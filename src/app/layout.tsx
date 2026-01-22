@@ -1,5 +1,9 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import { theme } from "@/theme/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +29,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+          {/* ThemeProvider applies your MUI theme */}
+          <ThemeProvider theme={theme}>
+          {/* CssBaseline does a reset of styles, normalize, box-sizing, etc */}
+          <CssBaseline />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
