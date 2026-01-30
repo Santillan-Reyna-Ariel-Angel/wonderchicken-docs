@@ -4,9 +4,18 @@
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
     },
-     "github": {
+    "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "TestSprite": {
+      "command": "npx",
+      "args": [
+        "@testsprite/testsprite-mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "sk-user-7LnGhlMBObVplknJFZDWnaaa80qeU_mQNoEifVzvI-qqI017_qOBdvfyEwGsyPYwz7N0PkTvX7NcURmB0VIYX43ozIatgawnTAx-yZj1otsM2Qy1P2flbuDCTrHThmX3imo"
+      }
     }
   }
 }
