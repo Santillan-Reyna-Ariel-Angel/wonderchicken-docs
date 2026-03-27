@@ -1,0 +1,216 @@
+A. GRIETAS Y AMBIGÜEDADES (RESPONDER EN FORMATO NUMERADO)
+
+A.1 Variantes y sustituciones
+A.1.1 ¿Una sustitución (p. ej. papa → arroz) cambia el precio del producto? (Opciones: no cambia; cambia por delta fijo; recalcula sumando precio del componente). Da ejemplos con números.
+Respuesta: Actualemente el plato/producto que se elige se sirve mixto(papa y arroz). Hace tiempo arroz y papa tenian el mismo precio y por ello se hacia el cambio sin problema, pero actualmente estos tienen diferentes precios por lo que se cree que se recalcual el precio. 
+
+A.1.2 ¿Cuántas sustituciones/variantes se permiten por ítem en una orden? (ej.: 0, 1, ilimitado; si hay límite, especificar).
+Respuesta: se desconoce, normalmente solo se solica cambiar de papa a arroz o papa Smile
+
+A.1.3 ¿Las variantes se definen como componentes obligatorios (ej.: 2 presas) + componentes opcionales (ej.: bebida)? Proporciona 2–3 ejemplos concretos de combos con su descomposición.
+Respuesta: este es el menu oficial y la conposicion:
+## WONDER CHICKEN - MENÚ (2026):
+Platos pricipales:
+1. Cuarto de Pollo (2 presas) - 23 Bs.
+2. Porción Media (2 presas + porción mixto de papa y arroz) - 30 Bs.
+3. Wonder (2 presas + porción mixto + mocochinchi o gaseosa de 500 ml) - 36 Bs.
+4. Medio Pollo (4 presas) - 46 Bs.
+5. Porción Completa (4 presas + porción mixto) - 54 Bs.
+6. Super Wonder (4 presas + porción mixto + mocochinchi o gaseosa de 500 ml) - 58 Bs.
+7. Wonder Pop (300 g de trozos de filete de pechuga + porción de papa o arroz o mixto) - 33 Bs.
+NOTA: LAS PRESAS VAN EN PAREJA, ES DECIR: PECHO-ALA O PIERNA-ENTREPIERNA. Raros casos se vende de manera custom (2 pechos u otro)
+
+A.1.4 ¿Cómo debe afectar la sustitución al inventario? (ej.: si sustituyen papa por arroz, decrementar stock de arroz en lugar de papa).
+Respuesta: Por ahora se conoce que se controla la cantidad de papa usada (por bolsas no por porciones), No se controla el arroz. Al fianl del turno solo se cuenta cuantas bolsas de papa se gasto y se registra eso como gasto (revisar planilal de inventario del prd)
+
+A.2 Vales de empleados
+A.2.1 ¿Qué tipo contable tienen los vales? (Opciones: descuento inmediato; crédito a nómina mensual; registro como gasto). Explica el flujo contable deseado.
+Respueta: Por lo que se conoce seria como un credito, es decir se registra el vale y este sera descontado del salario del trabajador del mes en curso(del mes que se registro el vale)
+
+A.2.2 ¿Hay límites por empleado (cantidad/valor) y reglas de autorización? Si sí, define límites y quién autoriza.
+Respuesta: No se conoce de ningun limite. Los administradores permiten los vales y las cajeras solo lo registarn.
+
+A.2.3 ¿Cómo se registra la redención del vale en arqueos y reportes? (ej.: aparece como venta con método “vale” y monto 0 en caja; o como descuento aplicado).
+Respuesta: Al final del turno se hace el arqueo, se ahace anotaciones en una planilla pre impresa y en dicha planilla se registra el vale indicando el nombre del trabajador y el monto.
+
+A.3 Pedidos con pago pendiente (delivery)
+A.3.1 ¿Cuál es el estado transaccional exacto para pedidos a domicilio? Propón la secuencia de estados (ej.: draft → pending_payment → preparing → ready → delivered → closed).
+Respuesta:  Cajera registra pedido (el delivery paga a nombre del cliente) → sistema imprime comanda llevar → despachadora prepara → entrega a servicio de delivery.  
+
+A.3.2 ¿Cuál es el tiempo máximo para confirmar el pago antes de cancelar automáticamente? (ej.: 30 min, 2 horas).
+Respuesta: Se desconoce el tiempo. Pero normalmente el delivery menciona la hora en que llegara al restaurante, para pagar y retirar el pedido.
+
+A.3.3 ¿Qué sucede si el delivery no paga o paga parcialmente? Define reglas de anulación, reembolso o cobro posterior.
+Respuesta: No se procede con la venta. Pues la venta se registra cuando el delivery paga.
+
+A.4 Inventario por presas (lotes y sobrantes)
+A.4.1 ¿Deseas modelar inventario por lote/batch (fecha procesado, reproceso, sobrante) o solo por tipo (pecho/ala/etc.)? Elige uno y da ejemplo de un lote.
+Respuesta: No se tiene definido, pero se prefiere por presa.
+
+A.4.2 ¿Cómo se asigna la venta a un lote? (FIFO, LIFO, manual, no aplica). Indica preferencia.
+Respuesta: No aplica. Las ventas son numeradas(ticket numerados) y se despacha en ese orden.
+
+A.4.3 ¿Qué reglas para sobrante procesado (venta interna con descuento) deben reflejarse en inventario y reportes?
+Respuesta: Se desconoce, pero se intuye que Las ventas internas (vales) deben reflejarse en el inventario y reportes(distinguiendo que fue vale para evitar confusiones). 
+
+A.5 Descuentos y ventas internas (personal)
+A.5.1 ¿Cuál es la política exacta para ventas al personal (ej.: descuento fijo, porcentaje, autorización)? Da ejemplos numéricos.
+Respuesta: Normalemente es un descuento fijo, como se indico un plato que vale a 30bs se da a 23bs. Es el palto que comunmente se suele vender al personal. Se deberia poder especificar un descuento en la venta (esto apra los casos de vale)
+
+A.5.2 ¿Deben aparecer en reportes como ventas normales, como gasto, o como ajuste separado?
+Respuesta: Se desconoce, recomeinda lo mejor.
+
+A.6 Roles, sesiones y rotación de funciones
+A.6.1 Cuando un trabajador cambia de rol (cajera ↔ despachadora), ¿debe usar la misma cuenta o cuentas separadas? ¿Qué restricciones de sesión aplican (p. ej. cierre de caja obligatorio antes de cambiar)?
+Respuesta: El sistema de ventas solo esta disponible para usarios autorizados. Las depachadoras no manipulan el sistema de ventas. Es decir la persona que debe logearse y para poder vender.
+
+A.6.2 ¿Qué acciones requieren doble autorización (ej.: anular venta, emitir vale, modificar inventario)?
+Respuesta: Por lo que se sabe, la aunalcion de venta(factura en realidad) se realiza con el adminstrador,  el unico que podria modificar el inventario seria el administrador(solo si es necesario)
+
+A.7 Errores operativos y fallos (impresora, red, sincronización)
+A.7.1 Si la impresora térmica falla, ¿qué fallback quieres? (ej.: reintento + PDF para imprimir manualmente; guardar comanda en historial y mostrar alerta).
+Respuesta: Si falla la impresora, se deberia guardar en historial y mostrar un toast( se tiene pensado que las comandas tambein sera digitales apra que estas puedan ser consultadas por las despachadoras y puedan servir los paltos)
+
+A.7.2 En modo offline (sin conexión nube), ¿qué operaciones deben seguir funcionando y cómo se sincronizan luego? Define prioridad de datos a sincronizar.
+Respuesta: EL Software esta pensado para que funcione de manera local (Es deseable en el futuro que sea multisucursal y con varios puntos de venta). Solo se necesitaria internet para el tema de facturas(electronica o equivalente), pero esto se debe constatar con las normas de impuesto de Sucre-Bolivia 
+
+A.8 Conciliación caja vs tickets
+A.8.1 ¿Cuál es el umbral tolerable de discrepancia (Bs) antes de generar alerta?
+Respuesta: Se desconoce.
+
+A.8.2 ¿Cuál es el proceso de auditoría cuando hay discrepancias (pasos, responsables, plazos)?
+Rspuesta: Se desconoce.
+
+B. RECOMENDACIONES CONCRETAS Y PRIORIZADAS
+
+B.1 State machine de pedidos
+B.1.1 Confirma la lista final de estados de Order y las transiciones permitidas. ¿Quieres triggers automáticos (p. ej. OrderReady emite notificación) o manuales?
+Respuesta: Aun no definido.
+
+B.2 Transacciones atómicas de inventario
+B.2.1 ¿Deseas que cada venta sea una transacción atómica que decremente inventario por presa y registre una Transaction con referencia a OrderItem? (Sí/No)
+Respuesta: Si debe decrementar el inventario por presa. Como se menciono los platos se venden normalmente por pares de presas fijas (Pecho-ala o pierna-entrepierna), raros son los casos donde se ahace uan venta custom.
+
+B.2.2 ¿Qué comportamiento ante fallo parcial (ej.: inventario no actualizado pero venta registrada)? Define rollback o compensación.
+Respuesta: Se debe realizar todo correctamente o abortar la venta(no registrar)
+
+B.3 Contratos API y eventos
+B.3.1 ¿Prefieres REST + WebSocket o REST + Server-Sent Events para notificaciones internas? (elige uno y por qué).
+Respuesta: Por el momento solo se prefiere Rest, es decir se creara un backend con api rest (nest.js) el cual subministarra datoa l frontend. El fronted solo deberia renderizar datos, np deberia tener logica compleja ni operaciones sobre el negocio.
+
+B.3.2 ¿Necesitas versionado de API desde el inicio? (ej.: v1 en path).
+Respuesta: Se desconoce. Se debe elegir algo que sea mantenible y escalable en el tiempo. Pero Sin que sea complicado y que permita un desarrolo rapido.
+
+B.4 Reglas de vales y contabilidad
+B.4.1 ¿Cómo se contabiliza un vale en el cierre de caja y en reportes mensuales? (especifica etiquetas o cuentas a usar).
+Respuesta: Se desconoce, como se menciono: se intuye que Las ventas internas (vales) deben reflejarse en el inventario, planilla de arqueo y reportes(distinguiendo que fue vale para evitar confusiones).
+
+B.5 Impresoras y fallback
+B.5.1 ¿Quieres un servicio local que exponga una API para enviar comandos a la impresora (recomendado) o imprimir desde el servidor? (elige uno).
+Respuesta: Se desconoce, peros e sabe que se usa impresoras comerciales de rollo (ancho de 7cm aprox)
+
+B.5.2 ¿Cuántos reintentos automáticos antes de marcar error? (ej.: 3 reintentos con backoff).
+Respuesta: 3 intentos, pero desde que se registra/consolida la venta el ticket digital ya debe estar disponible para las despachadoras. 
+
+B.6 Auditoría y reconciliación
+B.6.1 ¿Qué campos mínimos deben guardarse para auditoría por cada venta? (ej.: userId, shiftId, printedComandaId, paymentMethod, timestamp).
+Respuesta: Se desconoce, pero los campos necesarios apra poder indentificar la venta, fecha hora, producto, precio y el responsable (cajera), similar a toda la info de un ticket.
+
+B.6.2 ¿Deseas reportes automáticos diarios de discrepancias? (Sí/No)
+Respuesta: Priorizar primeramente los reportes de ventas.
+
+B.7 Backups y sincronización
+B.7.1 ¿Política de sincronización local→nube: en tiempo real, cada X minutos, o manual? Indica intervalo.
+Respuesta: Como se menciono el sistema esta pensado para funcionar de manera local (Es deseable en el futuro que sea multisucursal y con varios puntos de venta)
+B.7.2 ¿Qué conflicto de sincronización debe prevalecer (local wins, cloud wins, manual merge)?
+Respesta: Els istema fucnionara en primera instacia de manera local, Pero simpre se debe prioriza la sincronizacion que tenga los ultimoscambios (normalemnte el local) 
+
+C. AJUSTES PARA QUE EL PDR SEA AMIGABLE PARA UNA LLM
+
+C.1 JSON payloads
+C.1.1 Proporciona 3–6 ejemplos reales (valores) para los payloads críticos: ProductCreate, OrderCreate (mesa y llevar), InventoryAdjust, CashOpen, VoucherRedeem. (Si no quieres todos, indica cuáles prefieres primero).
+Respuesta: Se desconoce
+C.1.2 ¿Prefieres snake_case o camelCase en JSON?
+Respuesta: camelCase
+
+C.2 E2E test cases
+C.2.1 Indica 10 escenarios E2E prioritarios (ej.: venta combo con sustitución; venta con vale; pedido delivery pendiente → confirmado; cierre de caja con discrepancia). ¿Quieres datos exactos (nombres, montos, timestamps)?
+Respuesta: Los test no son prioridad. Solo si se tiene tiempo se realizara de la uta critica del sistema.
+
+C.3 Errores y códigos
+C.3.1 ¿Qué convención de códigos HTTP y mensajes estándar quieres usar para errores comunes (400, 401, 403, 404, 409, 500)? ¿Mensajes en español o inglés?
+Respuesta: Los mensajes seran depende del caso y todos los mensajes al cleinte seran en español.
+
+C.4 OpenAPI skeleton
+C.4.1 ¿Quieres que el OpenAPI incluya securitySchemes (JWT bearer) y ejemplos en cada path? (Sí/No)
+Respuesta: aun no definido
+
+C.4.2 ¿Deseas que la LLM genere controladores y tests a partir del OpenAPI o solo los modelos y DTOs?
+Respuesta: El LLM debe crear todo loq ue pueda, con coherencia. Los test deben ser opcionales
+
+C.5 Business rules doc
+C.5.1 ¿Aceptas que prepare un business_rules.md con reglas “no negociables” (inventario atómico, vales, sustituciones)? ¿Alguna regla adicional que deba incluirse?
+Respuesta: Las busines rules deben esatr en el PDR. 
+
+D. DISEÑO DE DATOS Y EVENTOS
+
+D.1 Campos obligatorios y tipos
+D.1.1 Para InventoryItem ¿quieres currentStock como entero (unidades) y unit (ej.: presas, bolsas)? ¿Se permiten decimales para insumos (ej.: kg)?
+Respuesta: se prefiere unidades
+
+D.1.2 Para OrderItem ¿qué campos son obligatorios? (productId, variantId, quantity, unitPrice, totalPrice, notes).
+Respuesta: Aun no se definio
+
+D.2 Batch / Lot
+D.2.1 Si aceptas Batch, define campos mínimos: batchId, processedAt, origin, quantity, remaining.
+D.2.2 ¿Deseas trazabilidad por lote en reportes? (Sí/No)
+Respuesta: aun no se decidio.
+
+D.3 Precios y redondeo
+D.3.1 ¿Regla de redondeo para totales y subtotales (2 decimales, redondeo al alza, al par)? Define.
+Respuesta: 2 decimales.
+
+D.4 Moneda y localización
+D.4.1 ¿Moneda única (Bs) y formato local? ¿Soportar multi-moneda desde inicio? (Sí/No)
+Respuesta: solo soportar bs
+
+E. UX / UI Y TICKETS
+
+E.1 Pantalla de cajera (POS)
+E.1.1 ¿Cuántos pasos máximos permites para registrar una venta (ideal: 3)? Confirma el flujo exacto (selección → variantes → pago).
+Respuesta por el momento solo 1
+
+E.1.2 ¿Necesitas atajos de teclado para ventas rápidas? Si sí, lista 5 atajos prioritarios.
+Respuesta: es deseable
+
+E.2 Pantalla de despachadora (cocina)
+E.2.1 ¿Cómo quieres que se muestre la cola de pedidos (orden por tiempo, por prioridad, por tipo mesa/llevar)?
+Respues: Quiero por orden de emision
+
+E.2.2 ¿Deseas una vista “solo listos” con sonido y pantalla cliente? Define el sonido/alerta (breve, repetitivo, etc.).
+Respuesta: Debe ser pareciso aun banco, donde se indica el numero de ficha lista para recoger
+
+E.3 Formato de ticket/comanda
+E.3.1 Proporciona el layout exacto que quieres en el ticket térmico (campos obligatorios, orden, logos, ancho en caracteres si lo sabes).
+Respuesta: debe ser similar al ticket actual en el PDR. Eviatr usar mucha tienta
+
+
+F. PRIORIDADES, ACEPTACIÓN Y DESPLIEGUE
+
+F.1 MVP
+F.1.1 Confirma qué FR son obligatorios para el MVP (marca FR-001…FR-015 que deben estar en la primera versión).
+Respuesta: Son todos, excepto de "FR de integración externa (API pública, marketing)"
+
+F.1.2 ¿Aceptas dejar FR de integración externa (API pública, marketing) para fases posteriores? (Sí/No)
+Respuesta: Este FR no si no es necesario, que no se realice.
+
+F.2 Rendimiento y SLA
+F.2.1 ¿Confirmas la meta de respuesta <200 ms en LAN para operaciones de venta? ¿Qué carga de usuarios/ventas simultáneas estimas (ej.: 5 cajeras, 3 despachadoras, 50 ventas/hora)?
+Respuesta: Puede ser hasta 300ms. Para empezar sera 1 cajera y 2 despachadoras por turno.
+
+F.3 Despliegue
+F.3.1 ¿Dónde se desplegará inicialmente el backend? (on-premise Windows server, Linux local, VPS en la nube).
+Respuesta: Aun no definido.
+
+F.3.2 ¿Necesitas instalador/paquete para el restaurante (ej.: Docker compose) o prefieres despliegue guiado?
+Respuesta: Aun no definido
