@@ -331,89 +331,166 @@ Estados adicionales: `pendingPayment`, `cancelled`, `onHold`.
 
 # 9. Anexos técnicos útiles (para LLM) — ejemplos y artefactos listos
 
+**Estructura de exito**
+```json
+{
+  "isSuccess": true,
+  "message": "Operacion exitosa",
+  "data": {}
+}
+```
+
+**Estructura de error**
+```json
+{
+  "isSuccess": false,
+  "message": "Error de validacion",
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [
+      {
+        "field": "items[0].quantity",
+        "message": "Debe ser mayor a 0"
+      }
+    ]
+  }
+}
+```
+
+**Reglas que se usaran**
+- Frontend validara flujo con `isSuccess`.
+- `error` sera singular.
+- `details` sera array.
+- `code` sera string estable (`VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, etc.).
+- En NestJS se implementara con `ValidationPipe` + excepciones HTTP + `ExceptionFilter` global para mantener este contrato en todos los endpoints.
+
+
 ## 9.1 JSON payloads de ejemplo (6)
-**ProductCreate**
+
+**ProductCreateResponse (exito)**
 ```json
 {
-  "name": "Porción Media",
-  "basePrice": 30.00,
-  "category": "Plato principal",
-  "description": "2 presas + porción mixto",
-  "active": true
+  "isSuccess": true,
+  "message": "Producto creado correctamente",
+  "data": {
+    "id": "uuid-product-porcion-media",
+    "name": "Porción Media",
+    "basePrice": 30.00,
+    "category": "Plato principal",
+    "description": "2 presas + porción mixto",
+    "active": true
+  }
 }
 ```
 
-**VariantCreate**
+**VariantCreateResponse (exito)**
 ```json
 {
-  "productId": "uuid-product-porcion-media",
-  "name": "Porción Media - Mixto",
-  "components": [
-    {"type":"presa","count":2},
-    {"type":"acompanamiento","name":"mixto","count":1}
-  ],
-  "priceDelta": 0.00,
-  "isDefault": true
+  "isSuccess": true,
+  "message": "Variante creada correctamente",
+  "data": {
+    "id": "uuid-variant-porcion-media-mixto",
+    "productId": "uuid-product-porcion-media",
+    "name": "Porción Media - Mixto",
+    "components": [
+      {"type":"presa","count":2},
+      {"type":"acompanamiento","name":"mixto","count":1}
+    ],
+    "priceDelta": 0.00,
+    "isDefault": true
+  }
 }
 ```
 
-**OrderCreate (mesa)**
+**OrderCreateResponse (mesa, exito)**
 ```json
 {
-  "type": "MESA",
-  "tableNumber": "70",
-  "customerName": "GOMEZ",
-  "items": [
-    {
-      "productId": "uuid-product-wonder",
-      "variantId": "uuid-variant-wonder",
-      "quantity": 2,
-      "unitPrice": 36.00,
-      "substitutions": [
-        {"from":"mixto","to":"mixto"}
-      ]
-    },
-    {
-      "productId": "uuid-product-fanta",
-      "quantity": 1,
-      "unitPrice": 8.00
-    }
-  ],
-  "paymentStatus": "paid",
-  "createdBy": "user-roxana"
+  "isSuccess": true,
+  "message": "Pedido creado correctamente",
+  "data": {
+    "id": "uuid-order-001",
+    "type": "MESA",
+    "tableNumber": "70",
+    "customerName": "GOMEZ",
+    "status": "confirmed",
+    "paymentStatus": "paid",
+    "items": [
+      {
+        "productId": "uuid-product-wonder",
+        "variantId": "uuid-variant-wonder",
+        "quantity": 2,
+        "unitPrice": 36.00,
+        "totalPrice": 72.00,
+        "substitutions": [
+          {"from":"mixto","to":"mixto"}
+        ]
+      },
+      {
+        "productId": "uuid-product-fanta",
+        "quantity": 1,
+        "unitPrice": 8.00,
+        "totalPrice": 8.00
+      }
+    ],
+    "total": 80.00,
+    "createdBy": "user-roxana"
+  }
 }
 ```
 
-**OrderCreate (llevar, pendingPayment)**
+**OrderCreateResponse (llevar, pendingPayment, exito)**
 ```json
 {
-  "type": "LLEVAR",
-  "customerName": "MARCO ORTEGA",
-  "items": [
-    {"productId":"uuid-product-porcion-media","quantity":3,"unitPrice":30.00}
-  ],
-  "paymentStatus": "pending",
-  "createdBy": "user-roxana"
+  "isSuccess": true,
+  "message": "Pedido creado en estado pendiente de pago",
+  "data": {
+    "id": "uuid-order-002",
+    "type": "LLEVAR",
+    "customerName": "MARCO ORTEGA",
+    "status": "pendingPayment",
+    "paymentStatus": "pending",
+    "items": [
+      {
+        "productId": "uuid-product-porcion-media",
+        "quantity": 3,
+        "unitPrice": 30.00,
+        "totalPrice": 90.00
+      }
+    ],
+    "total": 90.00,
+    "createdBy": "user-roxana"
+  }
 }
 ```
 
-**InventoryAdjust**
+**InventoryAdjustResponse (exito)**
 ```json
 {
-  "inventoryItemId": "uuid-inv-pecho",
-  "delta": -2,
-  "reason": "sale",
-  "referenceId": "uuid-order-123",
-  "userId": "user-roxana"
+  "isSuccess": true,
+  "message": "Ajuste de inventario registrado correctamente",
+  "data": {
+    "id": "uuid-invtx-001",
+    "inventoryItemId": "uuid-inv-pecho",
+    "delta": -2,
+    "reason": "sale",
+    "referenceId": "uuid-order-123",
+    "userId": "user-roxana"
+  }
 }
 ```
 
-**CashOpen**
+**CashOpenResponse (exito)**
 ```json
 {
-  "userId": "user-admin",
-  "openingAmount": 200.00,
-  "startAt": "2026-03-19T09:00:00"
+  "isSuccess": true,
+  "message": "Caja abierta correctamente",
+  "data": {
+    "id": "uuid-shift-001",
+    "userId": "user-admin",
+    "openingAmount": 200.00,
+    "startAt": "2026-03-19T09:00:00"
+  }
 }
 ```
 
