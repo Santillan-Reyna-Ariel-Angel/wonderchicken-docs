@@ -336,7 +336,7 @@ Estados adicionales: `pendingPayment`, `cancelled`, `onHold`.
 {
   "isSuccess": true,
   "message": "Operacion exitosa",
-  "data": {}
+  "data": {} // {}, [] or null
 }
 ```
 
