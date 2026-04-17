@@ -10,121 +10,95 @@ Este documento organiza las preguntas de negocio en un formato de taller, con do
 ## 1. Inventario y Productos
 
 ### 1.1 ¿Cómo se registran las entradas de pollo (procesado, reproceso, sobrante) en el sistema?
-Respuesta: las entrada son procesados.
+- S. actual: Las entrada son procesado.
+- S. deseada: procesado
 
 ### 1.2 ¿Cada venta descuenta automáticamente las presas? ¿Cómo se reflejan los pares fijos (pecho-ala, pierna-entrepierna)?
-Respuesta: De cada venta se deberia descontar las presas. Por ejemplo una porcion media trae 2 presas (pecho-ala o pierna-entrepierna), el cliente decide que par de presas seran.
+- S. actual: El sistema actual no realiza el descuento de presas. Actualmente se usa un registro manual para realizar el seguimiento del inventario de presas al final de cada turno.
+- S. deseada: De cada venta se deberia descontar automaticamente las presas. Por ejemplo una porcion media trae 2 presas (pecho-ala o pierna-entrepierna), el cliente escoje el par de presas en de su plato.
 
 ### 1.3 ¿Qué pasa con ventas custom (ej. dos pechos)? ¿Se permiten o se registran como excepción?
-- a) Se permiten libremente y descuentan inventario según selección real.
-- b) Se permiten solo con autorización de administrador.
-- c) No se permiten en el MVP; solo combinaciones predefinidas.
-- otro) ________
+- S. actual: El sistema actual no permite una venta custom, la cajera realiza esta venta custom seleccioando un plato que encaje en precio. Pero las presas reales vendidas se descuentan del registro de "INVENTARIO DIARIO". 
+- S. deseada: El nuevo sistema debe permitir una venta custom, (2 pechos, 2 alas, etc). El nuevo sistema debe permitir registrar la venta custom y descontar el inventario de presas correspondiente a lo que se vendio. Por ejemplo, si se vende 2 pechos, se debe descontar 2 pechos del inventario. Si se vende 1 ala y 1 pierna, se debe descontar esa misma cantidad del inventario. (crear endpoint especifico para custom)
 
 ### 1.4 ¿Cómo se controlan insumos como arroz, papas y bebidas? ¿Por unidad, por bolsa, por lote?
-Respuesta: Ene l inventario solo se anota la cantidad de bolsas de papa usadas en cada turno.  Las bebidas deberian descontarse por unidad.
+- S. actual: Se usa el registro manual "INVENTARIO DIARIO", en el cual se anota la cantidad de bolsas de papa usadas en cada turno. Las bebidas de descuentan por unidad. Tambien las despachadoras suelen anotar: envacez de arroz, bombillas, basos desachables de 500ml, etc. (Revisar INVENTARIO DIARIO para mas detalles)
+- S. deseada: El sistema debe controllar el inventario. Debe descontar automaticamente las bebidas (por unidad y por cada venta). Debe permitir anotar al cantidad de bolsas de papa(y papa smile) usadas en cada turno y descontarlas del inventario.
 
 ### 1.5 Momento de descuento de inventario de presas
-- a) Al confirmar pedido (confirmed).
-- b) Al iniciar preparación (preparing).
-- c) Al confirmar pago (paid).
-- otro) ________
+- S. deseada: El nuevo sistema al confirmar el pago (paid), para evitar problemas de inventario por pedidos pendientes.
 
 ---
 
 ## 2. Variantes y Sustituciones
 
 ### 2.1 ¿El precio cambia cuando se sustituye un acompañamiento (papa -> arroz -> Smiles)?
-- a) Sí, siempre se recalcula con el precio del nuevo acompañamiento.
-- b) No, se mantiene el precio base del producto.
-- c) Depende del producto/variante configurada por administrador.
-- otro) ________
+- S. actual: El precio base del plato no cambia.
+- S. deseada: El nuevo sistemaa mantiene el precio base. Recordar que actualmente los platos se sirven con una porcion de mixto(arroz y papa). Solo se puede sustituir con: 1 porcion de arroz, 1 porcion de papa o 1 porcion de papa smiles.
 
 ### 2.2 ¿Se permite más de una sustitución por plato?
-- a) Solo 1 sustitución por ítem.
-- b) Hasta 2 sustituciones por ítem.
-- c) Sin límite, mientras se registre el ajuste de precio.
-- otro) ________
+- S. actual: Solo se sustituye el acompañate del plato que es 1 porcion mixta.
+- S. deseada: El nuevo sistema solo se permite 1 sustitucion. Solo se sustituye el acompañande (1 porcion de mixto)  por: 1 porcion de arroz, 1 porcion de papa o 1 porcion smiles.  
 
 ### 2.3 ¿Cómo se refleja la sustitución en el ticket y en el inventario?
-- a) Se imprime el detalle de sustitución y descuenta inventario por componente final.
-- b) Solo se refleja en ticket, sin impacto de inventario diferenciado.
-- c) Solo se refleja en inventario, sin detalle explícito en ticket.
-- otro) ________
+- S. actual: El sistema actual no refleja la sustitución en el ticket. Del inventario no se descuentan porciones de mixtos, papa, arroz, smiles o platanos fritos.
+- S. deseada: El nuevo sistema debe imprimir el detalle de sustitución en el ticket.
 
 ---
 
 ## 3. Pedidos y Estados
 
 ### 3.1 ¿Cuál es la máquina de estados definitiva de un pedido (ej. registrado -> preparando -> listo -> entregado -> cerrado)?
-- a) `created -> confirmed -> preparing -> ready -> delivered -> closed`.
-- b) `created -> preparing -> ready -> delivered -> closed`.
-- c) `created -> pendingPayment -> confirmed -> preparing -> ready -> delivered -> closed`.
-- otro) ________
+- S. actual: Se desconoce la maquina de estados o si es que existe alguna.
+- S. El nuevo sistema debe tener una maquina de estados segun sea lo mas adecuado sin llegar a aser complejo.
 
 ### 3.2 ¿Qué pasa con pedidos delivery si el pago no llega? ¿Se cancelan automáticamente?
-Respuesta: El delivery debe realizar el pago para que recien se regsitre la venta.
+- S.ctual: Actualmente solo se registra una venta cuando esta es pagada, asi que el delivery debe realizar el pago. Mientras tanto no se registra nada en el sistema.
+- S. deseada: El nuevo sistema debe permitir registrar el pedido aunque el pago no llegue, pero debe marcarlo como pendiente de pago. Tambien el sistema debe permitir borrar un pedido en pendiente de pago.
+
 
 ### 3.3 ¿Se permite registrar pedidos con pago pendiente?
-Respuesta: El nuevo sistema debe contemplar esto, el actual no lo hace.
+- S. actual: No se permite registrar pedidos con pago pendiente, solo se registra una venta cuando esta es pagada.
+- S. deseada: El nuevo sistema debe registrar un pedido con pago pendiente, pero el inventario y los ingresos solo deben actualizar cuando un pedido es pagado.
 
 ### 3.4 Preparación de pedidos en estado pendiente de pago
 - a) Se prepara inmediatamente aunque esté pendiente.
 - b) No se prepara hasta confirmar pago.
 - c) Se prepara solo para clientes frecuentes autorizados.
 - otro) ________
+- S. actual: Actualmente si se preparan los pedidos y se tienen lsitos para recoger cuando el cleintttte o delivery paga el pedido.
+- S. deseada: Debe funcionar igua, es decir, se prepara inmediatamente aunque esté pendiente. Esto para evitar retrasos en la preparación.
 
 ### 3.5 Tiempo máximo para mantener un pedido pendiente de pago
-- a) 15 minutos.
-- b) 30 minutos.
-- c) 60 minutos.
-- otro) ________
+- Respuesta: 25 min. El pollo se cocina entre 18-20 min. 
+
 
 ### 3.6 Cancelación de pedido ya confirmado
-- a) Permitida con reverso automático de inventario y movimientos de caja.
-- b) Permitida solo con aprobación de administrador y reverso controlado.
-- c) No permitida después de pasar a preparing.
-- otro) ________
-
+- S. actual: Actualmente un pedido confirmado es uno ya pagado. Si es que se quiere cancelar implca la devolucion del dinero, en ese caso la cajera lo realiza pero al final de cada turno la cajera informa de esta situacion al administrador y se procede con la anulacion de la factura. De la anulacion de la factura solo se sabe que se encesita el numero de factura, pero se desconoce mas detalles del proceso.
+- S. deseada: El nuevo sistema debe permitir cancelar un pedido pagado, pero esde bebe requerir una razon y detalles del pedido para registrarse. En el arqueo de caja debe haber un apartado que indique las anulaciones realizadass y la cantidad monetaria, para cuadrar los ingresos de cada turno. 
 ---
 
 ## 4. Vales y Ventas Internas
 
 ### 4.1 ¿Cómo se registran los vales en el sistema (como venta con método vale, como gasto, como descuento)?
-- a) Como venta con método de pago `vale`.
-- b) Como egreso/gasto de caja.
-- c) Como descuento interno vinculado al trabajador.
-- otro) ________
+- S. actual: Actualmente no se registran en el sistema.
+- S. deseada: El nuevo sistema debe permitir registrar vales. Para el vale se debe registrar el nombre del trabajador, el nomber del plato, la fecha y el monto. El sistema debe descontar las presas, del inventario pero no debe registrar como dinero entrante. Para esto se puede añadir al flujo de venta una opcion de pago como vale o simplemente tener una interfaz dedicada(elegir la opcion que sea mas simple y efectiva).
 
 ### 4.2 Naturaleza del vale de empleado
-- a) Solo descuento por nómina (sin cobro en caja).
-- b) Solo canje inmediato (impacta caja al momento).
-- c) Ambos, con tipos separados de vale.
-- otro) ________
+- Respuesta: Actualmente no se registran en el sistema, pero se manejan como un descuento por nomina, es decir, el trabajador recibe su vale y al final de cada mes se le descuenta el monto total de los vales que uso en ese mes.
 
 ### 4.3 ¿Se aplican límites por trabajador (cantidad o monto)?
-- a) Límite por monto mensual.
-- b) Límite por cantidad de vales por mes.
-- c) Sin límite fijo, solo aprobación administrativa.
-- otro) ________
+- Respuesta: No, no existen limites.
 
 ### 4.4 Umbral para aprobación obligatoria de vales
-- a) Desde 30 Bs.
-- b) Desde 50 Bs.
-- c) Desde 100 Bs.
-- otro) ________
+- respuesta: No existe un umbral.
 
 ### 4.5 ¿Cómo se reflejan en reportes y arqueos?
-- a) Se muestran en arqueo y reporte de vales por trabajador.
-- b) Solo en reporte mensual de nómina.
-- c) Solo en reporte contable interno.
-- otro) ________
+- S. actual: Actualmente no se registran en el sistema, pero se anota el vale del trabajador el dia que lo solicito en el reporte diario de venta(arqueo de caja).
+- S. deseada: El nuevo sistema debe reflejar lso vales otrorgados en el dia, esto para los reportes (reporte diario o arqueo de caja). Tambien deberia haber una interfaz que lsite los vales otrorgados a los trabajadores con su detalle (nombre del trabajador, plato, fecha y monto), esto para poder ser consultado en cualquier momento. 
 
 ### 4.6 Política de descuento interno al personal
-- a) Porcentaje fijo por producto.
-- b) Precio fijo especial por producto.
-- c) Descuento variable con aprobación caso a caso.
-- otro) ________
+- S. actual: No existe una politica formal, pero al finalizar el turno si existe pollo cocido sobrante. Se ofrece al trabajador una Porción Media por el precio de 23bs. Lo que pasa es que en el sistema sea anota una venta de Cuarto de Pollo (2 presas) - 23 Bs. Pero al trabajador se le entrega Porción Media (2 presas + porción mixto de papa y arroz) - 30 Bs. Todo esto para que cuadre en el inventario la catidad de presas. Casi siempre este es el trato "descuento" que se le da al trabajador. Peros olo cuando hay pollo cocido sobrante al final de truno (16hrs o 23hrs). 
 
 ---
 
