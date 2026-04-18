@@ -228,11 +228,5 @@ RESPONSABLE: ROXANA
 - b) Críticas + cambios de estado de pedido y caja.
 - c) Auditoría integral de todas las acciones operativas.
 - otro) ________
-- S. deseada: continuara...
+- S. Solo acciones críticas (ventas, arqueos de caja, reportes, vales)
 ---
-
-## Uso recomendado en taller
-
-- Marcar una opción por pregunta pendiente.
-- Si se marca `otro`, describir la regla exacta.
-- Al finalizar, pasar decisiones al PDR como reglas cerradas del MVP.
