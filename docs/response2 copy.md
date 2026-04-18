@@ -109,6 +109,7 @@ Este documento organiza las preguntas de negocio en un formato de taller, con do
 - b) Apertura, cierre, ventas por método, gastos, vales, diferencia.
 - c) Todo lo anterior + detalle por transacción.
 - otro) ________
+- S. actual: continuar...
 
 ### 5.2 ¿Cuál es el umbral de discrepancia aceptable entre caja y tickets?
 - a) 0 Bs (sin tolerancia).
@@ -149,27 +150,20 @@ Respuesta: Es algo deseable pero no indispensable.
 ## 7. Roles, Usuarios y Turnos
 
 ### 7.1 ¿Qué acciones son exclusivas del administrador (ej. anular venta, modificar inventario)?
-Respuesta: por ahora solo seria modificar el inventario(con registro de quin lo hizo, timestamp y descripcion/motivo).
+- S deseada: registrar productos (presas), registar platos, crear usuarios, modificar el inventario(con registro de quien lo hizo, timestamp y descripcion/motivo).
 
 ### 7.2 ¿Las cajeras pueden registrar vales o solo el administrador?
-Respuesta: las cajeras si peuden registrar vales.
+Respuesta: las cajeras si pueden registrar vales.
 
 ### 7.3 ¿Qué pasa si un trabajador rota de cajera a despachadora en la semana? ¿Usa la misma cuenta o distinta?
-Respuesta: Actualmente, se presume que usa la misma cuenta, pues solo hay una caja que es atendida por 1 cajera durante 1 turno de manera  simultanea.
-El nuevo sistema podria tener 1 o mas cajas, pero solo se debe permitir que una caja sea atentida por 1 cajera a la vez por tueno.
+- S. actual: Actualmente, se presume que usa la misma cuenta, pues solo hay una caja que es atendida por 1 cajera durante 1 turno de manera  simultanea. Las personas que trabajan como despachadora no se logean en el sistema ese da, solo se logean cuando es su turno como cajera.
+- S. deseada: El nuevo sistema podria tener 1 o mas cajas, pero solo se debe permitir que una caja sea atentida por 1 cajera a la vez por turno.
 
 ### 7.4 Regla de turnos activos por usuario
-- a) Máximo 1 turno abierto por usuario en todo momento.
-- b) 1 turno abierto por caja, aunque el usuario rote.
-- c) Múltiples turnos por usuario con restricciones y auditoría.
-- otro) ________
+- S. deseada: Un usuario puede estar activo 1 sola vez por turno. Ejemplo: un trabajador solo puede logearse como cajera o despachadora en 1 mismo turno. No puede logearse como cajera y despachadora en 1 mismo turno.
 
 ### 7.5 Matriz de permisos para MVP
-- a) Estricta por rol, sin excepciones.
-- b) Por rol con excepciones temporales autorizadas.
-- c) Flexible por usuario según necesidad operativa.
-- otro) ________
-
+- S. deseada: No se hara control de permisos.
 ---
 
 ## 8. Tickets, Notificaciones e Impresión
@@ -198,57 +192,33 @@ RESPONSABLE: ROXANA
 ```
 
 ### 8.2 ¿Cómo se notifica al cliente que su pedido está listo (pantalla, sonido, número de ficha)?
-Respueta: El nuevo sistema debe lisitar los pedidos listos (parecido a las pantallas de tickets de los bancos, es decir sera uan pantlla/interfaz publica dentro del negocio)
+- S. deseada: El nuevo sistema debe lisitar los pedidos listos (parecido a las pantallas de tickets de los bancos, es decir sera ana pantlla/interfaz publica dentro del negocio)
 
 ### 8.3 ¿Se guarda un historial digital de comandas para auditoría?
-Respuesta: Si debe guardarse los datos para poder ser consultados/usados en un futuro.
+- S. deseada: Si debe guardarse los datos para poder ser consultados/usados en un futuro.
 
 ### 8.4 Documento emitido al confirmar venta
-- a) Factura fiscal + comanda de cocina.
-- b) Solo comanda (sin factura en ese flujo).
-- c) Ticket comercial + factura solo cuando corresponda.
-- otro) ________
+- S. actual: Factura(si lo desea el cliente) + 2 comandas del pedido(1 para el cliente y otro para la despachadora).
+- S. deseada: Al confirmar la venta se debe imprimir una factura (solo si lo desea el cliente). El nuevo sistema debera listar las comandas generadas(pdf, html u otro formato) en una interfaz que podra ser accedida por las despachadoras. El cliente tendra otra interfaz para ver solo su comanda de su pedido realizado.
 
 ### 8.5 Arquitectura de impresión de comandas
-- a) Impresión local desde el frontend (caja).
-- b) Impresión centralizada desde backend/servidor.
-- c) Modo híbrido con fallback automático a PDF.
-- otro) ________
+- S. actual: Actualmente la comanda se imprime en una impresora termica.
+- S. deseada: Se pretende que el nuevo sistema solo digitalice las comandas (html, pdf u otro formato) y las liste en una interfaz para que las despachadoras puedan consultarlas La impresora termica se usaria solo para imprimir la factura si es que el cliente lo desea.
 
 ### 8.6 Contingencia ante falla de impresora térmica
-- a) Reintentar 3 veces y luego generar PDF.
-- b) Generar PDF inmediatamente.
-- c) Redirigir a impresora secundaria y dejar trazabilidad.
-- otro) ________
-
+- S. deseada: En primera instancia, la factura podria poder descargarse. Al ser una aplicacion local web, deberia caer en el navegador(u otro lector de pdf) la responsabilidad de elegir la impresora a usar para la impresion.
 ---
 
 ## 9. Rendimiento y Despliegue
 
-### 9.1 ¿Cuál es la meta de respuesta aceptable en LAN (200 ms, 300 ms)?
-- a) <= 200 ms para operaciones críticas.
-- b) <= 300 ms para operaciones críticas.
-- c) <= 500 ms para operaciones críticas.
-- otro) ________
-
 ### 9.2 ¿Dónde se desplegará inicialmente el backend (Windows local, Linux, nube)?
-- a) Windows local en el restaurante.
-- b) Linux local (servidor on-premise).
-- c) Nube (con acceso remoto).
-- otro) ________
+- S. deseada: El nuevo sistema debe ser multiplaforma, pero principalmente se usara en una sistema windows 10.
 
 ### 9.3 ¿Se requiere instalador sencillo (ej. Docker Compose) para el restaurante?
-- a) Sí, obligatorio para MVP.
-- b) Sí, pero en fase posterior.
-- c) No, instalación manual por equipo técnico.
-- otro) ________
+- S. deseada: Es una aplicacion web. El cual se usara primeramente localmente. En la version 2 del sistema se pensara de colocarlo en la nube.
 
 ### 9.4 Política de respaldo de base de datos
-- a) Backup diario automático.
-- b) Backup por turno.
-- c) Backup diario + semanal completo de seguridad.
-- otro) ________
-
+- S. deseada: Esto es para la version 2 del sistema. El nuevo sistema debe realizar backup diario automático de la base de datos, esto para evitar perdida de datos en caso de algun error o falla del sistema. Tambien el adminsitrador debe tener la opcion de realizar backup manualmente en cualquier momento.
 ---
 
 ## 10. Auditoría
@@ -258,7 +228,7 @@ Respuesta: Si debe guardarse los datos para poder ser consultados/usados en un f
 - b) Críticas + cambios de estado de pedido y caja.
 - c) Auditoría integral de todas las acciones operativas.
 - otro) ________
-
+- S. deseada: continuara...
 ---
 
 ## Uso recomendado en taller
