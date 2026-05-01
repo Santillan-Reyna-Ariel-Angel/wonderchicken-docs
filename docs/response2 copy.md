@@ -224,9 +224,5 @@ RESPONSABLE: ROXANA
 ## 10. Auditoría
 
 ### 10.1 Nivel de auditoría para MVP
-- a) Solo acciones críticas (ventas, anulaciones, ajustes, vales).
-- b) Críticas + cambios de estado de pedido y caja.
-- c) Auditoría integral de todas las acciones operativas.
-- otro) ________
-- S. Solo acciones críticas (ventas, arqueos de caja, reportes, vales)
+- S. deseada: Solo acciones críticas (ventas, arqueos de caja, reportes, vales)
 ---
