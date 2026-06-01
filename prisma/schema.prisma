@@ -1,8 +1,14 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Wonder Chicken — Sistema de Ventas
+// Schema basado en PRD v2.0 (docs/PDR.md)
+//
+// Reglas críticas codificadas (NO alterar sin revisar el PRD):
+//   §2.1  Sustituciones NO afectan precio → no existe priceAdjustment
+//   §2.3  Inventario decrementa al pagar (paymentStatus = PAID), no en preparing
+//   §2.5  pendingPayment se prepara igual; cancelación SIEMPRE manual (sin timeout)
+//   §2.7  Sin enforcement de permisos en backend (MVP) — solo UI por rol
+//   §2.8  Order.type ∈ {MESA, LLEVAR}. CUSTOM NO es un type — es Order.isCustom = true
+//   §2.10 Ventas custom: endpoint dedicado, item con customPieces, precio libre
+//   §2.11 internalDiscount = true para ventas con sobrante de pollo cocido
 
 generator client {
   provider = "prisma-client"
@@ -11,4 +17,428 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // url se configura en prisma.config.ts (Prisma 7+)
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  CASHIER
+  DISPATCHER
+  COOK
+}
+
+enum OrderType {
+  // CUSTOM NO va acá — ver Order.isCustom (§2.10)
+  MESA
+  LLEVAR
+}
+
+enum OrderStatus {
+  CREATED
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CLOSED
+  PENDING_PAYMENT
+  CANCELLED
+  ON_HOLD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  VALE
+}
+
+enum InventoryUnit {
+  PRESA
+  BOLSA
+  PAQUETE
+  UNIDAD
+  VASO
+  DOYPACK
+}
+
+enum InventoryItemType {
+  PECHO
+  ALA
+  PIERNA
+  ENTREPIERNA
+  BEBIDA
+  INSUMO
+}
+
+enum InventoryTxnReason {
+  SALE
+  ADJUSTMENT
+  RECEPTION
+  VALE
+  INTERNAL_DISCOUNT
+  MANUAL_CONSUMPTION
+  CANCELLATION_REVERT
+}
+
+enum VoucherStatus {
+  ISSUED
+  REDEEMED
+  CANCELLED
+}
+
+enum ExpensePaidBy {
+  CASH
+  REGISTER
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+// ============================================================================
+// USERS & AUTH
+// ============================================================================
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  shiftsAsCashier    Shift[]                  @relation("ShiftCashier")
+  ordersCreated      Order[]                  @relation("OrderCreatedBy")
+  ordersDelivered    Order[]                  @relation("OrderDeliveredBy")
+  vouchersIssued     Voucher[]                @relation("VoucherIssuedBy")
+  inventoryTxns      InventoryTransaction[]
+  manualConsumptions DailyManualConsumption[]
+  expensesCreated    Expense[]
+  auditLogs          AuditLog[]
+
+  @@index([role])
+  @@index([active])
+  @@map("users")
+}
+
+// ============================================================================
+// PRODUCTS & VARIANTS
+// ============================================================================
+
+model Product {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String
+  basePrice   Decimal  @db.Decimal(10, 2)
+  category    String   // "Plato principal" | "Bebida" | "Extra" — string libre p/ no romper si cambia el menú
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants   Variant[]
+  orderItems OrderItem[]
+  vouchers   Voucher[]
+
+  @@index([category, active])
+  @@map("products")
+}
+
+model Variant {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  productId String   @db.Uuid
+  name      String
+  // components: [{type:"presa", count:2}, {type:"acompanamiento", name:"mixto", count:1}, ...]
+  components Json
+  isDefault  Boolean  @default(false)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@map("variants")
+}
+
+// ============================================================================
+// ORDERS
+// ============================================================================
+
+model Order {
+  id String @id @default(uuid(7)) @db.Uuid
+  // Número humano para pantalla pública "turnos de banco" (§2.8 / FR-007).
+  // Se REINICIA por turno (1, 2, 3...) — único en combinación con shiftId.
+  // Lo asigna la app vía Shift.lastOrderNumber dentro de una $transaction.
+  orderNumber Int
+
+  type             OrderType
+  tableNumber      String?
+  customerName     String?
+  status           OrderStatus    @default(CREATED)
+  paymentStatus    PaymentStatus  @default(PENDING)
+  paymentMethod    PaymentMethod?
+  total            Decimal        @db.Decimal(10, 2)
+  discountAmount   Decimal?       @db.Decimal(10, 2)
+  internalDiscount Boolean        @default(false) // §2.11
+  isCustom         Boolean        @default(false) // §2.10 — true si vino por POST /orders/custom
+
+  cancelReason  String?
+  cancelDetails String?
+  cancelledAt   DateTime?
+
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+  readyAt     DateTime? // §2.8 — reemplaza NotificationLog
+  deliveredAt DateTime?
+
+  createdById   String  @db.Uuid
+  createdBy     User    @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  deliveredById String? @db.Uuid
+  deliveredBy   User?   @relation("OrderDeliveredBy", fields: [deliveredById], references: [id], onDelete: Restrict)
+  shiftId       String  @db.Uuid
+  shift         Shift   @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  items OrderItem[]
+
+  @@unique([shiftId, orderNumber]) // numerado reinicia por turno
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([type])
+  @@index([isCustom]) // reportes filtran por isCustom (§2.10)
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid(7)) @db.Uuid
+  orderId    String  @db.Uuid
+  productId  String? @db.Uuid // null si pertenece a orden custom (§2.10)
+  variantId  String? @db.Uuid
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+  notes      String?
+
+  // [{from:"mixto", to:"arroz"}] — sustituciones (§2.1). NO modifican precio.
+  substitutions Json?
+
+  // Presas elegidas en orden ESTÁNDAR: [{type:"pecho", qty:2}, {type:"ala", qty:2}]
+  selectedPieces Json?
+
+  // Presas en orden CUSTOM (§2.10): [{type:"pecho", qty:2}, {type:"ala", qty:1}]
+  customPieces Json?
+
+  // Acompañamientos opcionales (no afectan inventario granular en MVP)
+  extras Json?
+
+  // Bebidas opcionales: [{productId:"...", qty:1}] — sí decrementan inventario
+  drinks Json?
+
+  createdAt DateTime @default(now())
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ============================================================================
+// INVENTORY
+// ============================================================================
+
+model InventoryItem {
+  id           String            @id @default(uuid(7)) @db.Uuid
+  sku          String            @unique // "B1", "P3", "PRESA-PECHO", etc.
+  name         String
+  unit         InventoryUnit
+  type         InventoryItemType
+  currentStock Int               @default(0)
+  unitMeasure  String? // texto libre: "500 ml", "2 lt", etc.
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  batches            InventoryBatch[]
+  transactions       InventoryTransaction[]
+  manualConsumptions DailyManualConsumption[]
+
+  @@index([type, active])
+  @@map("inventory_items")
+}
+
+model InventoryBatch {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  inventoryItemId   String   @db.Uuid
+  batchCode         String
+  processedAt       DateTime
+  quantityReceived  Int
+  quantityRemaining Int
+  origin            String? // "fresh" | "reproceso" | "supplier-X"
+  createdAt         DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([inventoryItemId])
+  @@index([batchCode])
+  @@map("inventory_batches")
+}
+
+model InventoryTransaction {
+  id              String             @id @default(uuid(7)) @db.Uuid
+  inventoryItemId String             @db.Uuid
+  delta           Int // negativo = decremento, positivo = ingreso/reversión
+  reason          InventoryTxnReason
+  referenceId     String?            @db.Uuid // Order.id | Voucher.id | Expense.id
+  note            String?
+  timestamp       DateTime           @default(now())
+
+  userId        String        @db.Uuid
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([inventoryItemId, timestamp])
+  @@index([reason])
+  @@index([referenceId])
+  @@map("inventory_transactions")
+}
+
+// Bolsas de papa, smile, vasos, bombillas, etc. anotadas al cierre de turno (§2.3 / FR-017)
+model DailyManualConsumption {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  shiftId         String   @db.Uuid
+  inventoryItemId String   @db.Uuid
+  quantity        Int
+  recordedAt      DateTime @default(now())
+
+  recordedById  String        @db.Uuid
+  recordedBy    User          @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  shift         Shift         @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([shiftId])
+  @@map("daily_manual_consumptions")
+}
+
+// ============================================================================
+// VOUCHERS (vales — descuento por nómina, §2.4)
+// ============================================================================
+
+model Voucher {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  code        String        @unique // "V-20260501-001"
+  workerName  String        // texto libre: el trabajador puede no ser usuario del sistema
+  productId   String?       @db.Uuid
+  productName String        // snapshot del nombre al momento de emitir
+  amount      Decimal       @db.Decimal(10, 2)
+  status      VoucherStatus @default(ISSUED)
+  note        String?
+  issuedAt    DateTime      @default(now())
+
+  issuedById String   @db.Uuid
+  issuedBy   User     @relation("VoucherIssuedBy", fields: [issuedById], references: [id], onDelete: Restrict)
+  shiftId    String   @db.Uuid
+  shift      Shift    @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([shiftId])
+  @@index([workerName])
+  @@index([issuedAt])
+  @@map("vouchers")
+}
+
+// ============================================================================
+// CASH REGISTER & SHIFTS
+// ============================================================================
+
+model CashRegister {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @unique // "Caja 1", "Caja 2"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  shifts Shift[]
+
+  @@map("cash_registers")
+}
+
+model Shift {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  status          ShiftStatus @default(OPEN)
+  openingAmount   Decimal     @db.Decimal(10, 2)
+  closingAmount   Decimal?    @db.Decimal(10, 2)
+  expectedAmount  Decimal?    @db.Decimal(10, 2)
+  discrepancy     Decimal?    @db.Decimal(10, 2)
+  // Contador de tickets del turno. Se incrementa atómicamente al crear cada Order.
+  // El orderNumber asignado a la orden = lastOrderNumber resultante (1, 2, 3...).
+  lastOrderNumber Int         @default(0)
+  startAt         DateTime    @default(now())
+  endAt           DateTime?
+
+  cashierId      String        @db.Uuid
+  cashier        User          @relation("ShiftCashier", fields: [cashierId], references: [id], onDelete: Restrict)
+  cashRegisterId String?       @db.Uuid
+  cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: Restrict)
+
+  orders             Order[]
+  vouchers           Voucher[]
+  expenses           Expense[]
+  manualConsumptions DailyManualConsumption[]
+
+  @@index([status])
+  @@index([cashierId])
+  @@index([startAt])
+  @@map("shifts")
+}
+
+model Expense {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  description String
+  amount      Decimal       @db.Decimal(10, 2)
+  paidBy      ExpensePaidBy
+  createdAt   DateTime      @default(now())
+
+  shiftId     String @db.Uuid
+  shift       Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  createdById String @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([shiftId])
+  @@map("expenses")
+}
+
+// ============================================================================
+// AUDIT (§2.9 — solo acciones críticas en MVP)
+// ============================================================================
+
+model AuditLog {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  entity    String   // "Order" | "Voucher" | "InventoryItem" | "Shift"
+  entityId  String   @db.Uuid
+  action    String   // "CREATE_SALE" | "CANCEL_ORDER" | "ADJUST_INVENTORY" | "ISSUE_VOUCHER" | "OPEN_SHIFT" | "CLOSE_SHIFT"
+  details   Json?
+  timestamp DateTime @default(now())
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("audit_logs")
 }
