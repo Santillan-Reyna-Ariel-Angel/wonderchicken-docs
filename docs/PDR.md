@@ -288,6 +288,7 @@ RESPONSABLE: ROXANA
 - **Venta para llevar / delivery:** La cajera registra el pedido (puede quedar con pago pendiente si el delivery aún no paga) → la comanda digital aparece y SE PREPARA de inmediato → al confirmar el pago, se descuenta inventario y se contabiliza la venta → el cliente es notificado en la pantalla pública (solo número de pedido) → entrega al delivery o al cliente.
 - **Venta custom (presas surtidas):** La cajera entra al flujo "Venta Custom" en el POS → el pedido queda marcado como custom y puede ser MESA o LLEVAR → la cajera arma uno o más ítems indicando las presas exactas (ej. 2 pechos, 1 ala + 1 pierna) y un precio que ella decide → confirma el pago → el inventario descuenta exactamente las presas vendidas.
 - **Venta interna con descuento (sobrante de pollo cocido):** Al final del turno, si hay sobrante de pollo cocido, se permite vender una Porción Media a 23 Bs (precio de Cuarto de Pollo) al personal. La venta queda marcada como descuento interno para que el arqueo y el inventario cuadren correctamente.
+- **Compensación al cliente (pollo defectuoso):** cuando el pollo cocido no sale bien (presas quebradas/partidas/mal cortadas), el administrador autoriza una vez por turno a la cajera para aplicar el descuento "Compensación al cliente" (7 Bs, disponible todo el turno). Autorizada, la cajera puede aplicarlo a los pedidos afectados durante el turno; cada aplicación queda registrada como descuento para que arqueo e inventario cuadren (§2.11).
 - **Administración:** Crear/editar productos, variantes y usuarios; consultar conteo de presas; generar reportes de ventas y gastos; ajustar inventario con motivo.
 
 ---
@@ -384,26 +385,54 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
   - cantidad y tipo de cada presa (ej. 2 pechos, 1 ala, 1 pierna),
   - acompañamientos opcionales (papa / arroz / mixto / smiles / plátano) — sin afectar el inventario granular,
   - bebidas opcionales (descuentan por unidad),
-  - **precio unitario indicado por la cajera** (libre, lo decide ella según política del negocio. Podria calcularse un precio sugerido).
+  - **precio unitario:** el sistema muestra un **precio sugerido** (suma del precio de venta de cada presa seleccionada + extras + bebidas); la cajera puede **aceptarlo o pisarlo** — el precio final lo confirma ella según política del negocio (ver "Precio sugerido en venta custom" abajo).
 - **Inventario:** descuenta **exactamente** lo que la cajera indicó en las presas, al confirmar el pago.
 - **Comanda:** se lista igual que cualquier otra, mostrando la composición real del ítem (ej. "2 - PECHO; 1 - ALA; 1 - PIERNA"). La cabecera del ticket dice MESA o LLEVAR según corresponda — no existe el tipo "CUSTOM" en la comanda.
 - **Reportes:** las ventas custom se identifican como marca sobre el pedido, no como tipo MESA/LLEVAR.
 
-### Visión V2 (no MVP) — precio unitario por presa
-En V2 se prevé que cada tipo de presa lleve un **precio unitario** registrado al momento del procesado / recepción. Esto permitirá:
-- Mostrar a la cajera un **precio sugerido / de referencia** automático en la venta custom (sumatoria de las presas seleccionadas + extras + bebidas), evitando que ponga el precio "a ojo".
-- Si el sistema se abre al público en modalidad auto-servicio, **calcular automáticamente** el total de la venta custom sin intervención de la cajera.
-- Tener trazabilidad de costos por tipo de presa para reportes de margen.
+### Precio sugerido en venta custom (V1)
+Cada tipo de presa cocida (pecho, ala, pierna, entrepierna) lleva un **precio de venta unitario** que configura el administrador. En la venta custom, como la cajera puede seleccionar **X presas y/o productos**, el sistema calcula un **precio sugerido** = suma de las presas seleccionadas (a su precio de venta) + extras + bebidas, y se lo muestra. Reglas:
+- Es una **sugerencia, no una imposición**: la cajera puede pisar el precio (regla del §2.10 — ella decide). El sistema persiste el precio **confirmado**, nunca la sugerencia.
+- Es solo **precio de VENTA**. El sistema **no registra el costo del pollo** ni calcula margen (fuera de alcance — descartado de V2).
 
-## 2.11 Política de descuento al personal (sobrante de pollo cocido)
+### Visión V2 (no MVP) — auto-servicio
+- Si el sistema se abre al público en modalidad **auto-servicio**, el cliente arma su propio pedido custom y el total se **calcula automáticamente** a partir del precio de venta por presa (ya definido en V1), sin intervención de la cajera.
+
+## 2.11 Descuentos sobre la orden (incluye descuento al personal)
+
+### Feature de descuentos (V1)
+- **El administrador crea descuentos** desde su panel. Cada descuento tiene: **nombre**, **monto fijo** (en Bs), **disponibilidad** (`siempre` / `solo a fin de turno`) y **requiere autorización** (`sí` / `no`). En V1 los descuentos son de **monto fijo** (no porcentaje) y se aplican **a toda la orden**.
+- **La cajera aplica un descuento a la orden** desde el POS (botón/selector dedicado): elige uno de los descuentos creados por el admin que esté disponible en ese momento. Se permite **un solo descuento por orden** (sin apilamiento).
+- **Descuentos que requieren autorización:** si el descuento tiene `requiere autorización = sí`, la cajera **no puede aplicarlo libremente**: necesita que el administrador le otorgue una **autorización para el turno** (ver "Autorización de descuentos por turno" abajo). Mientras la sesión de cajera no esté autorizada para ese descuento, el POS no lo ofrece.
+- **Registro sobre la venta:** quedan guardados el **precio original** (antes del descuento), el **monto descontado** (snapshot del monto fijo aplicado, ej. 7 Bs), el **total cobrado** (`precio_original − monto descontado`, lo que entra a caja) y la **referencia al descuento aplicado**. Aparece en arqueo y reportes para trazabilidad, y queda en auditoría.
+- **Inventario intacto:** el descuento es **puramente monetario**. El inventario siempre descuenta el producto **real** vendido, nunca el equivalente al precio descontado.
+
+### Descuento al personal (sobrante de pollo cocido) — instancia principal
 - **Contexto:** al final de cada turno (16:00 o 23:00), si sobra **pollo cocido en el expositor** (ver §2.3, plano cocido), el dueño permite vender una **Porción Media** al personal por **23 Bs** (en vez de 30 Bs). Hoy se registra incorrectamente como "Cuarto de Pollo (2 presas) - 23 Bs" para que el inventario cuadre.
-- **Regla del nuevo sistema:**
-  - La venta debe registrarse con el **producto real entregado** (Porción Media).
-  - Se aplica un **descuento explícito** marcado como descuento interno.
-  - El precio final es **23 Bs** y queda registrado el descuento de 7 Bs.
-  - El inventario descuenta lo correcto (2 presas + acompañamiento real), sin trucos.
-  - En reportes y arqueo aparece la venta marcada como descuento interno para trazabilidad.
-- **Disponibilidad:** esta opción solo se habilita al final del turno (configurable por el administrador) y queda registrada en auditoría.
+- **En el nuevo sistema** es simplemente un descuento creado por el admin: **"Descuento personal", monto fijo 7 Bs, disponibilidad `solo a fin de turno`**. Al aplicarlo a una Porción Media (30 Bs), el precio final es **23 Bs** y queda registrado el descuento de **7 Bs**.
+- **Producto real:** la venta se registra con la **Porción Media** real entregada (no el truco del Cuarto de Pollo). El inventario descuenta lo correcto (2 presas), sin trucos.
+- **Disponibilidad y auditoría:** este descuento solo se habilita al final del turno (es su config de disponibilidad) y queda registrado en auditoría.
+- **Sin autorización especial:** cualquier cajera puede aplicarlo cuando está disponible (`requiere autorización = no`). No confundir con el descuento de compensación al cliente, que sí la requiere (abajo).
+
+### Descuento de compensación al cliente (pollo defectuoso) — segunda instancia
+- **Contexto:** a veces el pollo cocido no sale bien (piernas quebradas, pechos partidos, alas mal cortadas, etc.). Para **compensar al cliente**, el dueño autoriza vender un plato de 30 Bs a **23 Bs**. Es un caso **distinto** del descuento al personal: el beneficiario es el **cliente**, no el personal; el motivo es un **defecto de calidad**, no el sobrante; y está disponible **durante todo el turno**, no solo al final.
+- **En el nuevo sistema** es un descuento creado por el admin: **"Compensación al cliente", monto fijo 7 Bs, disponibilidad `siempre`, requiere autorización `sí`**. Al aplicarlo a un plato de 30 Bs, el precio final es **23 Bs** y queda registrado el descuento de **7 Bs**.
+- **Requiere autorización del admin (clave):** la cajera **no** puede aplicar este descuento por su cuenta. El administrador le otorga una **autorización para el turno** (ver abajo). Una vez autorizada, la cajera puede aplicarlo **cuantas veces lo necesite hasta el fin del turno** (no se limita a un único pedido).
+- **Producto real e inventario:** como cualquier descuento, es puramente monetario. La venta registra el **plato real entregado** y el inventario descuenta las presas reales, sin trucos.
+
+### Autorización de descuentos por turno
+- **Qué es:** una habilitación que el administrador otorga **a la sesión de cajera de un turno** para aplicar un descuento marcado como `requiere autorización = sí`. Es el mecanismo que separa "el admin define el descuento" de "esta cajera, hoy, puede usarlo".
+- **Alcance — por turno, no por orden:** la autorización se da **una sola vez por turno** y vale para **todo el turno**. NO se solicita ni se renueva por cada orden o pedido. Mientras dure el turno y la cajera esté autorizada, puede aplicar el descuento las veces que la operación lo requiera.
+- **Atada a la cajera del turno:** la autorización se vincula a la **sesión de cajera** de ese turno. Como un usuario solo puede tener 1 sesión activa con 1 rol por turno (§2.7, FR-008b), la autorización vive y muere con esa sesión: **se extingue automáticamente al cerrar el turno** y no se hereda al turno siguiente.
+- **Datos de la autorización:** descuento autorizado, sesión/cajera y turno beneficiados, administrador que la otorgó y fecha/hora.
+- **Auditoría:** el **acto de autorizar** es una acción auditable por sí mismo (quién autorizó, a qué cajera, para qué descuento, cuándo), independientemente de cada aplicación posterior del descuento sobre una venta (que ya queda auditada como cualquier descuento).
+
+### Nota de diseño — catálogo mínimo, NO motor de reglas
+> Decisión de arquitectura para quien implemente. El requisito es **"el admin crea descuentos y la cajera los aplica"** — esa configurabilidad ES la feature, así que se justifica un **catálogo mínimo** de descuentos (entidad `Discount`: nombre, monto fijo, disponibilidad, activo). NO confundir con un motor de reglas:
+- **Alcance acotado a propósito:** **monto fijo** (sin porcentaje), **a nivel orden** (sin nivel ítem), **un descuento por orden** (sin apilamiento), sin ventanas de validez más allá de `siempre` / `fin de turno`. Si en el futuro hace falta %, apilamiento o targeting por ítem, se agrega **con un caso real**, no antes.
+- **La autorización por turno es la única excepción de control, y entra con un caso real:** el descuento de compensación al cliente exige que el admin habilite a la cajera, así que el catálogo suma **un flag `requiereAutorizacion`** en el `Discount` y una **autorización por turno** (admin → sesión de cajera). Sigue sin ser un motor de reglas: es un **flag de habilitación a nivel turno** (autorizado sí/no), NO un contador de usos ni una cuota por pedido. Una vez autorizada, la cajera aplica el descuento sin límite de cantidad hasta el cierre del turno.
+- **El monto se congela en la transacción (snapshot), NO se deriva de una resta:** al aplicar un descuento, la orden **copia** el `discountAmount` del **monto fijo vigente** en el catálogo (ej. 7 Bs) y guarda también la referencia al `Discount` y el `total` cobrado. Ojo: con monto fijo el `discountAmount` **es el valor que fijó el admin**, no el resultado de `precio_original − precio_final` — al revés, el `total` es el que se deriva (`precio_original − discountAmount`). Se congela en la orden para que, si el admin edita el descuento después (de 7 a 10 Bs), las ventas viejas conserven los 7 Bs con que realmente se cobraron. Detalle de campos en [`docs/technical guide.md` §3](technical%20guide.md).
+- **Los vales (§2.4) NO son descuentos:** no suman a caja y descuentan nómina — concepto aparte, no se mezclan en este feature.
 
 ---
 
@@ -445,8 +474,8 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Criterio de aceptación:** La cajera puede registrar un pedido en 3 pasos o menos; el total es correcto; al confirmar, la comanda aparece en el panel de despacho.
 
 ### FR-002b — Venta custom de presas surtidas (Alta)
-- **Funcionalidad:** El POS tiene un flujo dedicado **"Venta Custom"** para combinaciones que no encajan con el menú (ej. "2 pechos sueltos", "1 ala + 1 pierna + arroz"). La cajera indica cantidad y tipo de cada presa, acompañamientos opcionales, bebidas opcionales y un precio que ella decide. La venta puede ser **MESA o LLEVAR**. CUSTOM no es un tipo de pedido aparte: es una marca sobre la orden (ver §2.10).
-- **Criterio de aceptación:** Registrar una venta custom LLEVAR de "2 pechos + 1 papa + 1 coca" descuenta exactamente 2 pechos del inventario y 1 unidad de coca al confirmar el pago. La comanda muestra "LLEVAR" en la cabecera y la composición real del ítem. Los reportes pueden filtrar ventas custom.
+- **Funcionalidad:** El POS tiene un flujo dedicado **"Venta Custom"** para combinaciones que no encajan con el menú (ej. "2 pechos sueltos", "1 ala + 1 pierna + arroz"). La cajera indica cantidad y tipo de cada presa, acompañamientos opcionales y bebidas opcionales. El sistema muestra un **precio sugerido** = suma del precio de venta de cada presa seleccionada + extras + bebidas (precio de venta por presa configurado por el admin, §2.10); la cajera puede **aceptarlo o pisarlo** y confirma el precio final. La venta puede ser **MESA o LLEVAR**. CUSTOM no es un tipo de pedido aparte: es una marca sobre la orden (ver §2.10).
+- **Criterio de aceptación:** Registrar una venta custom LLEVAR de "2 pechos + 1 papa + 1 cocacola" muestra un precio sugerido (suma de los precios de venta configurados) que la cajera puede modificar; descuenta exactamente 2 pechos del inventario y 1 unidad de cocacola al confirmar el pago; persiste el precio **confirmado**, no la sugerencia. La comanda muestra "LLEVAR" en la cabecera y la composición real del ítem. Los reportes pueden filtrar ventas custom.
 
 ### FR-003 — Comanda digital y factura opcional (Alta)
 - **Funcionalidad:** Al confirmar un pedido, el sistema genera la **comanda digital** y la publica en (a) el panel de despachadoras y (b) la vista pública del cliente, donde el cliente puede consultar su pedido. La **factura solo se emite si el cliente la pide**; cuando se pide, se imprime en la térmica o, si la impresora falla, se descarga en PDF.
@@ -512,9 +541,16 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Funcionalidad:** Cada pedido tiene una interfaz dedicada donde el cliente puede ver SU comanda (no las de otros), accesible por una URL o QR únicos.
 - **Criterio de aceptación:** El cliente entra a la URL de su pedido y ve su comanda; intentar acceder al pedido de otra persona no funciona.
 
-### FR-016 — Política de descuento al personal (Media)
-- **Funcionalidad:** Cuando hay sobrante de pollo cocido al final del turno, el sistema permite registrar una **Porción Media a 23 Bs** (en lugar de 30 Bs) como venta al personal, marcada como descuento interno. El inventario y la caja cuadran correctamente, sin trucos (§2.11).
-- **Criterio de aceptación:** La venta queda marcada como descuento interno, aparece así en arqueo y reportes; el inventario descuenta lo correcto y la caja cuadra.
+### FR-016 — Gestión de descuentos y aplicación en POS (Media)
+- **Funcionalidad:** El administrador crea **descuentos** (nombre, **monto fijo** en Bs, disponibilidad `siempre` / `solo a fin de turno`, **requiere autorización** `sí` / `no`, activo). La cajera puede **aplicar un descuento a una orden** desde el POS (uno por orden, sin apilamiento). Hay dos instancias principales (§2.11):
+  - **Descuento al personal** (sobrante de pollo cocido): "Descuento personal", **7 Bs**, disponibilidad `solo a fin de turno`, sin autorización. Cualquier cajera lo aplica cuando está disponible.
+  - **Compensación al cliente** (pollo defectuoso): "Compensación al cliente", **7 Bs**, disponibilidad `siempre`, **requiere autorización**. La cajera solo lo puede aplicar si el admin la autorizó en ese turno.
+- El descuento es puramente monetario: el inventario descuenta el producto real, sin trucos (§2.11).
+- **Criterio de aceptación:** El admin crea un descuento de monto fijo; la cajera lo aplica a una orden y el total baja en ese monto; queda registrado el precio original, el monto descontado y la referencia al descuento; aparece en arqueo y reportes; el descuento `solo a fin de turno` no se ofrece fuera de esa ventana; el inventario descuenta lo correcto y la caja cuadra.
+
+### FR-016b — Autorización de descuentos por turno (Media)
+- **Funcionalidad:** Para los descuentos marcados con `requiere autorización = sí`, el administrador otorga una **autorización por turno a la sesión de cajera**. Una vez autorizada, la cajera puede aplicar ese descuento **las veces que necesite hasta el cierre del turno**; sin autorización, el POS no le ofrece el descuento. La autorización se da **una vez por turno** (no por orden), queda atada a la sesión de cajera de ese turno (§2.7, FR-008b) y **se extingue al cerrar el turno**. El acto de autorizar queda auditado (§2.9).
+- **Criterio de aceptación:** Sin autorización, la cajera no ve/no puede aplicar el descuento "Compensación al cliente"; tras autorizarla el admin, puede aplicarlo a uno o varios pedidos del turno; la autorización no se renueva por pedido; al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente; queda registrado quién autorizó, a qué cajera y cuándo.
 
 ### FR-017 — Registro de consumos manuales y ciclo crudo de presas por turno (Media)
 - **Funcionalidad:** Al cierre del turno, el cocinero registra:
@@ -541,7 +577,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ## 7.1 POS (Cajera)
 - **Objetivo:** Registrar venta en ≤3 pasos.
-- **Elementos:** Categorías, búsqueda rápida, botones de producto, selección de variante, selector de sustitución (1, sin alterar precio), selector de presas (par fijo: pecho-ala / pierna-entrepierna), keypad numérico, total visible, botones: `Confirmar Pago`, `Guardar Pendiente (LLEVAR)`, `Vale`, `Venta Custom`, `Descuento Personal`.
+- **Elementos:** Categorías, búsqueda rápida, botones de producto, selección de variante, selector de sustitución (1, sin alterar precio), selector de presas (par fijo: pecho-ala / pierna-entrepierna), keypad numérico, total visible, botones: `Confirmar Pago`, `Guardar Pendiente (LLEVAR)`, `Vale`, `Venta Custom`, `Aplicar Descuento`.
 - **Atajos:** (opcional) teclas para categorías, confirmar venta, abrir caja, aplicar vale.
 
 ## 7.2 Panel Despacho
@@ -557,7 +593,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Elementos:** Nombre, mesa, items con descomposición, total, estado actual.
 
 ## 7.5 Administración
-- **Objetivo:** CRUD productos/variantes, inventario, usuarios, reportes, gestión de vales, política de descuento personal.
+- **Objetivo:** CRUD productos/variantes (incluye precio de venta por presa), inventario, usuarios, reportes, gestión de vales, gestión de descuentos.
 - **Elementos:** Formularios producto, definición variantes, panel inventario por presas, registro consumos manuales, listado vales, reportes exportables.
 
 ## 7.6 Cocinero (consumos manuales)
@@ -581,10 +617,10 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 10. Prioridad de trabajo y roadmap de entregas (MVP en sprints)
-**Sprint 0 (planificación + datos):** Modelado de datos definitivo (orden custom, descuento al personal, timestamps de listo/entregado), esquema y diagramas. Definir umbral de discrepancia de arqueo con el administrador.
+**Sprint 0 (planificación + datos):** Modelado de datos definitivo (orden custom, descuentos con flag `requiereAutorizacion`, autorización de descuento por turno, timestamps de listo/entregado), esquema y diagramas. Definir umbral de discrepancia de arqueo con el administrador.
 **Sprint 1:** Productos y variantes + POS básico (MESA/LLEVAR, sustitución sin afectar precio, confirmación de pago, comanda digital).
 **Sprint 2:** Inventario por presas (descuento al pagar, transacciones atómicas) + flujo dedicado de venta custom de presas surtidas + dashboard de stock + consumos manuales.
-**Sprint 3:** Caja, turnos y arqueo (con anulaciones y vales) + reportes básicos + descuento al personal.
+**Sprint 3:** Caja, turnos y arqueo (con anulaciones y vales) + reportes básicos + feature de descuentos (descuento al personal + compensación al cliente con autorización por turno).
 **Sprint 4:** Notificaciones (pantalla pública) + factura térmica + vista pública del cliente + impresión PDF como fallback.
 **Sprint 5:** Auditoría (acciones críticas) + sesión única por turno + pruebas E2E + optimizaciones + despliegue local.
 
@@ -607,6 +643,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Comandas digitales en el panel de despacho + vista pública del cliente.
 - Factura impresa en térmica solo a demanda; descarga PDF como fallback.
 - Política de descuento al personal (Porción Media a 23 Bs) registrada con su marca de descuento interno.
+- Descuento de compensación al cliente por pollo defectuoso (7 Bs, todo el turno) aplicable solo si el admin autorizó a la cajera en ese turno; la autorización es por turno (no por orden) y se extingue al cierre.
 - Registro de consumos manuales por turno (bolsas, vasos, bombillas, etc.).
 - UI diferenciada por rol (el control de permisos en backend queda para V2).
 - Auditoría de acciones críticas (ventas, arqueos, vales, anulaciones, ajustes de inventario).
@@ -625,8 +662,10 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Composición visible en POS y ticket: presas, bebidas, extras, sustituciones (§2.2).
 - Sustitución de acompañamiento **sin alterar el precio**; máximo 1 sustitución por ítem (§2.1, FR-001).
 - POS estándar para pedidos **MESA** y **LLEVAR** (FR-002).
-- **Flujo dedicado de venta custom** de presas surtidas: la cajera define cantidades de presas y un precio manual (§2.10, FR-002b).
-- Política de **descuento al personal** (Porción Media a 23 Bs marcada como descuento interno) (§2.11, FR-016).
+- **Flujo dedicado de venta custom** de presas surtidas: la cajera define cantidades de presas; el sistema muestra un **precio sugerido** (precio de venta por presa + extras + bebidas) que ella puede aceptar o pisar (§2.10, FR-002b).
+- **Precio de venta por tipo de presa** configurado por el admin, usado para el precio sugerido en venta custom (§2.10).
+- **Feature de descuentos:** el admin crea descuentos de **monto fijo** (con disponibilidad `siempre` / `fin de turno` y flag `requiere autorización`); la cajera aplica uno por orden. Instancias principales: **descuento al personal** (Porción Media a 23 Bs, fin de turno, sin autorización) y **compensación al cliente por pollo defectuoso** (7 Bs, todo el turno, requiere autorización) (§2.11, FR-016).
+- **Autorización de descuentos por turno:** el admin habilita a la sesión de cajera para aplicar un descuento que requiere autorización; vale para todo el turno (no por orden), se extingue al cerrar el turno y queda auditada (§2.11, FR-016b).
 
 ### Estados, pago y cancelación
 - Máquina de estados completa para los pedidos (§4).
@@ -687,18 +726,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ## 13.2 Versión 2 (Roadmap futuro) — Diferido explícitamente
 
-### Inventario y precios
-- **Precio unitario por tipo de presa** registrado al momento del procesado / recepción (§2.10 visión v2).
-- **Precio sugerido automático** en ventas custom: la cajera ya no fija el precio "a ojo"; el sistema lo calcula a partir del precio unitario por presa más extras y bebidas.
-- **Trazabilidad de costos** por tipo de presa para reportes de margen.
-
 ### Modalidad auto-servicio
-- POS para cliente final: el cliente arma su propio pedido custom sin intervención de la cajera, con precio calculado automáticamente (§2.10 visión v2).
+- POS para cliente final: el cliente arma su propio pedido custom sin intervención de la cajera, con el total **calculado automáticamente** a partir del precio de venta por presa (definido en V1) (§2.10 visión v2).
 
 ### Reportes adicionales
 - Reporte de **productos más vendidos** (deseable, no obligatorio MVP — FR-010).
 - Reporte de **discrepancias automáticas** entre caja esperada y contada.
-- Reportes de **margen por tipo de presa** (deriva del precio unitario de V2).
 
 ### Backups y persistencia
 - **Backup diario automático** de la base de datos.
@@ -773,3 +806,4 @@ Este PRD está centrado en las **reglas de negocio** y en la **consistencia tran
 5. En V1 no hay control de permisos en el backend — solo UI diferenciada por rol (§2.7).
 6. Las ventas custom (presas surtidas) pueden ser MESA o LLEVAR. CUSTOM nunca es un tipo de pedido — es una marca que se aplica al pedido (§2.10).
 7. La política de descuento al personal (Porción Media a 23 Bs) se registra como descuento interno para que arqueo e inventario cuadren con trazabilidad (§2.11).
+8. El descuento de compensación al cliente por pollo defectuoso (7 Bs, disponible todo el turno) **requiere autorización del admin a la cajera**. La autorización es **por turno, no por orden**: una vez otorgada, la cajera lo aplica las veces que necesite hasta el cierre del turno, momento en que la autorización se extingue (§2.11).
