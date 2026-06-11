@@ -4,11 +4,22 @@
 **Audiencia:** Quien recién aterriza en el repo y necesita entender (a) cómo se organizan los archivos del backend NestJS, (b) cómo viaja un request desde el frontend hasta la base de datos, y (c) qué endpoints existen y a qué recursos golpean.
 
 **Fuentes:**
-- Reglas de negocio → [`docs/PDR.md`](PDR.md)
-- Modelo de datos + contrato API → [`docs/technical guide.md`](technical%20guide.md)
+- Reglas de negocio → [`docs/pdr.md`](pdr.md)
+- Modelo de datos + contrato API → [`docs/technical_guide.md`](technical_guide.md)
 - Esquema real → [`prisma/schema.prisma`](../prisma/schema.prisma)
 
 > Si un diagrama no coincide con el código, gana el código. Este documento se actualiza, no al revés.
+
+---
+
+## Índice
+
+- [1. Arquitectura modular del backend (NestJS)](#1-arquitectura-modular-del-backend-nestjs)
+- [2. Flujo interno: como viaja un request (lifecycle)](#2-flujo-interno-como-viaja-un-request-lifecycle)
+- [3. Endpoints por dominio (mapa visual)](#3-endpoints-por-dominio-mapa-visual)
+- [4. Modelo relacional (vista resumida del Prisma)](#4-modelo-relacional-vista-resumida-del-prisma)
+- [5. Como leer este documento mientras codeas](#5-como-leer-este-documento-mientras-codeas)
+- [Referencias cruzadas](#referencias-cruzadas)
 
 ---
 
@@ -41,7 +52,7 @@ graph TB
     subgraph INFRA["INFRAESTRUCTURA TRANSVERSAL"]
         FILTERS[ExceptionFilter<br/>contrato estandar isSuccess]
         PIPES[ValidationPipe<br/>DTOs class-validator]
-        GUARDS[JwtAuthGuard<br/>auth pero SIN role enforcement]
+        GUARDS[AuthGuard JWT<br/>+ RolesGuard @Roles]
         INTERCEPTOR[AuditInterceptor<br/>solo acciones criticas]
     end
 
@@ -87,7 +98,7 @@ graph TB
 - `OrdersModule` es el **modulo mas pesado** porque concentra: orden estandar, orden custom (PDR §2.10), confirmacion de pago, anulacion, descuento al personal (§2.11) y comanda digital. Ahi vive la transaccion atomica `pago + decremento de inventario` (technical guide §4.2).
 - `InventoryModule` es **compartido**: lo usan ordenes, vales y los cocineros. Maneja los **dos planos** del pollo (cocido transaccional + crudo anotado por turno via `ShiftChickenLog`).
 - `AuditModule` no se "inyecta" en cada modulo: **escucha** eventos via interceptor. Esto evita que cada controller tenga que recordar registrar el audit log a mano.
-- **No hay `RolesGuard` en MVP**. La diferenciacion por rol es UI-only (PDR §2.7).
+- **Control de permisos por rol enforced en el backend (V1)**. Dos guards globales (`APP_GUARD`): `AuthGuard` valida el JWT (401 si falta/expira) y `RolesGuard` valida el rol declarado con `@Roles()` (403 si no corresponde). La UI oculta pantallas, pero **no es la frontera de seguridad** (PDR §2.7 / FR-018; detalle en [`technical_guide.md` §5.2](technical_guide.md#52-autenticación-y-autorización)).
 
 ---
 
@@ -100,7 +111,8 @@ sequenceDiagram
     autonumber
     participant FE as Frontend Next.js
     participant MW as main.ts<br/>middlewares
-    participant GUARD as JwtAuthGuard
+    participant GUARD as AuthGuard JWT
+    participant ROLES as RolesGuard
     participant PIPE as ValidationPipe<br/>CreateOrderDto
     participant CTRL as OrdersController
     participant SVC as OrdersService
@@ -111,7 +123,10 @@ sequenceDiagram
 
     FE->>MW: POST /api/v1/orders<br/>Bearer JWT + body
     MW->>GUARD: validar token
-    GUARD->>PIPE: token OK, request.user inyectado
+    Note over GUARD: sin token/expirado → 401
+    GUARD->>ROLES: token OK, request.user inyectado
+    Note over ROLES: rol no autorizado (@Roles) → 403
+    ROLES->>PIPE: rol OK
     PIPE->>CTRL: body validado contra DTO
     CTRL->>SVC: createOrder(dto, userId)
 
@@ -155,10 +170,14 @@ sequenceDiagram
 
 ## 3. Endpoints por dominio (mapa visual)
 
-Los endpoints estan listados en [`docs/technical guide.md` §5.1](technical%20guide.md). Este diagrama los **agrupa por recurso y los conecta a su entidad** en la BD, para que veas de un vistazo quien toca a quien.
+Los endpoints estan listados en [`docs/technical_guide.md` §5.1](technical_guide.md). Este diagrama los **agrupa por recurso y los conecta a su entidad** en la BD, para que veas de un vistazo quien toca a quien.
 
 ```mermaid
 graph LR
+    subgraph AUTH["AUTH (publico)"]
+        A1["POST /auth/login<br/>200 + JWT"]
+    end
+
     subgraph PRODUCTOS["PRODUCTOS"]
         P1["POST /products"]
         P2["GET /products"]
@@ -204,6 +223,7 @@ graph LR
     end
 
     subgraph DB[("PostgreSQL")]
+        T_USERS[(users)]
         T_PROD[(products + variants)]
         T_ORDER[(orders + order_items)]
         T_INV[(inventory_items<br/>+ transactions<br/>+ shift_chicken_log)]
@@ -211,6 +231,8 @@ graph LR
         T_VOUCHER[(vouchers)]
         T_AUDIT[(audit_logs)]
     end
+
+    A1 --> T_USERS
 
     P1 --> T_PROD
     P2 --> T_PROD
@@ -359,7 +381,7 @@ erDiagram
 | Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog` (a agregar en el schema — ver technical guide §3.1). |
 | Vale no suma caja (§2.4) | `Voucher` no genera fila en ningun campo de monto de `Shift`. Aparece como linea separada en el arqueo via query. |
 
-> El schema actual NO tiene aun el modelo `ShiftChickenLog` listado en [`docs/technical guide.md` §3.1](technical%20guide.md). Es deuda explicita del Sprint 0 / Sprint 2.
+> El schema actual NO tiene aun el modelo `ShiftChickenLog` listado en [`docs/technical_guide.md` §3.1](technical_guide.md). Es deuda explicita del Sprint 0 / Sprint 2.
 
 ---
 
@@ -376,9 +398,9 @@ erDiagram
 
 | Tema | Documento autoritativo |
 |------|------------------------|
-| Reglas de negocio (no negociables) | [`docs/PDR.md` §2](PDR.md) |
-| Modelo de datos y entidades | [`docs/technical guide.md` §3](technical%20guide.md) |
-| Maquina de estados de pedidos | [`docs/technical guide.md` §4](technical%20guide.md) + [`docs/PDR.md` §4](PDR.md) |
-| Lista oficial de endpoints | [`docs/technical guide.md` §5.1](technical%20guide.md) |
-| Mapeo negocio to tecnica | [`docs/technical guide.md` §10](technical%20guide.md) |
-| Roadmap V1 vs V2 | [`docs/PDR.md` §13](PDR.md) |
+| Reglas de negocio (no negociables) | [`docs/pdr.md` §2](pdr.md) |
+| Modelo de datos y entidades | [`docs/technical_guide.md` §3](technical_guide.md) |
+| Maquina de estados de pedidos | [`docs/technical_guide.md` §4](technical_guide.md) + [`docs/pdr.md` §4](pdr.md) |
+| Lista oficial de endpoints | [`docs/technical_guide.md` §5.1](technical_guide.md) |
+| Mapeo negocio to tecnica | [`docs/technical_guide.md` §10](technical_guide.md) |
+| Roadmap V1 vs V2 | [`docs/pdr.md` §13](pdr.md) |

@@ -7,6 +7,55 @@
 
 ---
 
+## Índice
+
+**Material de origen**
+- [Citas textuales del documento](#citas-textuales-del-documento)
+- [Wonder Chicken — Menú (2026)](#wonder-chicken---menú-2026)
+- [Ejemplo de inventario diario](#ejemplo-de-inventario-diario)
+- [Ejemplo de comandas/tickets (sistema actual)](#ejemplo-de-comadastickets-impresas-por-el-sistema-actual-a-remplar)
+
+**Documento**
+- [1. Resumen ejecutivo (versión para desarrollo LLM)](#1-resumen-ejecutivo-versión-para-desarrollo-llm)
+- [2. Reglas de negocio (definitivas y no negociables)](#2-reglas-de-negocio-definitivas-y-no-negociables)
+  - [2.1 Precios y sustituciones](#21-precios-y-sustituciones)
+  - [2.2 Variantes y componentes](#22-variantes-y-componentes)
+  - [2.3 Inventario por presas](#23-inventario-por-presas)
+  - [2.4 Vales (ventas internas — descuento por nómina)](#24-vales-ventas-internas--descuento-por-nómina)
+  - [2.5 Pedidos delivery y pago pendiente](#25-pedidos-delivery-y-pago-pendiente)
+  - [2.6 Caja y arqueo](#26-caja-y-arqueo)
+  - [2.7 Roles e interfaces](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)
+  - [2.8 Comandas, tickets, factura y notificaciones](#28-comandas-tickets-factura-y-notificaciones)
+  - [2.9 Auditoría](#29-auditoría)
+  - [2.10 Ventas custom (presas surtidas)](#210-ventas-custom-presas-surtidas)
+  - [2.11 Descuentos sobre la orden (incluye descuento al personal)](#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)
+- [3. Modelo de datos](#3-modelo-de-datos)
+- [4. Máquina de estados de pedidos](#4-máquina-de-estados-de-pedidos)
+- [5. Requerimientos funcionales (completos) y criterios de aceptación](#5-requerimientos-funcionales-completos-y-criterios-de-aceptación)
+- [6. Requerimientos no funcionales](#6-requerimientos-no-funcionales)
+- [7. UX / UI — requisitos y pantallas clave](#7-ux--ui--requisitos-y-pantallas-clave)
+  - [7.1 POS (Cajera)](#71-pos-cajera)
+  - [7.2 Panel Despacho](#72-panel-despacho)
+  - [7.3 Pantalla pública (clientes en local)](#73-pantalla-pública-clientes-en-local)
+  - [7.4 Vista del cliente (su comanda)](#74-vista-del-cliente-su-comanda)
+  - [7.5 Administración](#75-administración)
+  - [7.6 Cocinero (consumos manuales)](#76-cocinero-consumos-manuales)
+  - [7.7 Factura (impresión / PDF)](#77-factura-impresión--pdf)
+- [8. API y contratos](#8-api-y-contratos)
+- [9. Anexos técnicos](#9-anexos-técnicos)
+- [10. Prioridad de trabajo y roadmap de entregas (MVP en sprints)](#10-prioridad-de-trabajo-y-roadmap-de-entregas-mvp-en-sprints)
+- [11. Despliegue](#11-despliegue)
+- [12. Criterios de aceptación del MVP (resumen)](#12-criterios-de-aceptación-del-mvp-resumen)
+- [13. Alcance V1 (MVP) vs V2 (Futuro)](#13-alcance-v1-mvp-vs-v2-futuro)
+  - [13.1 Versión 1 (MVP) — Incluido](#131-versión-1-mvp--incluido)
+  - [13.2 Versión 2 (Roadmap futuro) — Diferido explícitamente](#132-versión-2-roadmap-futuro--diferido-explícitamente)
+  - [13.3 Decisiones residuales pendientes de cierre antes de V1](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)
+- [14. Riesgos y decisiones POSPONIBLES (residuales tras Fase 1)](#14-riesgos-y-decisiones-posponibles-residuales-tras-fase-1)
+- [15. Siguientes entregables que puedo generar (elige uno)](#15-siguientes-entregables-que-puedo-generar-elige-uno)
+- [Observación final (para el LLM y el equipo)](#observación-final-para-el-llm-y-el-equipo)
+
+---
+
 ## CITAS TEXTUALES DEL DOCUMENTO:
 **SITUACIÓN PROBLEMÁTICA:** Después de haber realizado un análisis de observación al flujo de trabajo del restaurante Wonder Chicken, examinar el funcionamiento de su sistema informático genérico y haber sostenido una entrevista con el dueño del restaurante, se identificaron los siguientes problemas:
 - El sistema actual no se adecua a la forma de trabajo del restaurante, pues no admite el registro de nuevas variantes de los productos, por ejemplo: Una porción media consta de 2 presas de pollo + 1 porción de papa frita; pero también la porción de papa frita puede ser sustituida por 1 porción de arroz o 1 porción de Smiles McCain. Además, el sistema actual no permite diferenciar entre los pedidos para llevar y los de mesa. También dicho sistema no contempla el registro de vales de productos que opcionalmente un trabajador puede solicitar.
@@ -264,7 +313,7 @@ RESPONSABLE: ROXANA
 # 1. Resumen ejecutivo (versión para desarrollo LLM)
 **Contexto:** Wonder Chicken es un restaurante de servicio rápido con alta rotación de pedidos y necesidad de control por presas de pollo. El sistema actual es genérico y no cubre variantes de productos, control de presas, diferencia pedidos mesa/llevar, notificaciones eficientes ni manejo claro de vales.
 **Propósito del PRD:** Proveer al LLM un conjunto completo y no ambiguo de reglas de negocio, modelos de datos, flujos y criterios de aceptación para generar backend y frontend que cumplan con las operaciones reales del restaurante.
-**Alcance MVP:** Gestión de productos/variantes, POS (mesa/llevar), comandas digitales/impresa(opcional), ventas custom de presas surtidas, inventario por presas, control de caja por turno, vales, notificaciones de pedido listo en pantalla pública, interfaces diferenciadas por rol (sin enforcement de permisos en backend MVP), reportes básicos, historial de comandas, impresión térmica de factura (solo si el cliente la pide).
+**Alcance MVP:** Gestión de productos/variantes, POS (mesa/llevar), comandas digitales/impresa(opcional), ventas custom de presas surtidas, inventario por presas, control de caja por turno, vales, notificaciones de pedido listo en pantalla pública, interfaces diferenciadas por rol con enforcement de permisos por rol en backend (JWT), reportes básicos, historial de comandas, impresión térmica de factura (solo si el cliente la pide).
 
 ### Personas y casos de uso
 - **Administrador**
@@ -294,7 +343,7 @@ RESPONSABLE: ROXANA
 ---
 
 # 2. Reglas de negocio (definitivas y no negociables)
-> Estas reglas son la base del producto: rigen la operación del restaurante y deben respetarse al implementar. La traducción técnica de cada regla (entidades, campos, endpoints) vive en [`docs/technical guide.md`](technical%20guide.md).
+> Estas reglas son la base del producto: rigen la operación del restaurante y deben respetarse al implementar. La traducción técnica de cada regla (entidades, campos, endpoints) vive en [`docs/technical_guide.md`](technical_guide.md).
 
 ## 2.1 Precios y sustituciones
 - **Regla principal:** El precio del plato **NO cambia** cuando se sustituye su acompañamiento. Los platos vienen con 1 porción de mixto (papa + arroz) por defecto. El cliente puede sustituir esa porción mixta por 1 porción de arroz, 1 porción de papa o 1 porción de smiles, **manteniendo el precio base**.
@@ -354,12 +403,12 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 - **Anulaciones:** al anular un pedido ya pagado, se requiere **motivo y detalle**. Aparecen en el arqueo con su monto y motivo para cuadrar los ingresos del turno.
 - **Discrepancias:** se registran para auditoría. El umbral de tolerancia y la política de cierre con discrepancia son **POSPONIBLE** (definir con administrador antes de Sprint 3 — ver §13.3).
 
-## 2.7 Roles e interfaces (V1 sin control de permisos en backend)
+## 2.7 Roles e interfaces (V1 con autenticación JWT y control de permisos por rol en backend)
 - **Roles funcionales:** administrador, cajera, despachadora, cocinero.
-- **Decisión V1:** **el control de permisos NO se aplica en backend** en V1. La diferenciación por rol existe solo en la UI: cada rol ve solo las pantallas relevantes a su trabajo. El cierre del backend por rol es parte de V2 (ver §13).
-- **Acciones típicas por rol (guía para diseñar la UI):**
-  - **Administrador:** registrar productos, registrar platos / variantes, crear usuarios, modificar inventario (con motivo), ver reportes globales.
-  - **Cajera:** registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos.
+- **Decisión V1:** **el control de permisos SÍ se aplica en backend** en V1, vía autenticación JWT + un guard que valida el rol en cada endpoint. La UI además oculta las pantallas no relevantes a cada rol, pero **la UI no es la frontera de seguridad: el backend valida el rol en cada petición** (devuelve 401 sin token válido, 403 si el rol no corresponde).
+- **Matriz de autorización por rol** (la UI la usa para mostrar pantallas; el backend la usa para autorizar endpoints vía guard — es la spec que el guard implementa):
+  - **Administrador:** registrar productos, registrar platos / variantes, crear usuarios, modificar inventario (con motivo), ver reportes globales, crear descuentos y autorizar descuentos por turno.
+  - **Cajera:** registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos.
   - **Despachadora:** ver la cola de comandas, marcar pedidos como "listo" y "entregado".
   - **Cocinero:** registrar ingreso de presas procesadas, anotar consumos manuales por turno (bolsas de papa, smile, etc.).
 - **Sesiones por turno:** un mismo trabajador puede trabajar como cajera un día y como despachadora otro. Pero **dentro del mismo turno**, un usuario solo puede tener **1 sesión activa con 1 rol**. No puede estar simultáneamente activo como cajera y despachadora en el mismo turno.
@@ -431,18 +480,18 @@ Cada tipo de presa cocida (pecho, ala, pierna, entrepierna) lleva un **precio de
 > Decisión de arquitectura para quien implemente. El requisito es **"el admin crea descuentos y la cajera los aplica"** — esa configurabilidad ES la feature, así que se justifica un **catálogo mínimo** de descuentos (entidad `Discount`: nombre, monto fijo, disponibilidad, activo). NO confundir con un motor de reglas:
 - **Alcance acotado a propósito:** **monto fijo** (sin porcentaje), **a nivel orden** (sin nivel ítem), **un descuento por orden** (sin apilamiento), sin ventanas de validez más allá de `siempre` / `fin de turno`. Si en el futuro hace falta %, apilamiento o targeting por ítem, se agrega **con un caso real**, no antes.
 - **La autorización por turno es la única excepción de control, y entra con un caso real:** el descuento de compensación al cliente exige que el admin habilite a la cajera, así que el catálogo suma **un flag `requiereAutorizacion`** en el `Discount` y una **autorización por turno** (admin → sesión de cajera). Sigue sin ser un motor de reglas: es un **flag de habilitación a nivel turno** (autorizado sí/no), NO un contador de usos ni una cuota por pedido. Una vez autorizada, la cajera aplica el descuento sin límite de cantidad hasta el cierre del turno.
-- **El monto se congela en la transacción (snapshot), NO se deriva de una resta:** al aplicar un descuento, la orden **copia** el `discountAmount` del **monto fijo vigente** en el catálogo (ej. 7 Bs) y guarda también la referencia al `Discount` y el `total` cobrado. Ojo: con monto fijo el `discountAmount` **es el valor que fijó el admin**, no el resultado de `precio_original − precio_final` — al revés, el `total` es el que se deriva (`precio_original − discountAmount`). Se congela en la orden para que, si el admin edita el descuento después (de 7 a 10 Bs), las ventas viejas conserven los 7 Bs con que realmente se cobraron. Detalle de campos en [`docs/technical guide.md` §3](technical%20guide.md).
+- **El monto se congela en la transacción (snapshot), NO se deriva de una resta:** al aplicar un descuento, la orden **copia** el `discountAmount` del **monto fijo vigente** en el catálogo (ej. 7 Bs) y guarda también la referencia al `Discount` y el `total` cobrado. Ojo: con monto fijo el `discountAmount` **es el valor que fijó el admin**, no el resultado de `precio_original − precio_final` — al revés, el `total` es el que se deriva (`precio_original − discountAmount`). Se congela en la orden para que, si el admin edita el descuento después (de 7 a 10 Bs), las ventas viejas conserven los 7 Bs con que realmente se cobraron. Detalle de campos en [`docs/technical_guide.md` §3](technical_guide.md).
 - **Los vales (§2.4) NO son descuentos:** no suman a caja y descuentan nómina — concepto aparte, no se mezclan en este feature.
 
 ---
 
 # 3. Modelo de datos
-> **Trasladado a la guía técnica.** El detalle de entidades, campos y relaciones del esquema lógico de base de datos vive en [`docs/technical guide.md` §3](technical%20guide.md). Este PDR mantiene únicamente las reglas de negocio que esas entidades deben respetar.
+> **Trasladado a la guía técnica.** El detalle de entidades, campos y relaciones del esquema lógico de base de datos vive en [`docs/technical_guide.md` §3](technical_guide.md). Este PDR mantiene únicamente las reglas de negocio que esas entidades deben respetar.
 
 ---
 
 # 4. Máquina de estados de pedidos
-> Los efectos transaccionales detallados (campos, timestamps, reversiones de inventario) viven en [`docs/technical guide.md` §4](technical%20guide.md). Esta sección describe los estados y las reglas de negocio que rigen las transiciones.
+> Los efectos transaccionales detallados (campos, timestamps, reversiones de inventario) viven en [`docs/technical_guide.md` §4](technical_guide.md). Esta sección describe los estados y las reglas de negocio que rigen las transiciones.
 
 **Estados:** registrado → confirmado → en preparación → listo → entregado → cerrado.
 Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
@@ -463,112 +512,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 5. Requerimientos funcionales (completos) y criterios de aceptación
-> Cada FR incluye criterio de aceptación mínimo, pensado para pruebas automáticas y E2E.
-
-### FR-001 — Gestión de productos y variantes (Alta)
-- **Funcionalidad:** El administrador puede crear, editar y dar de baja productos; definir variantes con sus componentes obligatorios (presas) y por defecto (acompañamiento); fijar el precio base del plato. Las sustituciones permitidas no afectan el precio (§2.1).
-- **Criterio de aceptación:** El administrador crea un producto y su variante; la variante queda disponible en el POS de inmediato; el POS muestra la descomposición de la variante y el precio calculado.
-
-### FR-002 — Registro de pedidos POS (Alta)
-- **Funcionalidad:** El POS de la cajera ofrece un flujo rápido: seleccionar producto → elegir variante → elegir las presas → (opcional) aplicar 1 sustitución de acompañamiento → agregar bebidas o extras → confirmar pago o dejar pago pendiente. Soporta pedidos **MESA** y **LLEVAR** estándar. Las ventas de presas surtidas se manejan en un flujo separado (FR-002b).
-- **Criterio de aceptación:** La cajera puede registrar un pedido en 3 pasos o menos; el total es correcto; al confirmar, la comanda aparece en el panel de despacho.
-
-### FR-002b — Venta custom de presas surtidas (Alta)
-- **Funcionalidad:** El POS tiene un flujo dedicado **"Venta Custom"** para combinaciones que no encajan con el menú (ej. "2 pechos sueltos", "1 ala + 1 pierna + arroz"). La cajera indica cantidad y tipo de cada presa, acompañamientos opcionales y bebidas opcionales. El sistema muestra un **precio sugerido** = suma del precio de venta de cada presa seleccionada + extras + bebidas (precio de venta por presa configurado por el admin, §2.10); la cajera puede **aceptarlo o pisarlo** y confirma el precio final. La venta puede ser **MESA o LLEVAR**. CUSTOM no es un tipo de pedido aparte: es una marca sobre la orden (ver §2.10).
-- **Criterio de aceptación:** Registrar una venta custom LLEVAR de "2 pechos + 1 papa + 1 cocacola" muestra un precio sugerido (suma de los precios de venta configurados) que la cajera puede modificar; descuenta exactamente 2 pechos del inventario y 1 unidad de cocacola al confirmar el pago; persiste el precio **confirmado**, no la sugerencia. La comanda muestra "LLEVAR" en la cabecera y la composición real del ítem. Los reportes pueden filtrar ventas custom.
-
-### FR-003 — Comanda digital y factura opcional (Alta)
-- **Funcionalidad:** Al confirmar un pedido, el sistema genera la **comanda digital** y la publica en (a) el panel de despachadoras y (b) la vista pública del cliente, donde el cliente puede consultar su pedido. La **factura solo se emite si el cliente la pide**; cuando se pide, se imprime en la térmica o, si la impresora falla, se descarga en PDF.
-- **Criterio de aceptación:** Al confirmar el pedido, la comanda aparece en el panel de despacho de inmediato. El botón de imprimir factura está disponible solo bajo demanda. Si la impresora térmica falla, el sistema descarga el PDF de la factura automáticamente.
-
-### FR-004 — Control de caja por turno (Alta)
-- **Funcionalidad:** La cajera abre y cierra su turno. El arqueo muestra el desglose por método de pago, vales, gastos y anulaciones. Solo 1 caja por cajera por turno.
-- **Criterio de aceptación:** Al abrir el turno se crea un registro con el monto inicial; al cerrar, no se pueden registrar más ventas en esa caja; el arqueo se exporta a CSV con totales por método, vales, anulaciones y diferencia.
-
-### FR-005 — Vales de trabajadores (Media)
-- **Funcionalidad:** La cajera o el administrador registran un vale con nombre del trabajador, plato consumido, fecha y monto. El vale descuenta presas y bebidas del inventario, pero NO suma al ingreso de caja del turno.
-- **Criterio de aceptación:** El vale aparece como línea separada en el arqueo; descuenta inventario; existe una interfaz que lista todos los vales con filtros por trabajador, fecha y monto.
-
-### FR-006 — Inventario por presas (Alta)
-- **Funcionalidad:** El sistema lleva los **dos planos** de inventario de pollo definidos en §2.3:
-  - **Plano cocido (transaccional):** descuenta por venta **al confirmar el pago** por tipo (pecho, ala, pierna, entrepierna); muestra un dashboard de stock cocido por tipo y delta del turno.
-  - **Plano crudo (anotado por turno):** registra por turno y por tipo de presa el reproceso crudo, procesado crudo, sobrante procesado crudo y sobrante cocido en expositor; aplica la regla de continuidad (sobrante crudo del turno T → reproceso crudo del turno T+1).
-- Permite además registrar los consumos manuales del turno (bolsas de papa, smile, vasos, etc.) — ver FR-017.
-- **Criterio de aceptación:** Una venta pagada descuenta el stock cocido; un pedido pendiente de pago NO descuenta hasta confirmar; el dashboard muestra el stock cocido actual por tipo y el delta del turno; al abrir un nuevo turno, el reproceso crudo se autopobla con el sobrante crudo del turno anterior; la reconciliación diaria es posible (vendido cocido + sobrante cocido en expositor vs cocinado en turno).
-
-### FR-007 — Notificación de pedido listo (Alta)
-- **Funcionalidad:** Una **pantalla pública** dentro del local muestra los pedidos listos, estilo "turnos de banco". Solo aparece **el número de pedido** (sin nombre, sin mesa). Aplica indistintamente a **MESA y LLEVAR**. Suena una alerta breve cuando aparece un pedido. Cuando la despachadora marca el pedido como entregado, este desaparece de la pantalla.
-- **Criterio de aceptación:** Un pedido listo (MESA o LLEVAR) aparece en la pantalla pública con su número y suena la alerta; al marcarse como entregado, desaparece y queda registrado quién lo entregó y cuándo.
-
-### FR-008 — Interfaces diferenciadas por rol (Alta)
-- **Funcionalidad:** Cada rol ve solo las pantallas relevantes a su trabajo: POS para la cajera, panel de comandas para la despachadora, dashboard de inventario para el cocinero, admin completo para el administrador. **El control de permisos en el MVP es solo visual** — el backend no bloquea endpoints por rol (§2.7).
-- **Criterio de aceptación:** Al ingresar como cajera, se muestran POS y caja; como despachadora, el panel de comandas; como administrador, todo.
-
-### FR-008b — Sesión única por turno (Alta)
-- **Funcionalidad:** Durante un mismo turno, un usuario solo puede estar activo con un rol. No puede estar simultáneamente como cajera y despachadora.
-- **Criterio de aceptación:** Si un usuario ya tiene sesión activa en el turno actual, intentar iniciar sesión con otro rol falla con un mensaje claro.
-
-### FR-009 — Registro de gastos (Media)
-- **Funcionalidad:** La cajera registra gastos pagados con dinero de la caja (ej. compra de arroz, guantes, servilletas). El gasto queda asociado al turno.
-- **Criterio de aceptación:** El gasto aparece en el arqueo y en los reportes.
-
-### FR-010 — Reportes (Alta)
-- **Funcionalidad MVP:** Reportes de (a) ventas por turno/día, (b) inventario de presas (vendidas y restantes por tipo), (c) arqueo de caja con anulaciones y vales. Exportables a CSV.
-- **Deseable (no obligatorio MVP):** Reporte de productos más vendidos.
-- **Criterio de aceptación:** Se puede generar un reporte por rango de fechas; la exportación a CSV es correcta.
-
-### FR-011 — Pedidos con pago pendiente (Alta)
-- **Funcionalidad:** La cajera puede registrar pedidos LLEVAR/delivery con pago pendiente. **Se preparan de inmediato**, pero NO descuentan inventario ni contabilizan ingreso hasta confirmar el pago. **No hay timeout automático**: la cancelación es siempre manual, la decide la cajera, en cualquier momento, sin requerir motivo (§2.5).
-- **Criterio de aceptación:** Un pedido con pago pendiente aparece en el panel de despacho y se prepara; al confirmar el pago, descuenta inventario y suma al ingreso del turno; el sistema no auto-cancela por tiempo.
-
-### FR-011b — Anulación de pedido pagado (Alta)
-- **Funcionalidad:** La cajera o el administrador pueden anular un pedido ya pagado. Es obligatorio indicar **motivo y detalle**. El sistema revierte el inventario y registra la anulación con su monto en el arqueo del turno.
-- **Criterio de aceptación:** Al anular un pedido pagado, motivo y detalle son obligatorios; el inventario se revierte; la anulación aparece en el arqueo bajo "anulaciones" con su monto y razón.
-
-### FR-012 — Historial de comandas (Media)
-- **Funcionalidad:** El sistema guarda las comandas digitales y los datos del pedido para auditoría y consulta posterior. Se pueden buscar por ID de pedido, fecha, responsable, mesa o cliente.
-- **Criterio de aceptación:** Buscar y recuperar una comanda es rápido.
-
-### FR-013 — UI limpia por rol (Alta)
-- **Funcionalidad:** POS y paneles con vistas simplificadas por rol para reducir la carga cognitiva. Soporte de tema claro y oscuro.
-- **Criterio de aceptación:** Las pruebas de usabilidad muestran reducción de errores; cada rol ve solo las opciones relevantes.
-
-### FR-014 — Impresión de factura y descarga PDF (Media)
-- **Funcionalidad:** La impresora térmica se usa solo para imprimir la factura cuando el cliente la pide. Si la impresora falla, el sistema descarga el PDF de la factura para que el cliente o la cajera lo impriman por otra vía.
-- **Criterio de aceptación:** La impresión de factura funciona; si falla, el PDF se descarga automáticamente.
-
-### FR-015 — Vista pública del cliente (Alta)
-- **Funcionalidad:** Cada pedido tiene una interfaz dedicada donde el cliente puede ver SU comanda (no las de otros), accesible por una URL o QR únicos.
-- **Criterio de aceptación:** El cliente entra a la URL de su pedido y ve su comanda; intentar acceder al pedido de otra persona no funciona.
-
-### FR-016 — Gestión de descuentos y aplicación en POS (Media)
-- **Funcionalidad:** El administrador crea **descuentos** (nombre, **monto fijo** en Bs, disponibilidad `siempre` / `solo a fin de turno`, **requiere autorización** `sí` / `no`, activo). La cajera puede **aplicar un descuento a una orden** desde el POS (uno por orden, sin apilamiento). Hay dos instancias principales (§2.11):
-  - **Descuento al personal** (sobrante de pollo cocido): "Descuento personal", **7 Bs**, disponibilidad `solo a fin de turno`, sin autorización. Cualquier cajera lo aplica cuando está disponible.
-  - **Compensación al cliente** (pollo defectuoso): "Compensación al cliente", **7 Bs**, disponibilidad `siempre`, **requiere autorización**. La cajera solo lo puede aplicar si el admin la autorizó en ese turno.
-- El descuento es puramente monetario: el inventario descuenta el producto real, sin trucos (§2.11).
-- **Criterio de aceptación:** El admin crea un descuento de monto fijo; la cajera lo aplica a una orden y el total baja en ese monto; queda registrado el precio original, el monto descontado y la referencia al descuento; aparece en arqueo y reportes; el descuento `solo a fin de turno` no se ofrece fuera de esa ventana; el inventario descuenta lo correcto y la caja cuadra.
-
-### FR-016b — Autorización de descuentos por turno (Media)
-- **Funcionalidad:** Para los descuentos marcados con `requiere autorización = sí`, el administrador otorga una **autorización por turno a la sesión de cajera**. Una vez autorizada, la cajera puede aplicar ese descuento **las veces que necesite hasta el cierre del turno**; sin autorización, el POS no le ofrece el descuento. La autorización se da **una vez por turno** (no por orden), queda atada a la sesión de cajera de ese turno (§2.7, FR-008b) y **se extingue al cerrar el turno**. El acto de autorizar queda auditado (§2.9).
-- **Criterio de aceptación:** Sin autorización, la cajera no ve/no puede aplicar el descuento "Compensación al cliente"; tras autorizarla el admin, puede aplicarlo a uno o varios pedidos del turno; la autorización no se renueva por pedido; al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente; queda registrado quién autorizó, a qué cajera y cuándo.
-
-### FR-017 — Registro de consumos manuales y ciclo crudo de presas por turno (Media)
-- **Funcionalidad:** Al cierre del turno, el cocinero registra:
-  - **Consumos manuales de insumos:** bolsas de papa, bolsas de smile, envases de arroz, vasos, bombillas, etc. (referencia: "INVENTARIO DIARIO").
-  - **Ciclo crudo de presas por tipo (pecho, ala, pierna, entrepierna):** reproceso crudo, procesado crudo, sobrante procesado crudo y sobrante cocido en expositor (§2.3).
-- Al abrir un turno, el sistema **autopobla** el reproceso crudo a partir del sobrante crudo del turno anterior; el cocinero puede ajustar antes de confirmar y el cambio queda registrado.
-- **Criterio de aceptación:** El registro queda vinculado al turno y aparece en el reporte de inventario diario; el reproceso crudo del nuevo turno coincide por default con el sobrante crudo del turno anterior; el sistema reconcilia `(reproceso + procesado − sobrante crudo) − vendido cocido` contra el sobrante cocido en expositor anotado y reporta discrepancias.
+> **Trasladado a un documento dedicado.** El detalle de los requerimientos funcionales (FR-001 a FR-017) con sus criterios de aceptación vive en [`docs/requirements.md` §1](requirements.md). Este PDR mantiene las reglas de negocio (§2) que esos FR deben respetar y el alcance V1/V2 (§13).
 
 ---
 
 # 6. Requerimientos no funcionales
-> **Trasladado a la guía técnica.** El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`docs/technical guide.md` §2](technical%20guide.md). Esta sección del PDR enumera únicamente las calidades de uso de cara al negocio:
-
-- **Velocidad de uso:** El POS debe permitir registrar una venta en 3 pasos como máximo. Las pantallas deben ser limpias y responder al instante en hora pico.
-- **Idioma y moneda:** Español por defecto; montos en bolivianos (Bs).
-- **Accesibilidad:** Contraste y tamaño de fuente adecuados para uso en ambientes con iluminación variable.
-- **Tema:** Soporte para tema claro y oscuro.
-- **Modo de operación:** Aplicación web local on-premise. La sincronización a la nube y los backups automáticos son parte de la **V2** (ver §13).
+> **Trasladado a un documento dedicado.** Las calidades de uso de cara al negocio viven en [`docs/requirements.md` §2](requirements.md). El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`docs/technical_guide.md` §2](technical_guide.md).
 
 ---
 
@@ -607,12 +556,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 8. API y contratos
-> **Trasladado a la guía técnica.** El catálogo de endpoints, la estructura de respuesta estándar (éxito/error), los códigos de error y las reglas de seguridad viven en [`docs/technical guide.md` §5](technical%20guide.md).
+> **Trasladado a la guía técnica.** El catálogo de endpoints, la estructura de respuesta estándar (éxito/error), los códigos de error y las reglas de seguridad viven en [`docs/technical_guide.md` §5](technical_guide.md).
 
 ---
 
 # 9. Anexos técnicos
-> **Trasladado a la guía técnica.** Los JSON payloads de ejemplo, el OpenAPI skeleton y los 15 casos de prueba E2E priorizados viven en [`docs/technical guide.md` §6 / §7 / §8](technical%20guide.md).
+> **Trasladado a la guía técnica.** Los JSON payloads de ejemplo, el OpenAPI skeleton y los 15 casos de prueba E2E priorizados viven en [`docs/technical_guide.md` §6 / §7 / §8](technical_guide.md).
 
 ---
 
@@ -627,7 +576,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 11. Despliegue
-> **Trasladado a la guía técnica.** El detalle de modo de operación, distribución, sincronización a nube y backups vive en [`docs/technical guide.md` §9](technical%20guide.md).
+> **Trasladado a la guía técnica.** El detalle de modo de operación, distribución, sincronización a nube y backups vive en [`docs/technical_guide.md` §9](technical_guide.md).
 >
 > Resumen para negocio: en **V1** el sistema corre localmente en el restaurante (sin nube). La **sincronización a la nube y los backups automáticos** son parte de la **V2** (ver §13).
 
@@ -645,10 +594,10 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Política de descuento al personal (Porción Media a 23 Bs) registrada con su marca de descuento interno.
 - Descuento de compensación al cliente por pollo defectuoso (7 Bs, todo el turno) aplicable solo si el admin autorizó a la cajera en ese turno; la autorización es por turno (no por orden) y se extingue al cierre.
 - Registro de consumos manuales por turno (bolsas, vasos, bombillas, etc.).
-- UI diferenciada por rol (el control de permisos en backend queda para V2).
+- UI diferenciada por rol + autenticación JWT y control de permisos por rol enforced en backend.
 - Auditoría de acciones críticas (ventas, arqueos, vales, anulaciones, ajustes de inventario).
 
-> **Stack tecnológico:** especificado en [`docs/technical guide.md` §1](technical%20guide.md).
+> **Stack tecnológico:** especificado en [`docs/technical_guide.md` §1](technical_guide.md).
 
 ---
 
@@ -706,9 +655,9 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ### Usuarios, roles, sesiones
 - Roles funcionales: administrador, cajera, despachadora, cocinero (§2.7).
-- **UI diferenciada por rol**; **sin control de permisos en el backend** en V1 (FR-008).
+- **UI diferenciada por rol** + **control de permisos por rol enforced en el backend** en V1 (FR-008).
 - **Sesión única por turno**: un usuario no puede estar simultáneamente activo como cajera y despachadora en el mismo turno (FR-008b).
-- Autenticación con usuario y contraseña.
+- Autenticación con usuario y contraseña vía **JWT (Bearer token)**; cada endpoint valida el rol del usuario (FR-018).
 
 ### Reportes (MVP)
 - Ventas por turno / por día (FR-010).
@@ -720,7 +669,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Registro de auditoría solo para **acciones críticas**: ventas, anulaciones, ajustes de inventario, emisión de vales, apertura/cierre de caja, generación de reportes (§2.9).
 
 ### Despliegue
-- Aplicación web local (on-premise). Detalles técnicos en [`docs/technical guide.md` §9](technical%20guide.md).
+- Aplicación web local (on-premise). Detalles técnicos en [`docs/technical_guide.md` §9](technical_guide.md).
 
 ---
 
@@ -742,9 +691,6 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Despliegue **híbrido local + nube** con sincronización diferencial.
 - **Estrategia de resolución de conflictos**: priorizar cambios locales recientes y registrar conflictos para resolución manual.
 - Operación offline tolerable.
-
-### Control de permisos en backend
-- En V1 los permisos se diferencian solo en la UI; en V2 el backend bloquea acciones según el rol del usuario (§2.7).
 
 ### Distribución
 - **Empaquetado estandarizado** para portabilidad cross-host y onboarding rápido (V1 lo deja opcional).
@@ -777,7 +723,7 @@ La mayoría de POSPONIBLES de la versión 1.0 quedaron resueltos en el cuestiona
 - Vales sin umbral ni límite.
 - Los pedidos con pago pendiente se preparan de inmediato; la cancelación es siempre manual por la cajera (sin timeout automático).
 - Comandas digitales por default; impresión solo para la factura, a demanda.
-- Sin control de permisos en backend en V1; sesión única por turno.
+- Con control de permisos por rol en backend (JWT) en V1; sesión única por turno.
 - Política de descuento al personal documentada (Porción Media a 23 Bs).
 - Reportes MVP: ventas por turno, inventario de presas, arqueo de caja.
 - Auditoría MVP: solo acciones críticas.
@@ -791,19 +737,19 @@ La mayoría de POSPONIBLES de la versión 1.0 quedaron resueltos en el cuestiona
 - **C.** Anexo A: payloads ampliados con todos los flujos (custom, descuento personal, anulación, vale, etc.).
 - **D.** Anexo B: 15 casos de prueba E2E con datos concretos y pasos.
 
-> El detalle técnico ya existente vive en [`docs/technical guide.md`](technical%20guide.md).
+> El detalle técnico ya existente vive en [`docs/technical_guide.md`](technical_guide.md).
 
 ---
 
 ## Observación final (para el LLM y el equipo)
-Este PRD está centrado en las **reglas de negocio** y en la **consistencia transaccional** (ventas ↔ inventario ↔ arqueo). La implementación técnica (modelo de datos, API, payloads, despliegue) vive en [`docs/technical guide.md`](technical%20guide.md).
+Este PRD está centrado en las **reglas de negocio** y en la **consistencia transaccional** (ventas ↔ inventario ↔ arqueo). La implementación técnica (modelo de datos, API, payloads, despliegue) vive en [`docs/technical_guide.md`](technical_guide.md).
 
 **Reglas críticas de negocio que NO se pueden alterar al implementar:**
 1. La sustitución de acompañamiento NO modifica el precio del plato (§2.1).
 2. El inventario se descuenta al confirmar el pago, NO al pasar el pedido a preparación (§2.3).
 3. Los pedidos con pago pendiente se preparan de inmediato; la cancelación es siempre manual por la cajera, **sin timeout automático** (§2.5).
 4. Las comandas son digitales por default; solo la factura se imprime y solo a demanda del cliente (§2.8).
-5. En V1 no hay control de permisos en el backend — solo UI diferenciada por rol (§2.7).
+5. En V1 hay autenticación JWT y control de permisos por rol enforced en el backend; la UI diferenciada es complementaria, no la frontera de seguridad (§2.7).
 6. Las ventas custom (presas surtidas) pueden ser MESA o LLEVAR. CUSTOM nunca es un tipo de pedido — es una marca que se aplica al pedido (§2.10).
 7. La política de descuento al personal (Porción Media a 23 Bs) se registra como descuento interno para que arqueo e inventario cuadren con trazabilidad (§2.11).
 8. El descuento de compensación al cliente por pollo defectuoso (7 Bs, disponible todo el turno) **requiere autorización del admin a la cajera**. La autorización es **por turno, no por orden**: una vez otorgada, la cajera lo aplica las veces que necesite hasta el cierre del turno, momento en que la autorización se extingue (§2.11).
