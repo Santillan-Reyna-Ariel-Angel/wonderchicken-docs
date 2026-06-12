@@ -9,6 +9,8 @@
 - Esquema real → [`prisma/schema.prisma`](../prisma/schema.prisma)
 
 > Si un diagrama no coincide con el código, gana el código. Este documento se actualiza, no al revés.
+>
+> **Altitud de este documento:** el [ER de §4](#4-modelo-relacional-vista-resumida-del-prisma) es una **vista resumida** — solo relaciones críticas, **sin campos**. Es para **ubicarte, no para implementar**. El modelo lógico completo (todos los campos, snapshots, enums — el contrato del dato) vive en [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd). Mismo sistema, distinta altitud.
 
 ---
 
@@ -322,52 +324,10 @@ erDiagram
     InventoryItem ||--o{ InventoryBatch : "lotes opcional"
     InventoryItem ||--o{ DailyManualConsumption : "anotacion por turno"
 
-    User {
-        uuid id PK
-        string username UK
-        enum role "ADMIN | CASHIER | DISPATCHER | COOK"
-    }
-    Shift {
-        uuid id PK
-        uuid cashierId FK
-        int lastOrderNumber "reinicia por turno"
-        decimal openingAmount
-        decimal closingAmount
-        enum status "OPEN | CLOSED"
-    }
-    Order {
-        uuid id PK
-        int orderNumber "unique by shift"
-        enum type "MESA | LLEVAR (no CUSTOM)"
-        bool isCustom "§2.10"
-        bool internalDiscount "§2.11"
-        enum status "ver maquina de estados"
-        enum paymentStatus "PENDING | PAID"
-        datetime readyAt
-        datetime paidAt
-    }
-    OrderItem {
-        uuid id PK
-        json selectedPieces "ordenes estandar"
-        json customPieces "ordenes custom §2.10"
-        json substitutions "no afectan precio §2.1"
-        json drinks
-    }
-    InventoryItem {
-        string sku UK
-        enum type "PECHO | ALA | PIERNA | ENTREPIERNA | BEBIDA | INSUMO"
-        int currentStock "plano cocido transaccional"
-    }
-    InventoryTransaction {
-        int delta "negativo = decremento"
-        enum reason "SALE | VALE | INTERNAL_DISCOUNT | CANCELLATION_REVERT | ..."
-        uuid referenceId "Order/Voucher/Expense"
-    }
-    Voucher {
-        string code UK "V-YYYYMMDD-NNN"
-        string workerName "puede no ser User"
-        decimal amount "descuenta nomina, NO suma caja"
-    }
+    Shift ||--o{ ShiftChickenLog : "ciclo crudo presas §2.3"
+    Discount ||--o{ Order : "aplicado (uno por orden) §2.11"
+    Discount ||--o{ DiscountAuthorization : "habilita"
+    Shift ||--o{ DiscountAuthorization : "autoriza por turno"
 ```
 
 **Decisiones modeladas que vale la pena tener en la cabeza:**
@@ -380,6 +340,7 @@ erDiagram
 | Numeracion por turno (FR-007) | `Order.orderNumber` con `@@unique([shiftId, orderNumber])` + `Shift.lastOrderNumber` como contador atomico. |
 | Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog` (a agregar en el schema — ver technical guide §3.1). |
 | Vale no suma caja (§2.4) | `Voucher` no genera fila en ningun campo de monto de `Shift`. Aparece como linea separada en el arqueo via query. |
+| Descuento al personal ya no es un flag (§2.11) | Se eliminó `Order.internalDiscount`. Ahora `Order.discountId` apunta al catálogo `Discount`; la autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). Detalle de campos en technical_guide §3.1. |
 
 > El schema actual NO tiene aun el modelo `ShiftChickenLog` listado en [`docs/technical_guide.md` §3.1](technical_guide.md). Es deuda explicita del Sprint 0 / Sprint 2.
 
