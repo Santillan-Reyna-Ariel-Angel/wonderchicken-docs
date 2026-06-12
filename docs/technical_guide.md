@@ -18,6 +18,7 @@
 - [3. Modelo de datos (esquema lógico para la BD)](#3-modelo-de-datos-esquema-lógico-para-la-bd)
   - [3.1 Entidades principales](#31-entidades-principales)
   - [3.2 Relaciones clave](#32-relaciones-clave)
+  - [3.3 Diagrama de relaciones (ER)](#33-diagrama-de-relaciones-er)
 - [4. Máquina de estados de pedidos (transaccional)](#4-máquina-de-estados-de-pedidos-transaccional)
   - [4.1 Transiciones y efectos](#41-transiciones-y-efectos)
   - [4.2 Reglas transaccionales](#42-reglas-transaccionales)
@@ -195,6 +196,55 @@
 - `Discount` 1..* `DiscountAuthorization`
 - `DiscountAuthorization` vincula `Discount`, `Shift` y `User` (cajera) — autorización por turno otorgada por un admin
 
+## 3.3 Diagrama de relaciones (ER)
+
+Así se conectan las entidades clave descritas en [§3.1](#31-entidades-principales). Es el corazón transaccional del sistema.
+
+```mermaid
+erDiagram
+    Product ||--o{ Variant : tiene
+    Order ||--o{ OrderItem : contiene
+    OrderItem }o--o| Product : "referencia (null si custom)"
+    OrderItem }o--o| Variant : "referencia (null si custom)"
+    Shift ||--o{ Order : agrupa
+    Shift ||--o{ Voucher : agrupa
+    Shift ||--o{ Expense : agrupa
+    Shift ||--o{ ShiftChickenLog : "ciclo crudo presas"
+    Shift ||--o{ DailyManualConsumption : "consumos manuales"
+    Shift ||--o{ DiscountAuthorization : "autoriza por turno"
+    Discount ||--o{ Order : "aplicado (uno por orden)"
+    Discount ||--o{ DiscountAuthorization : habilita
+    InventoryItem ||--o{ InventoryTransaction : "movimientos"
+    Order ||--o{ InventoryTransaction : "reason=sale"
+    User ||--o{ Order : "createdBy"
+    User ||--o{ Shift : "cashierId"
+
+    Order {
+        enum type "MESA|LLEVAR"
+        bool isCustom "custom = marca, no tipo"
+        enum status "created..closed|pendingPayment|cancelled"
+        decimal originalAmount
+        decimal discountAmount "snapshot fijo"
+        decimal total "derivado"
+    }
+    Discount {
+        decimal fixedAmount "monto fijo, no %"
+        enum availability "always|endOfShift"
+        bool requiresAuthorization
+    }
+    ShiftChickenLog {
+        enum pieceType "pecho|ala|pierna|entrepierna"
+        int reprocessRaw "autopoblado del turno previo"
+        int processedRaw
+        int rawLeftover "→ reprocessRaw del turno T+1"
+        int cookedLeftover
+    }
+```
+
+> **Dos sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
+> - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](pdr.md#L380)).
+> - `discountAmount` es un **snapshot** del monto fijo, NO una resta. El `total` es lo derivado ([PDR §2.11](pdr.md#L401)).
+
 ---
 
 # 4. Máquina de estados de pedidos (transaccional)
@@ -202,6 +252,41 @@
 **Estados:**
 `created → confirmed → preparing → ready → delivered → closed`
 Estados adicionales: `pendingPayment`, `cancelled`, `onHold`.
+
+El flujo de vida de una orden. Negocio en [PDR §4](pdr.md#L444), efectos transaccionales en [§4.1](#41-transiciones-y-efectos).
+
+```mermaid
+stateDiagram-v2
+    [*] --> created: cajera registra
+
+    created --> confirmed: pago inmediato 💰
+    created --> pendingPayment: LLEVAR/delivery sin pago
+
+    note right of confirmed
+        Decremento ATÓMICO de inventario
+        + contabiliza ingreso
+    end note
+
+    pendingPayment --> confirmed: paga 💰 (recién aquí descuenta inventario)
+    pendingPayment --> cancelled: cancelación MANUAL (sin motivo, sin timeout)
+
+    confirmed --> preparing: comanda en panel despacho
+    pendingPayment --> preparing: se prepara de inmediato
+
+    preparing --> ready: despachadora marca listo 🔔 (pantalla pública)
+    ready --> delivered: cliente recoge / delivery retira
+    delivered --> closed: cierre administrativo
+
+    confirmed --> cancelled: anulación (motivo+detalle OBLIGATORIO, revierte inventario)
+
+    cancelled --> [*]
+    closed --> [*]
+```
+
+> **Reglas clave que el diagrama codifica:**
+> - El inventario se descuenta **al confirmar el pago**, nunca antes ([PDR §2.3](pdr.md#L324)).
+> - `pendingPayment` se prepara **igual** que un pedido pagado, pero sin tocar inventario ni caja ([PDR §2.5](pdr.md#L344)).
+> - Cancelar pendiente: **manual, sin motivo**. Anular pagado: **motivo + detalle obligatorios** + revierte inventario ([FR-011b](requirements.md#L74)).
 
 ## 4.1 Transiciones y efectos
 
