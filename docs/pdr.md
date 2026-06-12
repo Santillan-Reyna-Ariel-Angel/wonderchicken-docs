@@ -82,7 +82,7 @@ También es responsable de establecer la forma de despachar productos, es decir 
 Esta persona está autorizada por el administrador de disponer el dinero de caja para las necesidades imprevistas que surgen durante el día de trabajo.
 - Despachadoras: Se encargan de recibir las comandas de los pedidos, prepararlos y entregarlos a los clientes, ya sea llamándolos por su nombre o entregando el pedido a un servicio de delivery. Las despachadoras solicitarán a los cocineros los elementos necesarios para preparar los pedidos.
 - Cocineros: Son el personal encargado de la preparación y freído de: presas de pollos, pipocas de pollo, papa normal, papa Smiles McCain(papas con forma de cara sonriente) y aros de cebolla. También realizan la elaboración de aderezos, limpieza de la cocina y de las bandejas del restaurante. Al final de turno este personal debe realizar el conteo manual de cada presa de pollo restante para su  posterior almacenamiento refrigerado.
-Despresadores de pollo: Son las personas encargadas de despresar los pollos recién adquiridos y guardarlos en las neveras del restaurante.
+- Despresadores de pollo: Son las personas encargadas de despresar los pollos recién adquiridos y guardarlos en las neveras del restaurante.
 
 **PROCESO DE VENTA:**
 - Registrar pedido: Este proceso se realiza usando el sistema genérico y tiene como finalidad el registro de pedidos de un cliente ya sea de manera presencial o por llamada telefónica, registrando sus datos personales para la emisión de la factura, la emisión de la comanda y/o en envío por delivery del pedido.
@@ -93,7 +93,7 @@ En caso de pedidos a domicilio, el pedido se entrega a un servicio de delivery, 
 Al finalizar las entregas, las despachadoras guardan las comandas, ya que algunas veces la cajera necesita revisarlas cuando hay un problema al realizar las cuentas.
 
 IMPORTANTE:
-- Por cada turno de trabajo hay 1 cajera y 2-3 despachadoras. El dia de trabajo comprende 2 turnos.
+- Por cada turno de trabajo hay 1 cajera y 1-3 despachadoras. El dia de trabajo comprende 2 turnos.
 - El personal de cajera y despachadora suelen rotar funciones en la semana. Es decir un personal puede ser(tener las funciones) cajera un dia y al otro ser despachadora.
 - Cada cajera suele tener una clave unica para entrar al sistema (autenticaion)
 - Algunas veces(cuando sobra pollo cocinado), se suele vender al personal plato(s) con descuento (por ejemplo un plato de 30bs a 23bs). CONTEMPLAR ESTA SITACION PARA ARQUEO, REPORTES, ETC
