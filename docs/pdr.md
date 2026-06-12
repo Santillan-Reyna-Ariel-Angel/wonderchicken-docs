@@ -329,7 +329,7 @@ RESPONSABLE: ROXANA
   - **Frustraciones actuales:** Deben gritar o buscar clientes; pérdida de tiempo y experiencia negativa para el cliente.
 
 - **Cocineros**
-  - **Objetivo:** Marinar presas crudas (procesado), cocinar presas y porciones (papa, pipocas, plátano, smile). Contar bolsas de papa usadas y presas restantes (sobrante procesado).
+  - **Objetivo:** Marinar presas crudas (procesado), cocinar presas y porciones (papa, pipocas, plátano, smile). Contar bolsas de papa usadas y presas restantes (sobrante procesado). Anotar cantidad de presas crudas marinadas (procesado crudo).
   - **Frustraciones actuales:** Conteo manual de pollo restante y bolsas de papa al cambio de turno.
 
 ### Principales flujos de usuario (resumidos)
