@@ -1,9 +1,14 @@
 # Product Requirements Document (PRD)
 **Sistema Informático de Ventas — Wonder Chicken**
+
 **Rol del autor:** Senior Product Manager / Arquitecto de Sistemas (digitalización de servicios de comida rápida)
+
 **Versión:** 2.0 (incorpora respuestas del cuestionario Fase 1)
+
 **Fecha:** 2026-05-01
+
 **Alcance:** Documento de negocio y requisitos funcionales / no funcionales para que un LLM genere backend y frontend coherentes con las reglas operativas del restaurante.
+
 **Material de origen:** las citas textuales del documento oficial, el menú 2026, el inventario diario de ejemplo y los tickets reales del sistema actual de los que deriva este PDR viven en [`docs/business_context.md`](business_context.md).
 
 ---
@@ -53,7 +58,9 @@
 
 # 1. Resumen ejecutivo (versión para desarrollo LLM)
 **Contexto:** Wonder Chicken es un restaurante de servicio rápido con alta rotación de pedidos y necesidad de control por presas de pollo. El sistema actual es genérico y no cubre variantes de productos, control de presas, diferencia pedidos mesa/llevar, notificaciones eficientes ni manejo claro de vales.
+
 **Propósito del PRD:** Proveer al LLM un conjunto completo y no ambiguo de reglas de negocio, modelos de datos, flujos y criterios de aceptación para generar backend y frontend que cumplan con las operaciones reales del restaurante.
+
 **Alcance MVP:** Gestión de productos/variantes, POS (mesa/llevar), comandas digitales/impresa(opcional), ventas custom de presas surtidas, inventario por presas, control de caja por turno, vales, notificaciones de pedido listo en pantalla pública, interfaces diferenciadas por rol con enforcement de permisos por rol en backend (JWT), reportes básicos, historial de comandas, impresión térmica de factura (solo si el cliente la pide).
 
 ### Personas y casos de uso
@@ -166,6 +173,7 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 ## 2.9 Auditoría
 - **Nivel V1:** solo se auditan **acciones críticas**: registro de venta, anulación de venta, ajuste de inventario, emisión de vale, apertura / cierre de caja, generación de reporte.
 - **Registro:** cada acción auditada deja constancia de quién, cuándo, qué entidad afectó y qué cambió.
+> La traducción técnica (entidad `AuditLog`, patrón de implementación y atomicidad) vive en [`docs/technical_guide.md` §4.3](technical_guide.md#43-auditoría--implementación-v1).
 
 ## 2.10 Ventas custom (presas surtidas)
 - **Caso de uso:** a veces los clientes piden combinaciones que no encajan con los platos del menú (ej. "vendéme 2 pechos sueltos", "1 ala + 1 pierna + arroz"). Hoy la cajera fuerza la venta seleccionando un plato de precio similar y descuenta inventario manualmente. El nuevo sistema debe soportar esto de forma nativa.

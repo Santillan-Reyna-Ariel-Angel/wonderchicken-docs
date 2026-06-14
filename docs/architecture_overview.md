@@ -55,7 +55,7 @@ graph TB
         FILTERS[ExceptionFilter<br/>contrato estandar isSuccess]
         PIPES[ValidationPipe<br/>DTOs class-validator]
         GUARDS[AuthGuard JWT<br/>+ RolesGuard @Roles]
-        INTERCEPTOR[AuditInterceptor<br/>solo acciones criticas]
+        AUDITSVC[AuditService<br/>log explicito en la tx<br/>interceptor V2]
     end
 
     MAIN --> APP
@@ -92,14 +92,14 @@ graph TB
     APP --> FILTERS
     APP --> PIPES
     APP --> GUARDS
-    APP --> INTERCEPTOR
+    APP --> AUDITSVC
 ```
 
 **Decisiones que el grafico hace explicitas:**
 
 - `OrdersModule` es el **modulo mas pesado** porque concentra: orden estandar, orden custom (PDR §2.10), confirmacion de pago, anulacion, descuento al personal (§2.11) y comanda digital. Ahi vive la transaccion atomica `pago + decremento de inventario` (technical guide §4.2).
 - `InventoryModule` es **compartido**: lo usan ordenes, vales y los cocineros. Maneja los **dos planos** del pollo (cocido transaccional + crudo anotado por turno via `ShiftChickenLog`).
-- `AuditModule` no se "inyecta" en cada modulo: **escucha** eventos via interceptor. Esto evita que cada controller tenga que recordar registrar el audit log a mano.
+- `AuditModule` en V1 expone un `AuditService.log(tx, ...)` que cada service crítico llama **explícitamente dentro de su misma transacción** (ver diagrama §2). Así el audit es **atómico** con la acción y tiene el estado *antes/después* para `details`. El patrón de **interceptor genérico** (que correría fuera de la transacción y sin estado previo) se **difiere a V2** con un caso real. Detalle en [`technical_guide.md` §4.3](technical_guide.md#43-auditoría--implementación-v1).
 - **Control de permisos por rol enforced en el backend (V1)**. Dos guards globales (`APP_GUARD`): `AuthGuard` valida el JWT (401 si falta/expira) y `RolesGuard` valida el rol declarado con `@Roles()` (403 si no corresponde). La UI oculta pantallas, pero **no es la frontera de seguridad** (PDR §2.7 / FR-018; detalle en [`technical_guide.md` §5.2](technical_guide.md#52-autenticación-y-autorización)).
 
 ---

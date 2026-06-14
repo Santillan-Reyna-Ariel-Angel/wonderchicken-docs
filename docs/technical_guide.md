@@ -25,6 +25,7 @@
 - [4. Máquina de estados de pedidos (transaccional)](#4-máquina-de-estados-de-pedidos-transaccional)
   - [4.1 Transiciones y efectos](#41-transiciones-y-efectos)
   - [4.2 Reglas transaccionales](#42-reglas-transaccionales)
+  - [4.3 Auditoría — implementación (V1)](#43-auditoría--implementación-v1)
 - [5. Contratos de la API](#5-contratos-de-la-api)
   - [5.1 Endpoints principales](#51-endpoints-principales)
   - [5.2 Autenticación y autorización](#52-autenticación-y-autorización)
@@ -332,6 +333,49 @@ stateDiagram-v2
 
 - El decremento de inventario y la marca de pago deben ocurrir en una **transacción atómica**. Si falla inventario (stock insuficiente), la orden permanece en su estado anterior y se notifica a la cajera con detalle del faltante.
 - **No existe job de auto-cancelación**: los pedidos `pendingPayment` solo transitan a `cancelled` por acción manual de la cajera o a `paid` al confirmar el pago.
+- **El registro de auditoría forma parte de la transacción.** En las acciones críticas, el `INSERT` en `AuditLog` ocurre **dentro de la misma `$transaction`** que la acción: si la operación se revierte, el audit tampoco queda (no hay constancia de algo que no pasó). Detalle en [§4.3](#43-auditoría--implementación-v1).
+
+---
+
+## 4.3 Auditoría — implementación (V1)
+
+> Traducción técnica de la regla de negocio [PDR §2.9](pdr.md#29-auditoría). La auditoría registra el rastro inmutable de las **acciones críticas** (quién, cuándo, qué entidad, qué cambió) sobre la entidad [`AuditLog`](#31-entidades-principales). **No confundir con el logging técnico** (errores/debug): la auditoría es un registro **de negocio**, persistido en BD, inmutable y consultable por el admin.
+
+### Patrón V1: audit explícito dentro del service y la transacción
+- La escritura del `AuditLog` se hace de forma **explícita dentro del service** de cada acción crítica, en la **misma `prisma.$transaction`** que la operación. Dos motivos lo imponen:
+  1. **Atomicidad:** acción y audit se graban juntos o no se graban (§4.2). Evita auditar ventas que terminaron revertidas.
+  2. **Estado *antes/después*:** el `details` necesita el valor previo, que solo está disponible **antes de mutar**, dentro del service.
+- Recomendado: un `AuditService` con un único método `log(tx, { entity, entityId, action, userId, details })` invocado desde cada punto crítico, reutilizando la transacción activa.
+
+### Las 6 acciones auditadas (§2.9) y su punto de captura
+| Acción (`action`) | Punto de captura | `entity` |
+|---|---|---|
+| `CREATE_SALE` | `POST /orders` y `POST /orders/custom` (al confirmar pago) | `Order` |
+| `CANCEL_SALE` | `POST /orders/{id}/cancel` | `Order` |
+| `ADJUST_INVENTORY` | `POST /inventory/adjust` | `InventoryItem` |
+| `CREATE_VOUCHER` | `POST /vouchers` | `Voucher` |
+| `OPEN_SHIFT` / `CLOSE_SHIFT` | `POST /shifts/open` · `/close` | `Shift` |
+| `GENERATE_REPORT` | `GET /reports/...` | `Report` (lógico) |
+
+> El **acto de autorizar un descuento** ya queda auditado aparte (`AUTHORIZE_DISCOUNT`, §2.11 / FR-016b) — ver [§5.1](#51-endpoints-principales).
+
+### Cómo se llena cada campo
+- **`userId`** (quién): del JWT, `request.user.sub`. Disponible en toda petición autenticada.
+- **`timestamp`** (cuándo): reloj del server (`@default(now())`).
+- **`entity` + `entityId`** (qué entidad): tipo e id del registro afectado. En una **creación**, el `entityId` está disponible **tras el insert dentro de la misma `tx`**.
+- **`action` + `details`** (qué cambió): `action` es el verbo fijo del endpoint; `details: JSON` guarda el cambio concreto:
+  - **Creaciones** (venta, vale): qué se creó → `{ total, items, paymentMethod }`, `{ worker, product, amount }`.
+  - **Mutaciones** (ajuste de inventario, cierre de caja): estado previo y nuevo → `{ before, after, reason }`, `{ expected, counted, difference }`.
+
+### Inmutabilidad: tabla append-only
+- A `AuditLog` solo se le hace **`INSERT`** y **`SELECT`**. **Nunca `UPDATE` ni `DELETE`.** Un registro de auditoría editable no sirve como prueba — la inmutabilidad **es** la feature.
+
+### Consulta
+- Hace falta un endpoint de **lectura** del rastro para el admin (filtros por `entity`, `userId`, rango de fechas). Auditar sin poder consultar no aporta valor.
+
+### Por qué NO un interceptor genérico en V1
+- Un `AuditInterceptor` global corre **fuera de la transacción** del service y **no tiene el estado previo**, así que no puede garantizar atomicidad ni llenar `details` con el *antes/después*. Por eso V1 usa audit explícito.
+- Un interceptor (para las acciones simples, sin before/after) es una **optimización diferida a V2**, y se sumará **con un caso real** cuando la repetición lo justifique — misma disciplina que el catálogo de descuentos ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). No se introduce antes.
 
 ---
 

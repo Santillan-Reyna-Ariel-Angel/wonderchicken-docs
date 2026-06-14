@@ -220,6 +220,7 @@ flowchart TB
 | Descuentos | [§2.11](pdr.md#L401) | [FR-016/016b](requirements.md#L94) | `Discount`, `DiscountAuthorization` |
 | Notificación listo | [§2.8](pdr.md#L368) | [FR-007](requirements.md#L49) | `Order.readyAt`, pantalla pública |
 | Auth y roles | [§2.7](pdr.md#L357) | [FR-008](requirements.md#L53) / [FR-018](requirements.md#L112) | `AuthGuard` (JWT) + `RolesGuard` + `@Roles` ([tech §5.2](technical_guide.md#52-autenticación-y-autorización)) |
+| Auditoría | [§2.9](pdr.md#29-auditoría) | — | `AuditLog`, audit explícito en la transacción ([tech §4.3](technical_guide.md#43-auditoría--implementación-v1)) |
 
 > La tabla completa de mapeo Negocio → Técnica está en [`technical_guide.md` §10](technical_guide.md#10-mapeo-negocio--técnica).
 
