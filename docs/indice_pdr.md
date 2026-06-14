@@ -29,6 +29,7 @@
 
 | Documento | Propósito |
 | --------- | --------- |
+| [business_context.md](business_context.md) | **Material de origen.** Citas textuales del documento oficial de titulación, menú 2026, inventario diario de ejemplo y tickets reales del sistema actual. Evidencia cruda que **alimenta** al PDR. *No normativo.* |
 | [pdr.md](pdr.md) | Reglas de negocio definitivas, modelo de datos, alcance V1/V2, UX/UI, roadmap. **Fuente de verdad.** |
 | [requirements.md](requirements.md) | Requerimientos funcionales (FR-001…FR-018) y no funcionales (NFR de negocio) con criterios de aceptación. |
 | [technical_guide.md](technical_guide.md) | Traducción técnica: modelo de datos, contrato de la API, payloads, NFR técnicos, casos E2E, despliegue. |
@@ -45,10 +46,11 @@ reglas, ni los endpoints sin el modelo de datos, ni el código sin la guía téc
 | # | Documento | Por qué va acá |
 | - | --------- | -------------- |
 | 1 | [Mapa de relaciones (abajo)](#mapa-de-relaciones-entre-documentos) | **Orientación primero.** Cómo se relacionan los documentos y la regla de precedencia. Te evita perderte. |
-| 2 | [pdr.md](pdr.md) | **El negocio (el QUÉ y el PORQUÉ).** Fuente de verdad: reglas, estados, alcance V1/V2. Todo lo demás se deriva de acá. |
-| 3 | [requirements.md](requirements.md) | **El QUÉ verificable.** Los FR/NFR que nacen de las reglas del PDR, con criterios de aceptación. |
-| 4 | [technical_guide.md](technical_guide.md) | **El CÓMO.** Traducción técnica: modelo de datos, API, payloads, E2E. Necesita el PDR y los FR ya entendidos. |
-| 5 | [architecture_overview.md](architecture_overview.md) | **El código.** Mapa visual del backend NestJS: módulos, lifecycle de un request, endpoints reales. Aterriza la guía técnica en el repo. |
+| 2 | [business_context.md](business_context.md) | **El origen (la EVIDENCIA).** Material de origen del trabajo de titulación: citas, menú, inventario, tickets reales. Alimenta al PDR. *No normativo.* |
+| 3 | [pdr.md](pdr.md) | **El negocio (el QUÉ y el PORQUÉ).** Fuente de verdad: reglas, estados, alcance V1/V2. Todo lo demás se deriva de acá. |
+| 4 | [requirements.md](requirements.md) | **El QUÉ verificable.** Los FR/NFR que nacen de las reglas del PDR, con criterios de aceptación. |
+| 5 | [technical_guide.md](technical_guide.md) | **El CÓMO.** Traducción técnica: modelo de datos, API, payloads, E2E. Necesita el PDR y los FR ya entendidos. |
+| 6 | [architecture_overview.md](architecture_overview.md) | **El código.** Mapa visual del backend NestJS: módulos, lifecycle de un request, endpoints reales. Aterriza la guía técnica en el repo. |
 
 > ¿No tenés tiempo de leer todo? No leas de corrido: usá la **[Ruta de lectura según tu rol](#4-ruta-de-lectura-según-tu-rol)** del mapa (abajo) y empezá por donde tu trabajo lo necesita.
 
@@ -56,6 +58,7 @@ reglas, ni los endpoints sin el modelo de datos, ni el código sin la guía téc
 
 ## Por dónde empezar
 
+- **¿De dónde sale el negocio (evidencia, menú, tickets reales)?** → [business_context.md](business_context.md)
 - **¿Qué hace el negocio y por qué?** → [pdr.md](pdr.md)
 - **¿Qué tiene que cumplir el sistema (FR/NFR)?** → [requirements.md](requirements.md)
 - **¿Cómo lo implemento (modelo, API, payloads)?** → [technical_guide.md](technical_guide.md)
@@ -96,6 +99,10 @@ flowchart TB
         IDX["📑 indice_pdr.md<br/><i>Índice navegable</i><br/>Mapa con anchors a cada sección"]
     end
 
+    subgraph origen["📄 Origen (la EVIDENCIA)"]
+        BC["📄 business_context.md<br/><i>Material de origen</i><br/>Citas oficiales · menú · inventario · tickets reales"]
+    end
+
     subgraph negocio["🧠 Negocio (el QUÉ y el PORQUÉ)"]
         PDR["📘 pdr.md<br/><i>Reglas de negocio definitivas</i><br/>§2 reglas · §4 estados · §13 alcance V1/V2"]
     end
@@ -112,22 +119,26 @@ flowchart TB
         ARCH["📕 architecture_overview.md<br/><i>Mapa visual del backend NestJS</i><br/>Módulos · lifecycle de un request · endpoints reales"]
     end
 
+    IDX -.navega a.-> BC
     IDX -.navega a.-> PDR
     IDX -.navega a.-> REQ
     IDX -.navega a.-> TECH
     IDX -.navega a.-> ARCH
 
+    BC ==alimenta==> PDR
     PDR ==origina==> REQ
     PDR ==se traduce en==> TECH
     REQ -.se valida contra.-> TECH
     TECH ==se implementa en==> ARCH
 
     classDef idx fill:#e1f5fe,stroke:#0288d1,color:#01579b
+    classDef bc fill:#f5f5f5,stroke:#9e9e9e,color:#424242
     classDef pdr fill:#fff3e0,stroke:#f57c00,color:#e65100
     classDef req fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
     classDef tech fill:#fce4ec,stroke:#c2185b,color:#880e4f
     classDef arch fill:#ede7f6,stroke:#5e35b1,color:#311b92
     class IDX idx
+    class BC bc
     class PDR pdr
     class REQ req
     class TECH tech
@@ -137,6 +148,7 @@ flowchart TB
 | Documento | Responde a | Contiene | NO contiene |
 | --- | --- | --- | --- |
 | [`indice_pdr.md`](indice_pdr.md) | *"¿Dónde está X?"* | Anchors a cada sección de los otros 4 | Contenido propio |
+| [`business_context.md`](business_context.md) | *"¿De dónde sacamos esto?"* | Citas del documento oficial, menú, inventario diario, tickets reales | Reglas normativas (las deriva el PDR) |
 | [`pdr.md`](pdr.md) | *"¿Por qué el negocio funciona así?"* | Reglas (§2), estados (§4), alcance V1/V2 (§13), UX (§7) | Modelo de datos, endpoints, FR detallados (los **trasladó**) |
 | [`requirements.md`](requirements.md) | *"¿Qué debe hacer y cómo lo pruebo?"* | FR-001..FR-017 + criterios de aceptación, NFR de negocio | Reglas (referencia al PDR), detalle técnico |
 | [`technical_guide.md`](technical_guide.md) | *"¿Cómo lo construyo?"* | Stack, modelo Prisma, endpoints, payloads, E2E, despliegue | Reglas de negocio (referencia al PDR) |
@@ -172,7 +184,7 @@ flowchart LR
 ```
 
 > Lo declaran los documentos explícitamente:
-> [`requirements.md` L11](requirements.md#L11) · [`technical_guide.md` L10](technical_guide.md#L10) · [`architecture_overview.md` L11](architecture_overview.md#L11)
+> [`requirements.md` L11](requirements.md#L11) · [`technical_guide.md` L10](technical_guide.md#L10) · [`architecture_overview.md` L12](architecture_overview.md#L12)
 
 ### 3. Cómo "viaja" una decisión: del negocio al código
 
@@ -256,9 +268,10 @@ El PDR es el documento más grande. Esto es lo que vive adentro y qué **traslad
 
 ```mermaid
 flowchart LR
+    BC["📄 business_context.md<br/>Material de origen<br/>menú, inventario diario, tickets reales"]
     PDR["📘 pdr.md"]
 
-    PDR --> S0["Material de origen<br/>menú, inventario diario, tickets reales"]
+    BC ==alimenta==> PDR
     PDR --> S1["§1 Resumen ejecutivo<br/>personas + flujos"]
     PDR --> S2["§2 Reglas de negocio ⭐<br/>2.1 precios · 2.3 inventario<br/>2.5 pago pendiente · 2.10 custom · 2.11 descuentos"]
     PDR --> S4["§4 Máquina de estados<br/>(nivel negocio)"]
@@ -271,9 +284,11 @@ flowchart LR
     classDef pdr fill:#fff3e0,stroke:#f57c00,color:#e65100,stroke-width:2px
     classDef sec fill:#fff8e1,stroke:#ffa000,color:#e65100
     classDef moved fill:#f5f5f5,stroke:#9e9e9e,color:#616161,stroke-dasharray: 4 4
+    classDef bc fill:#eeeeee,stroke:#9e9e9e,color:#424242,stroke-width:2px
     class PDR pdr
-    class S0,S1,S2,S4,S7,S13 sec
+    class S1,S2,S4,S7,S13 sec
     class T1,T2 moved
+    class BC bc
 ```
 
 > ⭐ = secciones núcleo. Las cajas grises (`trasladó a...`) son secciones que el PDR vació a propósito y apuntan a otro documento — **no busques el detalle ahí, seguí el link.**

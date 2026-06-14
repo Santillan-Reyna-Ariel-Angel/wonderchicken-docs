@@ -1,6 +1,7 @@
 # Requerimientos — Wonder Chicken
 **Sistema Informático de Ventas — Requerimientos Funcionales y No Funcionales**
 **Complementa:** [docs/pdr.md](pdr.md) (reglas de negocio) y [docs/technical_guide.md](technical_guide.md) (traducción técnica)
+**Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Versión:** 1.0
 **Fecha:** 2026-06-06
 
@@ -139,7 +140,7 @@
 
 ### FR-017 — Registro de consumos manuales y ciclo crudo de presas por turno (Media)
 - **Funcionalidad:** Al cierre del turno, el cocinero registra:
-  - **Consumos manuales de insumos:** bolsas de papa, bolsas de smile, envases de arroz, vasos, bombillas, etc. (referencia: "INVENTARIO DIARIO" en el [PDR](pdr.md)).
+  - **Consumos manuales de insumos:** bolsas de papa, bolsas de smile, envases de arroz, vasos, bombillas, etc. (referencia: tabla "INVENTARIO DIARIO" en [`business_context.md`](business_context.md#ejemplo-de-inventario-diario)).
   - **Ciclo crudo de presas por tipo (pecho, ala, pierna, entrepierna):** reproceso crudo, procesado crudo, sobrante procesado crudo y sobrante cocido en expositor ([PDR §2.3](pdr.md)).
 - Al abrir un turno, el sistema **autopobla** el reproceso crudo a partir del sobrante crudo del turno anterior; el cocinero puede ajustar antes de confirmar y el cambio queda registrado.
 - **Criterio de aceptación:** El registro queda vinculado al turno y aparece en el reporte de inventario diario; el reproceso crudo del nuevo turno coincide por default con el sobrante crudo del turno anterior; el sistema reconcilia `(reproceso + procesado − sobrante crudo) − vendido cocido` contra el sobrante cocido en expositor anotado y reporta discrepancias.

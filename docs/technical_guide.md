@@ -1,6 +1,7 @@
 # Technical Guide — Wonder Chicken
 **Sistema Informático de Ventas — Documento Técnico de Implementación**
 **Complementa:** [docs/pdr.md](pdr.md)
+**Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
 **Versión:** 1.1 (sincroniza feature de descuentos con catálogo/autorización y precio de venta por presa en V1 — PDR §2.10 / §2.11)
 **Fecha:** 2026-06-06
@@ -9,7 +10,7 @@
 >
 > **Precedencia:** Si una decisión técnica de este documento entra en conflicto con una regla de negocio del PDR, **la regla de negocio del PDR gana**. Este documento se actualiza para reflejar el negocio, no al revés.
 >
-> **Altitud de este documento:** el modelo de datos de §3 (incluido el [ER de §3.3](#33-diagrama-de-relaciones-er)) es el **modelo lógico completo** — todos los campos, snapshots y enums. Es el **contrato del dato**. Para la vista estructural resumida (cómo se conectan las entidades, sin campos) mirá [`architecture_overview.md` §4](architecture_overview.md#4-modelo-relacional-vista-resumida-del-prisma). Misma realidad, distinto zoom.
+> **Altitud de este documento:** el modelo de datos de §3 (incluido el [ER de §3.3](#33-diagrama-de-relaciones-er)) es el **modelo lógico completo** — todos los campos, snapshots y enums. Es el **contrato del dato**. Para la vista estructural resumida (cómo se conectan las entidades, sin campos) mirá [`architecture_overview.md` §3](architecture_overview.md#3-modelo-relacional-vista-resumida-del-prisma). Misma realidad, distinto zoom.
 
 ---
 

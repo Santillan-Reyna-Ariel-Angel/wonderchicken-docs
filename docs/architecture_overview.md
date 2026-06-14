@@ -4,13 +4,14 @@
 **Audiencia:** Quien recién aterriza en el repo y necesita entender (a) cómo se organizan los archivos del backend NestJS, (b) cómo viaja un request desde el frontend hasta la base de datos, y (c) qué endpoints existen y a qué recursos golpean.
 
 **Fuentes:**
+- Contexto / material de origen → [`docs/business_context.md`](business_context.md)
 - Reglas de negocio → [`docs/pdr.md`](pdr.md)
 - Modelo de datos + contrato API → [`docs/technical_guide.md`](technical_guide.md)
 - Esquema real → [`prisma/schema.prisma`](../prisma/schema.prisma)
 
 > Si un diagrama no coincide con el código, gana el código. Este documento se actualiza, no al revés.
 >
-> **Altitud de este documento:** el [ER de §4](#4-modelo-relacional-vista-resumida-del-prisma) es una **vista resumida** — solo relaciones críticas, **sin campos**. Es para **ubicarte, no para implementar**. El modelo lógico completo (todos los campos, snapshots, enums — el contrato del dato) vive en [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd). Mismo sistema, distinta altitud.
+> **Altitud de este documento:** el [ER de §3](#3-modelo-relacional-vista-resumida-del-prisma) es una **vista resumida** — solo relaciones críticas, **sin campos**. Es para **ubicarte, no para implementar**. El modelo lógico completo (todos los campos, snapshots, enums — el contrato del dato) vive en [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd). Mismo sistema, distinta altitud.
 
 ---
 
@@ -18,9 +19,8 @@
 
 - [1. Arquitectura modular del backend (NestJS)](#1-arquitectura-modular-del-backend-nestjs)
 - [2. Flujo interno: como viaja un request (lifecycle)](#2-flujo-interno-como-viaja-un-request-lifecycle)
-- [3. Endpoints por dominio (mapa visual)](#3-endpoints-por-dominio-mapa-visual)
-- [4. Modelo relacional (vista resumida del Prisma)](#4-modelo-relacional-vista-resumida-del-prisma)
-- [5. Como leer este documento mientras codeas](#5-como-leer-este-documento-mientras-codeas)
+- [3. Modelo relacional (vista resumida del Prisma)](#3-modelo-relacional-vista-resumida-del-prisma)
+- [4. Como leer este documento mientras codeas](#4-como-leer-este-documento-mientras-codeas)
 - [Referencias cruzadas](#referencias-cruzadas)
 
 ---
@@ -170,130 +170,7 @@ sequenceDiagram
 
 ---
 
-## 3. Endpoints por dominio (mapa visual)
-
-Los endpoints estan listados en [`docs/technical_guide.md` §5.1](technical_guide.md). Este diagrama los **agrupa por recurso y los conecta a su entidad** en la BD, para que veas de un vistazo quien toca a quien.
-
-```mermaid
-graph LR
-    subgraph AUTH["AUTH (publico)"]
-        A1["POST /auth/login<br/>200 + JWT"]
-    end
-
-    subgraph PRODUCTOS["PRODUCTOS"]
-        P1["POST /products"]
-        P2["GET /products"]
-        P3["POST /variants"]
-    end
-
-    subgraph ORDENES["ORDENES"]
-        O1["POST /orders<br/>estandar MESA/LLEVAR"]
-        O2["POST /orders/custom<br/>presas surtidas §2.10"]
-        O3["GET /orders/:id"]
-        O4["GET /orders/:id/public<br/>vista cliente"]
-        O5["PATCH /orders/:id/status<br/>preparing/ready/delivered"]
-        O6["POST /orders/:id/pay<br/>pendingPayment to paid"]
-        O7["POST /orders/:id/cancel<br/>anulacion FR-011b"]
-    end
-
-    subgraph INVENTARIO["INVENTARIO"]
-        I1["POST /inventory/adjust"]
-        I2["POST /inventory/manual-consumption"]
-        I3["GET /inventory/shift-chicken-log/:shiftId<br/>autopobla reprocessRaw"]
-        I4["POST /inventory/shift-chicken-log<br/>plano crudo §2.3"]
-        I5["POST /inventory/shift-chicken-log/:shiftId/close"]
-    end
-
-    subgraph CAJA["CAJA Y TURNO"]
-        S1["POST /shifts/open"]
-        S2["POST /shifts/close<br/>arqueo CSV"]
-    end
-
-    subgraph VALES["VALES"]
-        V1["POST /vouchers"]
-        V2["GET /vouchers<br/>filtros trabajador/fecha"]
-    end
-
-    subgraph REPORTES["REPORTES"]
-        R1["GET /reports/sales"]
-        R2["GET /reports/inventory-presas"]
-    end
-
-    subgraph IMPRESION["IMPRESION"]
-        PR1["POST /print/invoice<br/>termica a demanda"]
-        PR2["GET /print/invoice/:id/pdf<br/>fallback PDF"]
-    end
-
-    subgraph DB[("PostgreSQL")]
-        T_USERS[(users)]
-        T_PROD[(products + variants)]
-        T_ORDER[(orders + order_items)]
-        T_INV[(inventory_items<br/>+ transactions<br/>+ shift_chicken_log)]
-        T_SHIFT[(shifts + cash_registers<br/>+ expenses)]
-        T_VOUCHER[(vouchers)]
-        T_AUDIT[(audit_logs)]
-    end
-
-    A1 --> T_USERS
-
-    P1 --> T_PROD
-    P2 --> T_PROD
-    P3 --> T_PROD
-
-    O1 --> T_ORDER
-    O1 -.al pagar.-> T_INV
-    O2 --> T_ORDER
-    O2 -.al pagar.-> T_INV
-    O3 --> T_ORDER
-    O4 --> T_ORDER
-    O5 --> T_ORDER
-    O6 --> T_ORDER
-    O6 ==decremento atomico==> T_INV
-    O7 --> T_ORDER
-    O7 ==reversion==> T_INV
-
-    I1 --> T_INV
-    I2 --> T_INV
-    I3 --> T_INV
-    I4 --> T_INV
-    I5 --> T_INV
-
-    S1 --> T_SHIFT
-    S2 --> T_SHIFT
-
-    V1 --> T_VOUCHER
-    V1 ==decremento==> T_INV
-    V2 --> T_VOUCHER
-
-    R1 --> T_ORDER
-    R1 --> T_SHIFT
-    R2 --> T_INV
-
-    PR1 --> T_ORDER
-    PR2 --> T_ORDER
-
-    O1 -.audit.-> T_AUDIT
-    O6 -.audit.-> T_AUDIT
-    O7 -.audit.-> T_AUDIT
-    V1 -.audit.-> T_AUDIT
-    S1 -.audit.-> T_AUDIT
-    S2 -.audit.-> T_AUDIT
-    I1 -.audit.-> T_AUDIT
-```
-
-**Leyenda del grafico:**
-- Linea solida `-->` : el endpoint **lee/escribe** la tabla directamente.
-- Linea gruesa `==>` : operacion **atomica critica** (transaccion + auditoria obligatoria).
-- Linea punteada `-.->` : efecto **lateral** (al pagar, al anular, audit).
-
-**Lo que el grafico te grita:**
-- `POST /orders/:id/pay` es el **endpoint mas critico del sistema** porque dispara el decremento atomico de inventario (PDR §2.3, technical guide §4.2). Si fallas la transaccion ahi, el restaurante pierde plata.
-- `POST /orders/custom` es **un endpoint aparte de** `POST /orders` a proposito (technical guide §5.1, PDR §2.10). NO es overkill, es claridad de DTO: la orden custom permite `customPieces` y precio libre, la estandar no.
-- Los vales **descuentan inventario pero NO contabilizan ingreso** (PDR §2.4) — por eso `POST /vouchers` golpea `inventory_items` pero NO toca `shifts` para sumar caja.
-
----
-
-## 4. Modelo relacional (vista resumida del Prisma)
+## 3. Modelo relacional (vista resumida del Prisma)
 
 Vista compacta del `schema.prisma` real. **Solo las relaciones criticas**, no campos. Para campos completos ir al schema.
 
@@ -346,12 +223,12 @@ erDiagram
 
 ---
 
-## 5. Como leer este documento mientras codeas
+## 4. Como leer este documento mientras codeas
 
 - **Antes de crear un modulo nuevo:** mira el grafico §1 y ubicate. Si tu modulo no esta ahi, preguntate por que.
-- **Antes de tocar un endpoint:** mira el §3 y verifica que efectos laterales dispara (audit, inventario, caja).
 - **Antes de escribir logica en un controller:** parate y leelo de nuevo §2. La logica va al **service**, no al controller.
-- **Antes de agregar un campo al schema:** revisa el §4 y verifica que la regla del negocio no este ya cubierta por un campo existente.
+- **Antes de agregar un campo al schema:** revisa el §3 y verifica que la regla del negocio no este ya cubierta por un campo existente.
+- **Lista de endpoints:** vive en [`docs/technical_guide.md` §5.1](technical_guide.md); en el código se documenta con **Swagger/OpenAPI** generado desde los controllers reales.
 
 ---
 
