@@ -96,9 +96,22 @@
 - **Component** *(opcional)*
   - `id: UUID`, `name: string`, `type: enum(presa, acompanamiento, bebida, extra)`, `unitPrice: decimal`
 
+- **Customer (Cliente)** *(cliente registrado para factura nominada y vista de "pedidos del día" — PDR §2.12 / FR-019)*
+  - `id: UUID`
+  - `ci: string` *(cédula de identidad — **único**, indexado; clave de búsqueda)*
+  - `nit: string?` *(para factura a nombre de empresa; también buscable. El cliente puede dictar **CI o NIT** para su factura)*
+  - `firstName: string` *(nombres)*, `lastName: string` *(apellidos)*
+  - `sex: enum(HOMBRE, MUJER)`
+  - `birthDate: date?` *(opcional — tipo `date`, NO `datetime`: una fecha de nacimiento no lleva hora)*
+  - `phone: string?` *(celular)*, `email: string?` *(la factura electrónica se envía por correo)*
+  - `active: boolean`, `createdAt: datetime`, `updatedAt: datetime`
+  - *Nota legal (SIN / RND 102100000011): registrar al cliente es **opcional por venta**. La nominatividad solo es obligatoria para ventas **> Bs 1.000**; bajo ese umbral se factura **"S/N" (sin nombre, sin NIT)**. Por eso `Order.customerId` es nullable. NO usar NIT `99001` para "sin nombre" (es exclusivo de misiones diplomáticas).*
+
 - **Order**
   - `id: UUID`, `type: enum(MESA, LLEVAR)` *(CUSTOM no es un tipo — es propiedad de la orden vía `isCustom`; ver PDR §2.8 / §2.10)*
-  - `tableNumber: string?`, `customerName: string?`
+  - `tableNumber: string?`, `customerName: string?` *(nombre para mostrar en comanda/factura; "S/N" si el cliente no se identifica. Es **snapshot** de visualización: no cambia si luego se edita el `Customer`)*
+  - `customerId: UUID?` *(referencia al `Customer` registrado; null si la venta es anónima/"S/N". **Agrupa** los pedidos del cliente para la vista del día — PDR §2.12 / FR-019)*
+  - `publicToken: string` *(token aleatorio no adivinable — ej. `crypto.randomBytes(16).toString('hex')`, 128 bits — generado al crear la orden, **único** e indexado. Es la **credencial** de la vista pública del cliente: NO se usa el `id` interno ni un valor secuencial. Espacio 2^128 → no enumerable, FR-015)*
   - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)`
   - `paymentStatus: enum(pending, paid, partial)`, `paymentMethod: enum(cash, card, vale)?`
   - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = suma de los ítems; PDR §2.11)*
@@ -192,6 +205,7 @@
 ## 3.2 Relaciones clave
 
 - `Product` 1..* `Variant`
+- `Customer` 1..* `Order` (vía `Order.customerId`, opcional — null si venta anónima "S/N")
 - `Order` 1..* `OrderItem`
 - `OrderItem` → `Product` / `Variant` (ambos opcionales si pertenece a una orden custom — `Order.isCustom = true` con item poblando `customPieces`)
 - `InventoryTransaction` referencia `Order`, `Voucher` o `Expense` por `referenceId`
@@ -211,6 +225,7 @@ erDiagram
     OrderItem }o--o| Product : "referencia (null si custom)"
     OrderItem }o--o| Variant : "referencia (null si custom)"
     Shift ||--o{ Order : agrupa
+    Customer ||--o{ Order : "factura nominada / pedidos del día (opcional)"
     Shift ||--o{ Voucher : agrupa
     Shift ||--o{ Expense : agrupa
     Shift ||--o{ ShiftChickenLog : "ciclo crudo presas"
@@ -227,9 +242,21 @@ erDiagram
         enum type "MESA|LLEVAR"
         bool isCustom "custom = marca, no tipo"
         enum status "created..closed|pendingPayment|cancelled"
+        uuid customerId "nullable, S/N si anónimo"
+        string publicToken "no adivinable, vista pública"
         decimal originalAmount
         decimal discountAmount "snapshot fijo"
         decimal total "derivado"
+    }
+    Customer {
+        string ci "único, buscable"
+        string nit "nullable, buscable"
+        string firstName
+        string lastName
+        enum sex "HOMBRE|MUJER"
+        date birthDate "opcional"
+        string phone "nullable"
+        string email "nullable"
     }
     Discount {
         decimal fixedAmount "monto fijo, no %"
@@ -392,10 +419,14 @@ stateDiagram-v2
 - `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Setea `Order.isCustom = false`.
 - `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR) con presas surtidas. Items llevan `customPieces` + extras/bebidas opcionales y un **precio unitario confirmado** por la cajera. El sistema calcula un **precio sugerido** = `sum(customPieces[].qty × InventoryItem.salePrice)` + extras + bebidas (todo a precio de venta, §2.10, **V1**); la cajera puede aceptarlo o pisarlo. Se persiste el precio **confirmado**, nunca la sugerencia. Setea `Order.isCustom = true`. Endpoint **separado** para mantener DTOs y validaciones limpias por flujo (PDR §2.10).
 - `GET /api/v1/orders/{id}` — obtener orden
-- `GET /api/v1/orders/{id}/public` — vista pública de la comanda del cliente
+- `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
 - `PATCH /api/v1/orders/{id}/status` — cambiar estado
 - `POST /api/v1/orders/{id}/pay` — confirmar pago (transita `pendingPayment` → `paid`)
 - `POST /api/v1/orders/{id}/cancel` — anular pedido pagado (requiere `reason` + `details`)
+- `GET /api/v1/customers?search=<ci|nit|nombre>` — buscar cliente registrado por CI, NIT o nombre (la cajera lo usa al facturar nominado)
+- `POST /api/v1/customers` — registrar cliente (`ci`, `nit?`, `firstName`, `lastName`, `sex`, `birthDate?`, `phone?`, `email?`)
+- `GET /api/v1/customers/{id}` — obtener datos del cliente
+- `PATCH /api/v1/customers/{id}` — editar datos personales del cliente
 - `POST /api/v1/inventory/adjust` — ajustar inventario (admin, con motivo)
 - `POST /api/v1/inventory/manual-consumption` — registrar consumos manuales por turno
 - `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
@@ -509,7 +540,8 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /orders/{id}/discount` | `CASHIER` |
 | `GET /orders/{id}` | `CASHIER`, `DISPATCHER`, `ADMIN` |
 | `PATCH /orders/{id}/status` (ready / delivered) | `DISPATCHER` |
-| `GET /orders/{id}/public` | **público** (vista del cliente, sin datos sensibles) |
+| `GET /public/orders/{token}` | **público** (vista del cliente por token no adivinable, sin datos sensibles) |
+| `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
 | `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
 | `POST /vouchers` | `CASHIER` |
 | `GET /vouchers` | `CASHIER`, `ADMIN` |
@@ -605,6 +637,27 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 }
 ```
 
+## 6.2a CustomerCreateResponse / CustomerSearchResponse
+> Alta de cliente para factura nominada. La búsqueda (`GET /customers?search=`) devuelve un array con la misma forma en `data`.
+```json
+{
+  "isSuccess": true,
+  "message": "Cliente registrado correctamente",
+  "data": {
+    "id": "uuid-customer-001",
+    "ci": "8351427",
+    "nit": "120558027",
+    "firstName": "MARCO",
+    "lastName": "ORTEGA GUTIERREZ",
+    "sex": "HOMBRE",
+    "birthDate": "1990-03-14",
+    "phone": "71234567",
+    "email": "marco.ortega@example.com",
+    "active": true
+  }
+}
+```
+
 ## 6.3 OrderCreateResponse (mesa, pagado, con sustitución)
 ```json
 {
@@ -615,6 +668,8 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
     "type": "MESA",
     "tableNumber": "70",
     "customerName": "GOMEZ",
+    "customerId": "uuid-customer-001",
+    "publicToken": "a3f9c2e81b4d7f60a9e35c8d2b1f4a7e",
     "status": "preparing",
     "paymentStatus": "paid",
     "paymentMethod": "cash",
@@ -880,7 +935,9 @@ El LLM debe generar `openapi: 3.0.3` con:
 6. Abrir caja → registrar ventas (incl. vale, anulación, orden con descuento) → cerrar caja → arqueo correcto con desglose por método, vales y descuentos.
 7. Emitir vale → aparece en arqueo y en listado de vales; decrementa inventario.
 8. Pedido `preparing` → comanda digital aparece en panel despacho → marcar `ready` → pantalla pública muestra → marcar `delivered`.
-9. Cliente accede a URL pública de su pedido → ve su comanda; intenta acceder a otro orderId → no autorizado.
+9. Cliente accede a `GET /public/orders/{token}` con el `publicToken` de su pedido → ve su comanda; probar un token aleatorio o el `id` interno → **404** (el token es no adivinable, FR-015).
+9b. Registrar cliente nuevo vía `POST /customers` → queda buscable por CI **y** por NIT vía `GET /customers?search=`. Crear orden con ese `customerId` → al abrir el `publicToken` de uno de sus pedidos, la vista lista **todos sus pedidos del día** (agrupados por `customerId` + fecha). Acceder con el NIT crudo en la URL → no funciona (el NIT no es llave; FR-019).
+9c. Venta anónima "S/N" (sin `customerId`) → su `publicToken` muestra **solo ese pedido**; no hay vista del día porque no hay identidad para agrupar.
 10. Cliente pide factura → impresora térmica imprime; impresora desconectada → PDF se descarga.
 11. Anular pedido pagado → motivo y detalles obligatorios → inventario revertido → aparece en arqueo.
 12. Reconciliación diaria: comparar `InventoryTransaction` vs `InventoryItem.currentStock`.
@@ -932,7 +989,10 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Sesión única por turno (FR-008b) | Constraint a nivel servicio: 1 sesión activa por `userId` por `shiftId` |
 | Roles funcionales (§2.7) | `User.role: enum(ADMIN, CASHIER, DISPATCHER, COOK)` — enforcement por rol en el backend vía `RolesGuard` + `@Roles` (V1, FR-018); ver §5.2 |
 | Auditoría de acciones críticas (§2.9) | Entidad `AuditLog` con `userId`, `entity`, `entityId`, `action`, `details: JSON` |
+| Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); búsqueda por CI/NIT vía `GET /customers?search=`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
+| Vista del cliente — por pedido y pedidos del día (§7.4 / FR-015 / FR-019) | `Order.publicToken` no adivinable; `GET /public/orders/{token}` (público); identidad (`customerId`) **agrupa** los pedidos del día, el **token** da acceso — el NIT no es llave |
 | Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total se calcula automáticamente con `InventoryItem.salePrice` (ya definido en V1), sin intervención de la cajera |
+| Visión V2: cuenta de cliente (§2.12 / §7.4) | Auto-registro + login del cliente; `GET /me/orders` seguro por auth, sin token por pedido |
 
 ---
 

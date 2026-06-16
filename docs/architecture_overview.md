@@ -186,6 +186,7 @@ erDiagram
     CashRegister ||--o{ Shift : "tiene turnos"
 
     Shift ||--o{ Order : "agrupa ventas del turno"
+    Customer ||--o{ Order : "factura nominada / pedidos del dia (opcional)"
     Shift ||--o{ Voucher : "agrupa vales emitidos"
     Shift ||--o{ Expense : "agrupa gastos del turno"
     Shift ||--o{ DailyManualConsumption : "consumos manuales"
@@ -212,6 +213,8 @@ erDiagram
 | Regla del negocio | Como queda en el schema |
 |---|---|
 | CUSTOM no es un tipo de pedido (§2.10) | `Order.type` solo tiene `MESA` y `LLEVAR`. El flag es `Order.isCustom: boolean`. |
+| Cliente es entidad, no solo string (§2.12) | `Customer` (CI/NIT, datos personales) habilita factura nominada y vista del dia. `Order.customerId: UUID?` es **opcional** (anónimo = "S/N", legal < Bs 1.000). Detalle en technical_guide §3.1. |
+| Vista pública por token, no por id (FR-015) | `Order.publicToken` aleatorio no adivinable es la credencial de `GET /public/orders/:token`. El `customerId` **agrupa** los pedidos del día; el token **da acceso**. El NIT no es llave. |
 | Sustitucion no cambia precio (§2.1) | `OrderItem.substitutions: Json` existe, pero **NO hay** campo `priceAdjustment`. |
 | Inventario decrementa al pagar (§2.3) | El decremento se hace en el service de `POST /orders/:id/pay`, NO al pasar a `preparing`. |
 | Numeracion por turno (FR-007) | `Order.orderNumber` con `@@unique([shiftId, orderNumber])` + `Shift.lastOrderNumber` como contador atomico. |

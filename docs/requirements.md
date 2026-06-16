@@ -41,6 +41,7 @@
 | [FR-016b](#fr-016b--autorización-de-descuentos-por-turno-media) | Autorización de descuentos por turno | Media |
 | [FR-017](#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media) | Consumos manuales y ciclo crudo de presas por turno | Media |
 | [FR-018](#fr-018--autenticación-jwt-y-autorización-por-rol-alta) | Autenticación JWT y autorización por rol | Alta |
+| [FR-019](#fr-019--registro-y-búsqueda-de-clientes-alta) | Registro y búsqueda de clientes | Alta |
 
 ### [2. Requerimientos no funcionales](#2-requerimientos-no-funcionales)
 
@@ -124,8 +125,8 @@
 - **Criterio de aceptación:** La impresión de factura funciona; si falla, el PDF se descarga automáticamente.
 
 ### FR-015 — Vista pública del cliente (Alta)
-- **Funcionalidad:** Cada pedido tiene una interfaz dedicada donde el cliente puede ver SU comanda (no las de otros), accesible por una URL o QR únicos.
-- **Criterio de aceptación:** El cliente entra a la URL de su pedido y ve su comanda; intentar acceder al pedido de otra persona no funciona.
+- **Funcionalidad:** Cada pedido tiene una interfaz dedicada donde el cliente ve SU comanda (no las de otros), accesible por una **URL o QR únicos** que llevan un **token no adivinable** (`Order.publicToken`, no el `id` interno). El token es la credencial (patrón "capability URL"): **no requiere login ni registro**. Funciona también para la venta anónima "S/N". Si el pedido está vinculado a un cliente registrado, ver además [FR-019](#fr-019--registro-y-búsqueda-de-clientes-alta) (pedidos del día).
+- **Criterio de aceptación:** El cliente entra a la URL/QR de su pedido (con su token) y ve su comanda; probar un token aleatorio o el `id` interno → no funciona (no enumerable); el acceso no expone datos sensibles ni pedidos de otros.
 
 ### FR-016 — Gestión de descuentos y aplicación en POS (Media)
 - **Funcionalidad:** El administrador crea **descuentos** (nombre, **monto fijo** en Bs, disponibilidad `siempre` / `solo a fin de turno`, **requiere autorización** `sí` / `no`, activo). La cajera puede **aplicar un descuento a una orden** desde el POS (uno por orden, sin apilamiento). Hay dos instancias principales ([PDR §2.11](pdr.md)):
@@ -152,6 +153,16 @@
   - Petición sin token, o con token inválido / expirado → **401 Unauthorized**.
   - Petición con token válido pero rol **no autorizado** para ese endpoint → **403 Forbidden**.
   - Petición con token válido y rol **autorizado** → procede normalmente.
+
+### FR-019 — Registro y búsqueda de clientes (Alta)
+- **Funcionalidad:** El sistema gestiona una entidad **`Customer`** (cliente) para **facturación nominada** y la vista de **"pedidos del día"**. La cajera puede **registrar** un cliente (CI, NIT opcional, nombres, apellidos, sexo `HOMBRE`/`MUJER`, fecha de nacimiento opcional, celular, correo) y **buscar** uno ya registrado por **CI o NIT** (el cliente, para su factura, puede dictar su CI o su NIT). Una orden puede **vincularse opcionalmente** a un cliente (`Order.customerId`): si el cliente no se identifica, la orden queda como **"S/N"** (válido por ley para ventas ≤ Bs 1.000, ver [PDR §2.12](pdr.md)). Para un cliente identificado, la vista pública de cualquiera de sus pedidos lista además **sus pedidos del día**, **agrupados por `customerId`**; el **acceso lo habilita el token del pedido, NO el NIT** (el NIT no es secreto y nunca es llave de acceso).
+- **Criterio de aceptación:**
+  - La cajera registra un cliente nuevo y luego lo encuentra buscando por **CI** o por **NIT**.
+  - Una orden se crea vinculada a un `customerId`; otra se crea sin cliente y queda como "S/N".
+  - Desde el token de un pedido de un cliente identificado se ven **todos sus pedidos del día** (mismo cliente, misma fecha); una venta "S/N" solo muestra su pedido único.
+  - Intentar listar pedidos tipeando un NIT/CI en la URL (sin token) **no funciona**.
+  - Editar los datos de un cliente no altera el `customerName` ya guardado como snapshot en pedidos pasados.
+- **Fuera de alcance (V1):** integración fiscal con el SFE del SIN (CUF, código de control, envío). V2: auto-registro de cliente + login (`GET /me/orders`).
 
 ---
 

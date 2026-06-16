@@ -29,6 +29,7 @@
   - [2.9 Auditoría](#29-auditoría)
   - [2.10 Ventas custom (presas surtidas)](#210-ventas-custom-presas-surtidas)
   - [2.11 Descuentos sobre la orden (incluye descuento al personal)](#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)
+  - [2.12 Clientes y facturación nominada](#212-clientes-y-facturación-nominada)
 - [3. Modelo de datos](#3-modelo-de-datos)
 - [4. Máquina de estados de pedidos](#4-máquina-de-estados-de-pedidos)
 - [5. Requerimientos funcionales (completos) y criterios de aceptación](#5-requerimientos-funcionales-completos-y-criterios-de-aceptación)
@@ -156,7 +157,7 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 - **Decisión V1:** **el control de permisos SÍ se aplica en backend** en V1, vía autenticación JWT + un guard que valida el rol en cada endpoint. La UI además oculta las pantallas no relevantes a cada rol, pero **la UI no es la frontera de seguridad: el backend valida el rol en cada petición** (devuelve 401 sin token válido, 403 si el rol no corresponde).
 - **Matriz de autorización por rol** (la UI la usa para mostrar pantallas; el backend la usa para autorizar endpoints vía guard — es la spec que el guard implementa):
   - **Administrador:** registrar productos, registrar platos / variantes, crear usuarios, modificar inventario (con motivo), ver reportes globales, crear descuentos y autorizar descuentos por turno.
-  - **Cajera:** registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos.
+  - **Cajera:** registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos, gestionar clientes (registrar / buscar por CI o NIT para factura nominada).
   - **Despachadora:** ver la cola de comandas, marcar pedidos como "listo" y "entregado".
   - **Cocinero:** registrar ingreso de presas procesadas, anotar consumos manuales por turno (bolsas de papa, smile, etc.).
 - **Sesiones por turno:** un mismo trabajador puede trabajar como cajera un día y como despachadora otro. Pero **dentro del mismo turno**, un usuario solo puede tener **1 sesión activa con 1 rol**. No puede estar simultáneamente activo como cajera y despachadora en el mismo turno.
@@ -164,7 +165,7 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 
 ## 2.8 Comandas, tickets, factura y notificaciones
 - **Comanda interna (despachadora):** **digital por default**, listada en una interfaz dedicada para despachadoras. Aparece automáticamente al confirmar el pedido (incluso si está con pago pendiente). NO se imprime en térmica salvo decisión explícita.
-- **Comanda del cliente:** el cliente accede a una interfaz dedicada (única por cliente) donde ve **solo su comanda(s)** (sus pedidos del dia).
+- **Comanda del cliente (dos capas):** **(1) por pedido** — el cliente accede a una interfaz dedicada de **su pedido** mediante una URL/QR con un **token no adivinable** (no por `id`). Funciona para **todos**, incluso la venta anónima "S/N". **(2) por cliente / pedidos del día** — si la venta está vinculada a un cliente registrado (`customerId`), desde ese mismo acceso ve además **sus otros pedidos del día**, agrupados por cliente. La identidad (`customerId`) **agrupa**; el **token da el acceso** (ver §2.12 y §7.4). La venta anónima sin identidad solo ve su pedido único.
 - **Factura (fiscal, para el cliente):** solo se emite si el cliente la solicita. En ese caso, se imprime en la impresora térmica local. Si la impresora falla, el sistema permite descargar la factura en PDF y delegar la impresión al navegador o lector de PDF del usuario.
 - **Tipos de comanda / ticket:** solo dos tipos — **MESA** y **LLEVAR**. Una venta custom (presas surtidas — §2.10) **no es un tipo aparte**: puede ser MESA o LLEVAR según dónde consume el cliente. CUSTOM es una marca que se aplica al pedido, no un tipo de pedido.
 - **Campos obligatorios en comanda / ticket:** ID del pedido, tipo (MESA / LLEVAR), nombre del cliente, fecha y hora, lista de ítems con su descomposición (presas seleccionadas, bebidas, extras, sustituciones), total y responsable (cajera).
@@ -234,6 +235,17 @@ Cada tipo de presa cocida (pecho, ala, pierna, entrepierna) lleva un **precio de
 
 ---
 
+## 2.12 Clientes y facturación nominada
+
+- **Por qué existe un cliente como entidad:** el negocio **factura** (la mayoría de las ventas el cliente pide factura con sus datos, en Bolivia para su RC-IVA). Para eso la cajera debe poder **registrar** y **reutilizar** clientes. El cliente es una **entidad** (`Customer`), no un simple string en la orden.
+- **Datos del cliente:** CI, NIT (opcional), nombres, apellidos, sexo (`HOMBRE` / `MUJER`), fecha de nacimiento (opcional), celular, correo. La cajera **busca un cliente ya registrado por CI o NIT**; el cliente, para su factura, puede **dictar su CI o su NIT**.
+- **Registro OPCIONAL por venta (regla legal):** facturar es obligatorio, pero la **nominatividad solo aplica a ventas mayores a Bs 1.000** (SIN / RND 102100000011). El ticket típico está por debajo de ese umbral, así que se puede facturar **"S/N" (sin nombre, sin NIT)**. Por eso vincular un cliente a la orden (`Order.customerId`) es **opcional**: si no se identifica, la orden queda como "S/N". **No** se usa el NIT `99001` para "sin nombre" (es exclusivo de misiones diplomáticas).
+- **Identidad ≠ acceso (regla de seguridad):** el `customerId` (o el NIT) sirve para **agrupar** los pedidos de un cliente (uso interno). El **acceso** a la vista pública del cliente va **siempre por un token no adivinable** (o, en V2, por login). El **NIT NO es una llave de acceso**: no es secreto, así que jamás se usa en la URL para listar pedidos — si no, cualquiera vería los pedidos ajenos probando números.
+- **Vista de "pedidos del día":** solo para clientes **identificados**. Un cliente anónimo ("S/N") no tiene identidad para agrupar, así que solo puede ver el pedido individual de su token. (Ver §7.4 y FR-019.)
+- **Fuera de alcance de V1:** la integración fiscal con el SFE del SIN (CUF, código de control, envío al SIN) es un módulo aparte; esta sección solo cubre la **entidad cliente** y su vínculo con la orden.
+
+---
+
 # 3. Modelo de datos
 > **Trasladado a la guía técnica.** El detalle de entidades, campos y relaciones del esquema lógico de base de datos vive en [`docs/technical_guide.md` §3](technical_guide.md). Este PDR mantiene únicamente las reglas de negocio que esas entidades deben respetar.
 
@@ -287,8 +299,10 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Elementos:** **Únicamente el número de pedido**. Sin nombre, sin mesa, sin ningún otro dato. Sonido breve al aparecer.
 
 ## 7.4 Vista del cliente (su comanda)
-- **Objetivo:** Cliente accede a una URL única de su pedido y ve su comanda con composición y total.
-- **Elementos:** Nombre, mesa, items con descomposición, total, estado actual.
+- **Objetivo (capa base — por pedido):** el cliente accede a una **URL/QR única de su pedido** mediante un **token no adivinable** (`Order.publicToken`, no el `id` interno) y ve su comanda con composición y total. **No requiere login ni registro** — el token es la credencial (patrón "capability URL"). Intentar otro token o el `id` → no funciona. Funciona también para la venta anónima "S/N".
+- **Objetivo (capa extra — pedidos del día):** si el pedido está vinculado a un cliente registrado (`customerId`), desde el mismo acceso se listan **todos sus pedidos del día**, agrupados por cliente. El agrupado usa `customerId`; el acceso lo habilita el token, **no el NIT** (ver §2.12).
+- **Elementos:** Nombre (o "S/N"), mesa, items con descomposición, total, estado actual; y —si hay cliente— la lista de sus pedidos del día.
+- **Alcance:** vista del día en **V1 vía token**; el login de cliente con cuenta propia (`GET /me/orders`) llega en **V2** con la venta abierta al público (§13).
 
 ## 7.5 Administración
 - **Objetivo:** CRUD productos/variantes (incluye precio de venta por presa), inventario, usuarios, reportes, gestión de vales, gestión de descuentos.
@@ -392,7 +406,8 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ### Comandas, tickets, factura, vista pública
 - **Comandas digitales** por default en el panel de despachadoras (§2.8, FR-003).
-- **Vista pública del cliente** por URL única por pedido (FR-015).
+- **Vista pública del cliente** por URL/QR única **por pedido** con token no adivinable; para clientes registrados incluye además la vista de **sus pedidos del día** (agrupada por `customerId`, acceso por token) (FR-015 / FR-019).
+- **Registro y búsqueda de clientes** (`Customer`: CI/NIT + datos personales) para factura nominada; vínculo opcional a la orden — anónimo = "S/N" (§2.12, FR-019).
 - **Factura solo a demanda** del cliente: impresora térmica con fallback automático a descarga PDF (FR-014).
 - Tipos de ticket: solo **MESA** y **LLEVAR** (CUSTOM nunca es un tipo) (§2.8, §2.10).
 - Historial digital de comandas con búsqueda (FR-012).
@@ -426,6 +441,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ### Modalidad auto-servicio
 - POS para cliente final: el cliente arma su propio pedido custom sin intervención de la cajera, con el total **calculado automáticamente** a partir del precio de venta por presa (definido en V1) (§2.10 visión v2).
+- **Cuenta de cliente con auto-registro y login:** el cliente se registra y accede con su sesión a **sus pedidos del día/histórico** (`GET /me/orders`), seguro por autenticación — sin depender del token por pedido. Es la evolución natural de la vista del cliente de V1 (§7.4 / §2.12, FR-019).
 
 ### Reportes adicionales
 - Reporte de **productos más vendidos** (deseable, no obligatorio MVP — FR-010).
