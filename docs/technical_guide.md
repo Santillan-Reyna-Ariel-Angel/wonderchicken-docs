@@ -162,12 +162,16 @@
   - *Constraint: `UNIQUE(shiftId, pieceType)` — un log por turno por tipo de presa*
 
 - **Voucher (Vale)**
-  - `id: UUID`, `code: string`
+  - `id: UUID`, `code: string` *(generado por el backend)*
   - `workerId: UUID?` *(o `workerName: string` si el trabajador no es usuario del sistema)*
-  - `productId: UUID?`, `productName: string`, `amount: decimal`
+  - `productId: UUID?`, `productName: string` *(snapshot derivado de `productId`)*
+  - `originalAmount: decimal` *(precio del producto, **derivado** de `productId`; el front NO lo envía)*
+  - `discountId: UUID?` *(opcional — instancia `Discount` "Descuento personal" aplicada al vale; null si el vale no lleva descuento — PDR §2.4 / §2.11)*
+  - `discountAmount: decimal?` *(**snapshot** del monto fijo del descuento al aplicarlo, ej. 7.00)*
+  - `amount: decimal` *(monto final que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`; **derivado** por el backend, no lo manda el front)*
   - `issuedBy: userId`, `issuedAt: datetime`, `shiftId: UUID`
   - `status: enum(issued, redeemed, cancelled)`, `note: string?`
-  - *Nota: los vales **NO son descuentos** (PDR §2.4 / §2.11): no suman a caja y descuentan nómina. Concepto aparte de `Discount`; no se mezclan.*
+  - *Nota: el vale **no es un tipo de descuento** (PDR §2.4): no suma a caja y descuenta nómina. Pero **sí puede llevar aplicado** el "Descuento personal" sobre su monto, con el mismo patrón snapshot que `Order` (§2.11). El inventario descuenta las presas reales en ambos casos.*
 
 - **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo, a nivel orden, uno por orden, sin apilamiento.)*
   - `id: UUID`, `name: string`
@@ -211,6 +215,7 @@
 - `InventoryTransaction` referencia `Order`, `Voucher` o `Expense` por `referenceId`
 - `Shift` vincula `CashRegister`, `User` (cajera), `Expense`, `Voucher`, `Order`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization`
 - `Discount` 1..* `Order` (vía `Order.discountId`, opcional — solo uno por orden)
+- `Discount` 1..* `Voucher` (vía `Voucher.discountId`, opcional — "Descuento personal" sobre el vale)
 - `Discount` 1..* `DiscountAuthorization`
 - `DiscountAuthorization` vincula `Discount`, `Shift` y `User` (cajera) — autorización por turno otorgada por un admin
 
@@ -232,6 +237,7 @@ erDiagram
     Shift ||--o{ DailyManualConsumption : "consumos manuales"
     Shift ||--o{ DiscountAuthorization : "autoriza por turno"
     Discount ||--o{ Order : "aplicado (uno por orden)"
+    Discount ||--o{ Voucher : "descuento personal (opcional)"
     Discount ||--o{ DiscountAuthorization : habilita
     InventoryItem ||--o{ InventoryTransaction : "movimientos"
     Order ||--o{ InventoryTransaction : "reason=sale"
@@ -408,9 +414,19 @@ stateDiagram-v2
 
 # 5. Contratos de la API
 
+## 5.0 Principios de diseño de la API (el backend manda, el frontend renderiza)
+
+Reglas transversales que **todos** los endpoints respetan. El frontend envía el **mínimo**; el backend resuelve el resto y devuelve respuestas **listas para pintar**.
+
+1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, username, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
+2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes, vales, gastos) NO reciben `shiftId`: el backend resuelve el **turno abierto de la sesión de cajera** autenticada (1 sesión activa por turno, FR-008b) y lo asigna. Mismo criterio para cualquier vínculo deducible de la sesión.
+3. **Precios y totales los calcula el backend desde la BD.** En la **orden estándar** el front **NO** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` / `Variant` y calcula `totalPrice` y `total`. **Única excepción:** la **venta custom**, donde la cajera confirma un `unitPrice` (input de negocio legítimo, §2.10). Snapshots (`discountAmount`, `customerName`) también los congela el backend, no el front.
+4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, manda `customerId` (lo obtuvo de `GET /customers`), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para cualquier dato que ya viva en una tabla.
+5. **Respuestas listas para renderizar.** El backend devuelve todo lo que la UI muestra, **ya calculado y con nombres resueltos**. Los campos de actor se devuelven como objeto `{ id, name }` (ej. `createdBy: { id, name }`), no como id suelto, para que el frontend **solo pinte** sin segundas consultas ni cálculos.
+
 ## 5.1 Endpoints principales
 
-> El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**.
+> El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
 
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica con `username` + `password`; responde **200** + `{ token, user: { id, username, role } }`. El `token` es un JWT con payload `{ sub: userId, username, role }` que el frontend envía como `Bearer` en el resto de las llamadas. Sin token o token expirado/ inválido → **401** (FR-018).
 - `POST /api/v1/products` — crear producto
@@ -441,7 +457,7 @@ stateDiagram-v2
 - `GET /api/v1/discounts` — listar descuentos (filtros: `availability`, `active`). El POS pide los **aplicables ahora**: `active = true`, disponibilidad vigente (`always`, o `endOfShift` solo en la ventana de fin de turno) y, si `requiresAuthorization`, que exista `DiscountAuthorization` para la sesión de cajera del turno
 - `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `Order` (§2.11)
 - `POST /api/v1/orders/{id}/discount` — aplicar **un** descuento a la orden: valida disponibilidad y autorización; setea `Order.discountId`, copia `discountAmount` (snapshot del `fixedAmount` vigente) y recalcula `total = originalAmount − discountAmount`
-- `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body: `shiftId`, `cashierId`). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
+- `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body mínimo: `cashierId`; el `shiftId` se deriva del turno activo de esa cajera y `authorizedBy` del JWT, §5.0). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
 - `GET /api/v1/reports/sales` — reporte ventas
 - `GET /api/v1/reports/inventory-presas` — reporte inventario presas
@@ -696,7 +712,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
       }
     ],
     "total": 80.00,
-    "createdBy": "user-roxana",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T22:10:00"
   }
 }
@@ -726,7 +742,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
       }
     ],
     "total": 90.00,
-    "createdBy": "user-roxana"
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" }
   }
 }
 ```
@@ -761,7 +777,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
       }
     ],
     "total": 35.00,
-    "createdBy": "user-roxana",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T13:20:00"
   }
 }
@@ -794,7 +810,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
       }
     ],
     "total": 23.00,
-    "createdBy": "user-roxana"
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" }
   }
 }
 ```
@@ -824,8 +840,8 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
     "id": "uuid-auth-001",
     "discountId": "uuid-discount-compensacion",
     "shiftId": "uuid-shift-001",
-    "cashierId": "user-roxana",
-    "authorizedBy": "user-admin",
+    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "authorizedBy": { "id": "uuid-user-admin", "name": "Admin" },
     "authorizedAt": "2026-06-06T15:05:00"
   }
 }
@@ -841,8 +857,11 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
     "code": "V-20260501-001",
     "workerName": "MARIA LOPEZ",
     "productName": "Porción Media",
-    "amount": 30.00,
-    "issuedBy": "user-roxana",
+    "originalAmount": 30.00,
+    "discountId": "uuid-discount-personal",
+    "discountAmount": 7.00,
+    "amount": 23.00,
+    "issuedBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "issuedAt": "2026-05-01T14:30:00",
     "shiftId": "uuid-shift-001",
     "status": "issued"
@@ -861,7 +880,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
     "delta": -2,
     "reason": "sale",
     "referenceId": "uuid-order-123",
-    "userId": "user-roxana"
+    "userId": { "id": "uuid-user-roxana", "name": "Roxana" }
   }
 }
 ```
@@ -889,7 +908,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
   "message": "Caja abierta correctamente",
   "data": {
     "id": "uuid-shift-001",
-    "cashierId": "user-admin",
+    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
     "openingAmount": 200.00,
     "startAt": "2026-05-01T09:00:00"
   }
@@ -933,7 +952,8 @@ El LLM debe generar `openapi: 3.0.3` con:
 4. Pedido `pendingPayment` cancelado manualmente por la cajera → inventario nunca tocado, ingreso nunca contabilizado, no requiere motivo. (No existe auto-cancelación por tiempo.)
 5. Crear orden custom LLEVAR vía `POST /api/v1/orders/custom` (item con `customPieces`: 2 pechos + 1 ala + 1 papa + 1 cocacola) → el sistema devuelve un **precio sugerido** = `2×salePrice(pecho) + 1×salePrice(ala) + precio papa + precio cocacola`; la cajera lo **pisa** con un precio distinto → se persiste el precio **confirmado**, no la sugerencia. Al pagar, decrementa exactamente 2 pechos, 1 ala y 1 cocacola. La orden queda con `type = LLEVAR` y `isCustom = true` (no existe `type = CUSTOM`).
 6. Abrir caja → registrar ventas (incl. vale, anulación, orden con descuento) → cerrar caja → arqueo correcto con desglose por método, vales y descuentos.
-7. Emitir vale → aparece en arqueo y en listado de vales; decrementa inventario.
+7. Emitir vale → el front manda `productId` (sin `amount`) → el backend deriva `originalAmount` del producto y el `amount` = original; aparece en arqueo y en listado de vales; decrementa inventario.
+7b. Emitir vale con "Descuento personal": front manda `productId` + `discountId` → backend calcula `amount = originalAmount − discountAmount` (ej. 30 − 7 = 23, snapshot del descuento); el inventario descuenta las presas reales (no el equivalente al precio); el vale registra `originalAmount`, `discountAmount` y `amount`. Fuera de la ventana `endOfShift` el descuento no se ofrece.
 8. Pedido `preparing` → comanda digital aparece en panel despacho → marcar `ready` → pantalla pública muestra → marcar `delivered`.
 9. Cliente accede a `GET /public/orders/{token}` con el `publicToken` de su pedido → ve su comanda; probar un token aleatorio o el `id` interno → **404** (el token es no adivinable, FR-015).
 9b. Registrar cliente nuevo vía `POST /customers` → queda buscable por CI **y** por NIT vía `GET /customers?search=`. Crear orden con ese `customerId` → al abrir el `publicToken` de uno de sus pedidos, la vista lista **todos sus pedidos del día** (agrupados por `customerId` + fecha). Acceder con el NIT crudo en la URL → no funciona (el NIT no es llave; FR-019).
@@ -983,7 +1003,7 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Inventario por presas (§2.3) | `InventoryItem.type ∈ {pecho, ala, pierna, entrepierna}`; decremento vía `InventoryTransaction` con `reason = sale` |
 | Consumos manuales por turno (FR-017) | `DailyManualConsumption` ligado a `Shift` |
 | Ciclo crudo de presas por turno — plano crudo (§2.3, FR-017) | `ShiftChickenLog` ligado a `Shift`; campos `reprocessRaw`, `processedRaw`, `rawLeftover`, `cookedLeftover` por `pieceType`; regla de continuidad entre turnos: `rawLeftover(T) → reprocessRaw(T+1)` vía autopoblado en `GET /shift-chicken-log/{shiftId}` |
-| Vales (§2.4) | Entidad `Voucher`; `InventoryTransaction.reason = vale`; NO suma al ingreso de `Shift` |
+| Vales (§2.4) | Entidad `Voucher`; `amount` **derivado** de `productId` (`originalAmount`) menos `discountAmount` si lleva "Descuento personal" (`discountId`, snapshot); `InventoryTransaction.reason = vale`; NO suma al ingreso de `Shift` |
 | Apertura/cierre de caja por turno (§2.6) | Entidad `Shift` con `openingAmount`, `closingAmount`, `expectedAmount`, `discrepancy` |
 | Caja = 1 cajera por turno (§2.7) | `Shift.cashierId` único activo por `cashRegisterId` |
 | Sesión única por turno (FR-008b) | Constraint a nivel servicio: 1 sesión activa por `userId` por `shiftId` |

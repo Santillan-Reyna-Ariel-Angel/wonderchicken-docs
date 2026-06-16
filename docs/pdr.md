@@ -134,6 +134,8 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 ## 2.4 Vales (ventas internas — descuento por nómina)
 - **Naturaleza:** un vale registra que un trabajador consumió un plato; el monto se descuenta de su nómina al cierre del mes. NO es un retiro de caja inmediato ni un ingreso de venta.
 - **Datos obligatorios del vale:** trabajador, plato, fecha, monto y quién lo emitió.
+- **Monto derivado del producto:** el monto del vale **es el precio del producto** — el sistema lo toma de `productId`, no se digita a mano.
+- **Descuento al personal sobre el vale:** un vale puede llevar aplicado el **"Descuento personal"** (§2.11, 7 Bs): un plato de 30 Bs se registra como vale de **23 Bs**. Es **puramente monetario** (el inventario descuenta las presas reales). El sistema guarda el **precio original**, el **descuento aplicado** (snapshot) y el **monto final**. Como ese descuento tiene disponibilidad `solo a fin de turno`, el vale con descuento sigue esa misma ventana.
 - **Efecto en inventario:** el vale **SÍ descuenta** las presas y bebidas correspondientes.
 - **Efecto en caja:** el vale **NO suma** al ingreso de caja del turno; aparece en el arqueo como línea separada con su monto.
 - **Autorización:** cualquier cajera puede emitir vales. **No hay umbral de aprobación** ni límite por trabajador (decisión del administrador).

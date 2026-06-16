@@ -54,6 +54,7 @@ erDiagram
     Order ||--o{ InventoryTransaction : "reason=sale"
 
     Discount ||--o{ Order : "aplicado, uno por orden"
+    Discount ||--o{ Voucher : "descuento personal (opcional)"
     Discount ||--o{ DiscountAuthorization : "habilita"
 
     InventoryItem ||--o{ InventoryTransaction : "movimientos"
@@ -218,7 +219,10 @@ erDiagram
         string workerName "si no es usuario"
         uuid productId FK "nullable"
         string productName
-        decimal amount
+        decimal originalAmount "precio del producto"
+        uuid discountId FK "nullable, descuento personal"
+        decimal discountAmount "nullable, snapshot"
+        decimal amount "derivado: original menos descuento"
         uuid issuedBy FK
         datetime issuedAt
         uuid shiftId FK
@@ -312,7 +316,7 @@ Response (200):
   "message": "Autenticación exitosa",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": { "id": "user-roxana", "username": "roxana", "role": "CASHIER" }
+    "user": { "id": "uuid-user-roxana", "username": "roxana", "role": "CASHIER" }
   }
 }
 ```
@@ -367,12 +371,12 @@ Response (201): mismo objeto `Customer` dentro de `data` (con `id` y `active: tr
 
 **`POST /api/v1/orders`** — crear orden estándar (MESA/LLEVAR). Rol: `CASHIER`.
 
-Request:
+Request (datos mínimos — ver [principios §5.0](technical_guide.md#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza)):
 ```json
 {
   "type": "MESA",
   "tableNumber": "70",
-  "customerName": "GOMEZ",
+  "customerId": "uuid-customer-001",
   "paymentStatus": "paid",
   "paymentMethod": "cash",
   "items": [
@@ -387,6 +391,7 @@ Request:
   ]
 }
 ```
+> **Mínimos:** `customerId` es **opcional** (omitirlo = venta anónima "S/N"); el backend lee `Customer` y snapshotea `customerName`. NO se envían `createdBy` ni `shiftId` (los deriva del JWT y del turno activo) ni precios (los calcula desde `Product`/`Variant`). Para venta nominada, el front ya obtuvo el `customerId` vía `GET /customers`.
 Response:
 ```json
 {
@@ -415,11 +420,12 @@ Response:
       { "productId": "uuid-product-fanta", "quantity": 1, "unitPrice": 8.00, "totalPrice": 8.00 }
     ],
     "total": 80.00,
-    "createdBy": "user-roxana",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T22:10:00"
   }
 }
 ```
+> **Listo para render:** `createdBy` viene como `{ id, name }` (no id suelto); `customerName` ya resuelto desde `Customer`; `unitPrice`/`totalPrice`/`total` calculados. El frontend solo pinta.
 
 **`POST /api/v1/orders/custom`** — crear orden custom (presas surtidas). Rol: `CASHIER`. La cajera arma las presas y confirma el precio.
 
@@ -427,7 +433,7 @@ Request:
 ```json
 {
   "type": "LLEVAR",
-  "customerName": "JUAN PEREZ",
+  "customerId": "uuid-customer-002",
   "paymentStatus": "paid",
   "paymentMethod": "cash",
   "items": [
@@ -441,6 +447,7 @@ Request:
   ]
 }
 ```
+> **Excepción de precio (§5.0):** acá el `unitPrice` **sí** lo envía el front porque es el **precio confirmado por la cajera** (§2.10). El backend igualmente calcula el **sugerido** para mostrarlo; lo que se persiste es el confirmado. `customerId` opcional; `createdBy`/`shiftId` del token/sesión.
 Response:
 ```json
 {
@@ -451,6 +458,7 @@ Response:
     "type": "LLEVAR",
     "isCustom": true,
     "customerName": "JUAN PEREZ",
+    "customerId": "uuid-customer-002",
     "status": "preparing",
     "paymentStatus": "paid",
     "items": [
@@ -464,7 +472,7 @@ Response:
       }
     ],
     "total": 35.00,
-    "createdBy": "user-roxana",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T13:20:00"
   }
 }
@@ -578,10 +586,11 @@ Response:
     "inventoryItemId": "uuid-inv-pecho",
     "delta": -2,
     "reason": "adjustment",
-    "userId": "user-admin"
+    "userId": { "id": "uuid-user-admin", "name": "Admin" }
   }
 }
 ```
+> `userId` se deriva del JWT (no del body) y se devuelve resuelto como `{ id, name }` (§5.0).
 
 ### 3.4 Caja y turno
 
@@ -598,7 +607,7 @@ Response:
   "message": "Caja abierta correctamente",
   "data": {
     "id": "uuid-shift-001",
-    "cashierId": "user-roxana",
+    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
     "openingAmount": 200.00,
     "startAt": "2026-05-01T09:00:00"
   }
@@ -637,14 +646,16 @@ Response (ejemplo de arqueo):
 
 **`POST /api/v1/vouchers`** — emitir vale (descuenta inventario, NO suma a caja). Rol: `CASHIER`.
 
-Request:
+Request (con descuento personal aplicado):
 ```json
 {
   "workerName": "MARIA LOPEZ",
   "productId": "uuid-product-porcion-media",
-  "amount": 30.00
+  "discountId": "uuid-discount-personal"
 }
 ```
+> **Mínimos (§5.0):** el `amount` **NO se envía** — el backend toma `originalAmount` de `productId` y, si viene `discountId`, le resta el `fixedAmount` (snapshot). `discountId` es **opcional** (sin él, el vale vale el precio pleno). `issuedBy` y `shiftId` salen del JWT y del turno activo; el `code` lo genera el backend.
+
 Response:
 ```json
 {
@@ -655,8 +666,11 @@ Response:
     "code": "V-20260501-001",
     "workerName": "MARIA LOPEZ",
     "productName": "Porción Media",
-    "amount": 30.00,
-    "issuedBy": "user-roxana",
+    "originalAmount": 30.00,
+    "discountId": "uuid-discount-personal",
+    "discountAmount": 7.00,
+    "amount": 23.00,
+    "issuedBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "issuedAt": "2026-05-01T14:30:00",
     "shiftId": "uuid-shift-001",
     "status": "issued"
@@ -698,8 +712,10 @@ Response:
 
 Request:
 ```json
-{ "shiftId": "uuid-shift-001", "cashierId": "user-roxana" }
+{ "cashierId": "uuid-user-roxana" }
 ```
+> **Mínimos (§5.0):** solo `cashierId` (a qué cajera se habilita). El `shiftId` lo deriva el backend del **turno activo de esa cajera**; `authorizedBy` sale del JWT del admin.
+
 Response:
 ```json
 {
@@ -709,8 +725,8 @@ Response:
     "id": "uuid-auth-001",
     "discountId": "uuid-discount-compensacion",
     "shiftId": "uuid-shift-001",
-    "cashierId": "user-roxana",
-    "authorizedBy": "user-admin",
+    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "authorizedBy": { "id": "uuid-user-admin", "name": "Admin" },
     "authorizedAt": "2026-06-06T15:05:00"
   }
 }
