@@ -102,7 +102,9 @@
 
 ## 2.2 Variantes y componentes
 - Una **variante** es un plato compuesto por: componentes obligatorios (presas), componente por defecto (mixto) y opciones (bebida y extras).
-- **Precio final del pedido** = precio base del plato + valor de los extras. Las sustituciones NO afectan el precio (§2.1).
+- **Un pedido estándar admite N ítems:** uno o varios **platos** del menú (cualquiera, en la cantidad que el cliente pida) y, **de forma OPCIONAL**, **extras y/o bebidas sueltos en cualquier cantidad**. Extras y bebidas sueltas **no son obligatorios**: un pedido puede no llevar ninguno. Platos, extras y bebidas son todos `Product` del catálogo (distinguidos por `category`); cada uno entra como un ítem del pedido con su `quantity`.
+- **Bebida incluida vs. bebida agregada:** algunos platos **traen bebida incluida** en su composición (ej. Wonder = 2 presas + mixto + bebida 500 ml; ya está en el precio y es parte de la **variante**, NO un ítem aparte). Los platos que **no** traen bebida (ej. Porción Media, 30 Bs) pueden igual **sumar una bebida suelta** como ítem adicional (ej. + bebida 2 L, 16 Bs → total 46 Bs). Idéntico criterio para los extras: se agregan solo si el cliente los pide.
+- **Precio final del pedido** = **suma de TODOS los ítems**, cada uno por `precio del producto × cantidad` (platos + extras + bebidas que efectivamente se agregaron). Lo calcula el **backend** desde el catálogo (el front no manda precios — §5.0 técnica). Las sustituciones NO afectan el precio (§2.1).
 - **Composición visible:** En el POS y en el ticket se debe mostrar la descomposición del ítem (ej. "2 - PECHO-ALA; 1 - COCA COLA 500 ml; 1 - PORCIÓN DE ARROZ").
 
 ## 2.3 Inventario por presas

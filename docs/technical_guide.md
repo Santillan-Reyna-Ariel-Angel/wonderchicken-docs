@@ -432,7 +432,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
-- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Setea `Order.isCustom = false`.
+- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Admite **N ítems**: platos, extras y bebidas son todos `Product` del catálogo (por `category`), cada uno un ítem con su `quantity`. El backend resuelve `unitPrice` desde `Product.basePrice`, calcula `totalPrice = unitPrice × quantity` por ítem y `total = Σ(totalPrice)` (el front NO manda precios, §5.0). Setea `Order.isCustom = false`.
 - `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR) con presas surtidas. Items llevan `customPieces` + extras/bebidas opcionales y un **precio unitario confirmado** por la cajera. El sistema calcula un **precio sugerido** = `sum(customPieces[].qty × InventoryItem.salePrice)` + extras + bebidas (todo a precio de venta, §2.10, **V1**); la cajera puede aceptarlo o pisarlo. Se persiste el precio **confirmado**, nunca la sugerencia. Setea `Order.isCustom = true`. Endpoint **separado** para mantener DTOs y validaciones limpias por flujo (PDR §2.10).
 - `GET /api/v1/orders/{id}` — obtener orden
 - `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
@@ -948,6 +948,7 @@ El LLM debe generar `openapi: 3.0.3` con:
 
 1. Crear producto + variante → aparece en POS.
 2. Registrar venta MESA con sustitución → precio NO cambia; inventario decrementa al confirmar pago.
+2b. Pedido estándar con bebida agregada y extras opcionales: `items = [Porción Media (30, sin bebida incluida), Bebida 2L (16)]` → `total = 46` (suma de ítems). Agregar también Porción de Papas (12) → `total = 58`. Un pedido de solo el plato (sin extras ni bebidas) → `total = 30`. Extras y bebidas sueltas son **opcionales**; cada uno es un `Product` y el backend calcula `Σ(unitPrice × quantity)`.
 3. Registrar venta LLEVAR `pendingPayment` → comanda se prepara; inventario NO decrementa hasta confirmar pago.
 4. Pedido `pendingPayment` cancelado manualmente por la cajera → inventario nunca tocado, ingreso nunca contabilizado, no requiere motivo. (No existe auto-cancelación por tiempo.)
 5. Crear orden custom LLEVAR vía `POST /api/v1/orders/custom` (item con `customPieces`: 2 pechos + 1 ala + 1 papa + 1 cocacola) → el sistema devuelve un **precio sugerido** = `2×salePrice(pecho) + 1×salePrice(ala) + precio papa + precio cocacola`; la cajera lo **pisa** con un precio distinto → se persiste el precio **confirmado**, no la sugerencia. Al pagar, decrementa exactamente 2 pechos, 1 ala y 1 cocacola. La orden queda con `type = LLEVAR` y `isCustom = true` (no existe `type = CUSTOM`).
@@ -986,6 +987,7 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 
 | Concepto de negocio (PDR) | Contraparte técnica |
 |---------------------------|---------------------|
+| Pedido estándar multi-ítem (§2.2 / FR-002) | `Order.items[]` con N `Product` (platos + extras + bebidas, por `category`), cada uno con `quantity`; `total = Σ(unitPrice × quantity)`, `unitPrice` tomado de `Product.basePrice` por el backend |
 | Venta custom de presas surtidas (§2.10) | Endpoint `POST /api/v1/orders/custom`; flag `Order.isCustom = true`; ítem con `customPieces: JSON` |
 | Tipo de pedido (MESA / LLEVAR) (§2.8) | `Order.type: enum(MESA, LLEVAR)` — CUSTOM **no** es un valor de `type` |
 | Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions: JSON` con `{from, to}`; sin campo de ajuste de precio |

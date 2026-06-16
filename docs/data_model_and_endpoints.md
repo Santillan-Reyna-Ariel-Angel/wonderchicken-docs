@@ -387,10 +387,12 @@ Request (datos mínimos — ver [principios §5.0](technical_guide.md#50-princip
       "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ],
       "substitutions": [ {"from":"mixto","to":"arroz"} ]
     },
-    { "productId": "uuid-product-fanta", "quantity": 1 }
+    { "productId": "uuid-product-fanta", "quantity": 1 },
+    { "productId": "uuid-product-papas", "quantity": 2 }
   ]
 }
 ```
+> **N ítems libres:** un pedido estándar mezcla **platos + bebidas + extras** en cualquier cantidad (acá: Wonder×2, Fanta×1, Porción de Papas×2). Cada uno es un `Product`; el front solo manda `productId` + `quantity`, el backend pone el precio y suma el total (§2.2 / §5.0).
 > **Mínimos:** `customerId` es **opcional** (omitirlo = venta anónima "S/N"); el backend lee `Customer` y snapshotea `customerName`. NO se envían `createdBy` ni `shiftId` (los deriva del JWT y del turno activo) ni precios (los calcula desde `Product`/`Variant`). Para venta nominada, el front ya obtuvo el `customerId` vía `GET /customers`.
 Response:
 ```json
@@ -417,9 +419,10 @@ Response:
         "substitutions": [ {"from":"mixto","to":"arroz"} ],
         "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ]
       },
-      { "productId": "uuid-product-fanta", "quantity": 1, "unitPrice": 8.00, "totalPrice": 8.00 }
+      { "productId": "uuid-product-fanta", "quantity": 1, "unitPrice": 8.00, "totalPrice": 8.00 },
+      { "productId": "uuid-product-papas", "quantity": 2, "unitPrice": 12.00, "totalPrice": 24.00 }
     ],
-    "total": 80.00,
+    "total": 104.00,
     "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T22:10:00"
   }
