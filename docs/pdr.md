@@ -268,7 +268,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Confirmación de pago de un pedido pendiente.** Al recibirse el pago: se descuenta inventario, se contabiliza el ingreso y se imprime/genera la factura si el cliente lo solicita.
 - **Cancelación de un pedido pendiente de pago.** Solo la cajera puede hacerlo, en cualquier momento, sin requerir motivo (no se contabilizó nada). **No hay auto-cancelación por tiempo.**
 - **Marcado como listo.** Cuando la despachadora termina el pedido, este se muestra en la pantalla pública (solo número de pedido) y suena una alerta breve. Aplica a MESA y a LLEVAR por igual.
-- **Entrega.** El cliente recoge / el delivery retira / la despachadora lleva el pedido a la mesa. La despachadora marca el pedido como entregado.
+- **Entrega.** El cliente recoge / el delivery retira el pedido. La despachadora marca el pedido como entregado.
 - **Cierre.** Acción administrativa, típicamente al cierre de turno.
 - **Anulación de un pedido ya pagado.** Requiere **motivo y detalle obligatorios**. El sistema revierte el inventario y la anulación queda registrada en el arqueo del turno con su monto. Queda auditado.
 
@@ -287,16 +287,16 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 7. UX / UI — requisitos y pantallas clave
-> Diseñar pantallas con foco en velocidad y claridad para personal con baja tolerancia a errores.
+> Diseñar pantallas con foco en velocidad y claridad para personal con tolerancia a errores.
 
 ## 7.1 POS (Cajera)
 - **Objetivo:** Registrar venta en ≤3 pasos.
-- **Elementos:** Categorías, búsqueda rápida, botones de producto, selección de variante, selector de sustitución (1, sin alterar precio), selector de presas (par fijo: pecho-ala / pierna-entrepierna), keypad numérico, total visible, botones: `Confirmar Pago`, `Guardar Pendiente (LLEVAR)`, `Vale`, `Venta Custom`, `Aplicar Descuento`.
+- **Elementos:** Categorías, búsqueda rápida, botones de producto, selección de variante, selector/radiobuttons de sustitución (1, sin alterar precio), selector/radiobuttons de presas (par fijo: pecho-ala / pierna-entrepierna), keypad numérico, total visible, botones: `Confirmar Pago`, `Guardar Pendiente (LLEVAR)`, `Vale`, `Venta Custom`, `Aplicar Descuento`.
 - **Atajos:** (opcional) teclas para categorías, confirmar venta, abrir caja, aplicar vale.
 
 ## 7.2 Panel Despacho
 - **Objetivo:** Cola clara de comandas digitales en preparación; marcar pedidos como "listo" y "entregado".
-- **Elementos:** Lista ordenada por hora de emisión; filtros (en preparación, listo); detalle por pedido con composición; botón "Marcar listo" con confirmación; indicador visual para pedidos con pago pendiente.
+- **Elementos:** Lista ordenada por hora de emisión; filtros (en preparación, listo, entregado); detalle por pedido con composición; botón "Marcar entregado" con confirmación; indicador visual para pedidos con pago pendiente.
 
 ## 7.3 Pantalla pública (clientes en local)
 - **Objetivo:** Mostrar los pedidos listos estilo "turnos de banco" para anunciar al cliente. Aplica a **MESA** y **LLEVAR** indistintamente.
@@ -313,12 +313,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - **Elementos:** Formularios producto, definición variantes, panel inventario por presas, registro consumos manuales, listado vales, reportes exportables.
 
 ## 7.6 Cocinero (consumos manuales)
-- **Objetivo:** Al final de turno, registrar bolsas papa/smile usadas, vasos, bombillas, etc.
+- **Objetivo:** Al final de turno, registrar bolsas papa/smile usadas, etc.
 - **Elementos:** Formulario simple por ítem de inventario manual.
 
 ## 7.7 Factura (impresión / PDF)
 - **Formato:** Similar a los [ejemplos de ticket en `business_context.md`](business_context.md#ejemplo-de-comadastickets-impresas-por-el-sistema-actual-a-remplar); incluir sustituciones y responsable.
-- **Fallback:** PDF descargable; el navegador maneja la elección de impresora.
+- **Fallback:** PDF descargable; el navegador maneja la elección de impresora. Revisar si los ticjets necesitar incluir QR para que el cliente ueda escanear y ver sus comandas del dia.
 
 ---
 
@@ -334,10 +334,15 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 # 10. Prioridad de trabajo y roadmap de entregas (MVP en sprints)
 **Sprint 0 (planificación + datos):** Modelado de datos definitivo (orden custom, descuentos con flag `requiereAutorizacion`, autorización de descuento por turno, timestamps de listo/entregado), esquema y diagramas. Definir umbral de discrepancia de arqueo con el administrador.
+
 **Sprint 1:** Productos y variantes + POS básico (MESA/LLEVAR, sustitución sin afectar precio, confirmación de pago, comanda digital).
+
 **Sprint 2:** Inventario por presas (descuento al pagar, transacciones atómicas) + flujo dedicado de venta custom de presas surtidas + dashboard de stock + consumos manuales.
+
 **Sprint 3:** Caja, turnos y arqueo (con anulaciones y vales) + reportes básicos + feature de descuentos (descuento al personal + compensación al cliente con autorización por turno).
+
 **Sprint 4:** Notificaciones (pantalla pública) + factura térmica + vista pública del cliente + impresión PDF como fallback.
+
 **Sprint 5:** Auditoría (acciones críticas) + sesión única por turno + pruebas E2E + optimizaciones + despliegue local.
 
 ---

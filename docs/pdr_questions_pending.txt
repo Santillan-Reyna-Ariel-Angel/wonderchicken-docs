@@ -167,3 +167,9 @@ IMPORTANTES (impactan reglas de negocio):
 
 A VERIFICAR:
   - 9.1  Pregunta faltante en el documento
+
+
+Una vez se escucho que se tuvo de hacer la devolucion de dinero a un cliente, pues se sirvio un pollo que aun estaba crudo(faltaba mas cocion), en este caso se devolvio el dinero pero esas presas ya se perdieron.
+Como se puede modelar/cubrir este caso en el pdr, requerimiento funcional, DB y codigo?
+
+separar recomendaciones de UI del pdr? 
