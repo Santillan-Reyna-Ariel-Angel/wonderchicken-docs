@@ -1,14 +1,20 @@
 // Wonder Chicken — Sistema de Ventas
-// Schema basado en PRD v2.0 (docs/PDR.md)
+// Schema basado en docs/technical_guide.md §3 (fuente de verdad del modelo) + docs/pdr.md §2 (reglas).
 //
-// Reglas críticas codificadas (NO alterar sin revisar el PRD):
+// Reglas críticas codificadas (NO alterar sin revisar technical_guide §3 / pdr §2):
 //   §2.1  Sustituciones NO afectan precio → no existe priceAdjustment
-//   §2.3  Inventario decrementa al pagar (paymentStatus = PAID), no en preparing
+//   §2.3  Inventario COCIDO decrementa al pagar (paymentStatus = PAID), no en preparing.
+//         Ciclo CRUDO de presas por turno se modela aparte en ShiftChickenLog.
 //   §2.5  pendingPayment se prepara igual; cancelación SIEMPRE manual (sin timeout)
-//   §2.7  Sin enforcement de permisos en backend (MVP) — solo UI por rol
-//   §2.8  Order.type ∈ {MESA, LLEVAR}. CUSTOM NO es un type — es Order.isCustom = true
-//   §2.10 Ventas custom: endpoint dedicado, item con customPieces, precio libre
-//   §2.11 internalDiscount = true para ventas con sobrante de pollo cocido
+//   §2.7  Permisos enforced en backend (JWT + guard por rol). La UI no es la frontera.
+//   §2.8  Order.type ∈ {MESA, LLEVAR}. CUSTOM NO es un type — es Order.isCustom = true.
+//         Order.orderNumber = número humano pantalla pública "turnos de banco" (FR-007),
+//         distinto de Order.publicToken = credencial vista privada del cliente (FR-015).
+//   §2.10 Ventas custom: endpoint dedicado, item con customPieces, precio confirmado por cajera.
+//         InventoryItem.salePrice (por presa) alimenta el precio sugerido custom.
+//   §2.11 Descuentos = catálogo Discount (monto fijo) + DiscountAuthorization (por turno).
+//         discountAmount es SNAPSHOT del monto fijo; total es derivado. NO existe internalDiscount.
+//   §2.12 Customer = facturación nominada OPCIONAL (Order.customerId nullable → "S/N" si anónimo).
 
 generator client {
   provider = "prisma-client"
@@ -80,11 +86,12 @@ enum InventoryItemType {
 }
 
 enum InventoryTxnReason {
+  // NO hay reason de descuento (§2.11): un descuento es puramente monetario,
+  // la venta con descuento descuenta inventario con reason = SALE como cualquier otra.
   SALE
   ADJUSTMENT
   RECEPTION
   VALE
-  INTERNAL_DISCOUNT
   MANUAL_CONSUMPTION
   CANCELLATION_REVERT
 }
@@ -93,6 +100,25 @@ enum VoucherStatus {
   ISSUED
   REDEEMED
   CANCELLED
+}
+
+enum CustomerSex {
+  HOMBRE
+  MUJER
+}
+
+// always = todo el turno; endOfShift = solo a fin de turno (§2.11)
+enum DiscountAvailability {
+  ALWAYS
+  END_OF_SHIFT
+}
+
+// Tipos de presa del ciclo CRUDO por turno (§2.3 / ShiftChickenLog)
+enum ChickenPieceType {
+  PECHO
+  ALA
+  PIERNA
+  ENTREPIERNA
 }
 
 enum ExpensePaidBy {
@@ -119,14 +145,18 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  shiftsAsCashier    Shift[]                  @relation("ShiftCashier")
-  ordersCreated      Order[]                  @relation("OrderCreatedBy")
-  ordersDelivered    Order[]                  @relation("OrderDeliveredBy")
-  vouchersIssued     Voucher[]                @relation("VoucherIssuedBy")
-  inventoryTxns      InventoryTransaction[]
-  manualConsumptions DailyManualConsumption[]
-  expensesCreated    Expense[]
-  auditLogs          AuditLog[]
+  shiftsAsCashier        Shift[]                  @relation("ShiftCashier")
+  ordersCreated          Order[]                  @relation("OrderCreatedBy")
+  ordersDelivered        Order[]                  @relation("OrderDeliveredBy")
+  vouchersIssued         Voucher[]                @relation("VoucherIssuedBy")
+  vouchersAsWorker       Voucher[]                @relation("VoucherWorker")
+  inventoryTxns          InventoryTransaction[]
+  manualConsumptions     DailyManualConsumption[]
+  shiftChickenLogs       ShiftChickenLog[]
+  discountAuthsAsCashier DiscountAuthorization[]  @relation("DiscountAuthCashier")
+  discountAuthsAsAdmin   DiscountAuthorization[]  @relation("DiscountAuthAdmin")
+  expensesCreated        Expense[]
+  auditLogs              AuditLog[]
 
   @@index([role])
   @@index([active])
@@ -141,7 +171,7 @@ model Product {
   id          String   @id @default(uuid(7)) @db.Uuid
   name        String
   basePrice   Decimal  @db.Decimal(10, 2)
-  category    String   // "Plato principal" | "Bebida" | "Extra" — string libre p/ no romper si cambia el menú
+  category    String // "Plato principal" | "Bebida" | "Extra" — string libre p/ no romper si cambia el menú
   description String?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -156,9 +186,9 @@ model Product {
 }
 
 model Variant {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  productId String   @db.Uuid
-  name      String
+  id         String   @id @default(uuid(7)) @db.Uuid
+  productId  String   @db.Uuid
+  name       String
   // components: [{type:"presa", count:2}, {type:"acompanamiento", name:"mixto", count:1}, ...]
   components Json
   isDefault  Boolean  @default(false)
@@ -178,22 +208,31 @@ model Variant {
 // ============================================================================
 
 model Order {
-  id String @id @default(uuid(7)) @db.Uuid
+  id          String @id @default(uuid(7)) @db.Uuid
   // Número humano para pantalla pública "turnos de banco" (§2.8 / FR-007).
   // Se REINICIA por turno (1, 2, 3...) — único en combinación con shiftId.
   // Lo asigna la app vía Shift.lastOrderNumber dentro de una $transaction.
   orderNumber Int
 
-  type             OrderType
-  tableNumber      String?
-  customerName     String?
-  status           OrderStatus    @default(CREATED)
-  paymentStatus    PaymentStatus  @default(PENDING)
-  paymentMethod    PaymentMethod?
-  total            Decimal        @db.Decimal(10, 2)
-  discountAmount   Decimal?       @db.Decimal(10, 2)
-  internalDiscount Boolean        @default(false) // §2.11
-  isCustom         Boolean        @default(false) // §2.10 — true si vino por POST /orders/custom
+  type          OrderType
+  tableNumber   String?
+  // customerName: snapshot de visualización p/ comanda/factura ("S/N" si anónimo).
+  // NO cambia si luego se edita el Customer. customerId agrupa los pedidos del día (§2.12).
+  customerName  String?
+  // Token aleatorio no adivinable (128 bits, crypto.randomBytes(16)). Credencial de la
+  // vista pública del cliente (FR-015) — NO se expone el id interno ni un secuencial.
+  publicToken   String         @unique
+  status        OrderStatus    @default(CREATED)
+  paymentStatus PaymentStatus  @default(PENDING)
+  paymentMethod PaymentMethod?
+
+  // §2.11 — originalAmount = suma de ítems ANTES de descuento.
+  // discountAmount = SNAPSHOT del monto fijo del Discount al aplicarlo (NO una resta).
+  // total = derivado: originalAmount − (discountAmount ?? 0). Es lo que entra a caja.
+  originalAmount Decimal  @db.Decimal(10, 2)
+  discountAmount Decimal? @db.Decimal(10, 2)
+  total          Decimal  @db.Decimal(10, 2)
+  isCustom       Boolean  @default(false) // §2.10 — true si vino por POST /orders/custom
 
   cancelReason  String?
   cancelDetails String?
@@ -204,12 +243,18 @@ model Order {
   readyAt     DateTime? // §2.8 — reemplaza NotificationLog
   deliveredAt DateTime?
 
-  createdById   String  @db.Uuid
-  createdBy     User    @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  deliveredById String? @db.Uuid
-  deliveredBy   User?   @relation("OrderDeliveredBy", fields: [deliveredById], references: [id], onDelete: Restrict)
-  shiftId       String  @db.Uuid
-  shift         Shift   @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  createdById   String    @db.Uuid
+  createdBy     User      @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  deliveredById String?   @db.Uuid
+  deliveredBy   User?     @relation("OrderDeliveredBy", fields: [deliveredById], references: [id], onDelete: Restrict)
+  shiftId       String    @db.Uuid
+  shift         Shift     @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  // §2.12 — cliente registrado (factura nominada); null = venta anónima "S/N"
+  customerId    String?   @db.Uuid
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  // §2.11 — un solo descuento por orden (sin apilamiento); null si no lleva descuento
+  discountId    String?   @db.Uuid
+  discount      Discount? @relation(fields: [discountId], references: [id], onDelete: Restrict)
 
   items OrderItem[]
 
@@ -218,6 +263,7 @@ model Order {
   @@index([paymentStatus])
   @@index([type])
   @@index([isCustom]) // reportes filtran por isCustom (§2.10)
+  @@index([customerId]) // vista "pedidos del día" agrupa por customerId (§2.12)
   @@index([createdAt])
   @@map("orders")
 }
@@ -270,6 +316,9 @@ model InventoryItem {
   type         InventoryItemType
   currentStock Int               @default(0)
   unitMeasure  String? // texto libre: "500 ml", "2 lt", etc.
+  // §2.10 — precio de venta unitario. Para type ∈ {PECHO,ALA,PIERNA,ENTREPIERNA} es el
+  // precio por presa que alimenta el precio sugerido custom. Solo VENTA (no costo ni margen).
+  salePrice    Decimal?          @db.Decimal(10, 2)
   active       Boolean           @default(true)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -340,23 +389,33 @@ model DailyManualConsumption {
 // ============================================================================
 
 model Voucher {
-  id          String        @id @default(uuid(7)) @db.Uuid
-  code        String        @unique // "V-20260501-001"
-  workerName  String        // texto libre: el trabajador puede no ser usuario del sistema
-  productId   String?       @db.Uuid
-  productName String        // snapshot del nombre al momento de emitir
-  amount      Decimal       @db.Decimal(10, 2)
-  status      VoucherStatus @default(ISSUED)
-  note        String?
-  issuedAt    DateTime      @default(now())
+  id             String        @id @default(uuid(7)) @db.Uuid
+  code           String        @unique // "V-20260501-001"
+  // El trabajador puede ser usuario del sistema (workerId) o no (workerName libre). Al menos uno.
+  workerId       String?       @db.Uuid
+  workerName     String? // texto libre si el trabajador no es usuario del sistema
+  productId      String?       @db.Uuid
+  productName    String // snapshot del nombre al momento de emitir
+  // §2.4 / §2.11 — originalAmount = precio del producto. discountAmount = snapshot del
+  // "Descuento personal" si se aplicó. amount = derivado: originalAmount − (discountAmount ?? 0).
+  originalAmount Decimal       @db.Decimal(10, 2)
+  discountAmount Decimal?      @db.Decimal(10, 2)
+  amount         Decimal       @db.Decimal(10, 2)
+  status         VoucherStatus @default(ISSUED)
+  note           String?
+  issuedAt       DateTime      @default(now())
 
-  issuedById String   @db.Uuid
-  issuedBy   User     @relation("VoucherIssuedBy", fields: [issuedById], references: [id], onDelete: Restrict)
-  shiftId    String   @db.Uuid
-  shift      Shift    @relation(fields: [shiftId], references: [id], onDelete: Restrict)
-  product    Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  issuedById String    @db.Uuid
+  issuedBy   User      @relation("VoucherIssuedBy", fields: [issuedById], references: [id], onDelete: Restrict)
+  worker     User?     @relation("VoucherWorker", fields: [workerId], references: [id], onDelete: Restrict)
+  shiftId    String    @db.Uuid
+  shift      Shift     @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  discountId String?   @db.Uuid
+  discount   Discount? @relation(fields: [discountId], references: [id], onDelete: Restrict)
 
   @@index([shiftId])
+  @@index([workerId])
   @@index([workerName])
   @@index([issuedAt])
   @@map("vouchers")
@@ -395,10 +454,12 @@ model Shift {
   cashRegisterId String?       @db.Uuid
   cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: Restrict)
 
-  orders             Order[]
-  vouchers           Voucher[]
-  expenses           Expense[]
-  manualConsumptions DailyManualConsumption[]
+  orders                 Order[]
+  vouchers               Voucher[]
+  expenses               Expense[]
+  manualConsumptions     DailyManualConsumption[]
+  chickenLogs            ShiftChickenLog[]
+  discountAuthorizations DiscountAuthorization[]
 
   @@index([status])
   @@index([cashierId])
@@ -428,9 +489,9 @@ model Expense {
 
 model AuditLog {
   id        String   @id @default(uuid(7)) @db.Uuid
-  entity    String   // "Order" | "Voucher" | "InventoryItem" | "Shift"
+  entity    String // "Order" | "Voucher" | "InventoryItem" | "Shift"
   entityId  String   @db.Uuid
-  action    String   // "CREATE_SALE" | "CANCEL_ORDER" | "ADJUST_INVENTORY" | "ISSUE_VOUCHER" | "OPEN_SHIFT" | "CLOSE_SHIFT"
+  action    String // "CREATE_SALE" | "CANCEL_ORDER" | "ADJUST_INVENTORY" | "ISSUE_VOUCHER" | "OPEN_SHIFT" | "CLOSE_SHIFT"
   details   Json?
   timestamp DateTime @default(now())
 
@@ -441,4 +502,96 @@ model AuditLog {
   @@index([userId])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// CUSTOMERS (§2.12 — facturación nominada OPCIONAL; FR-019)
+// ============================================================================
+
+model Customer {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  ci        String      @unique // cédula — clave de búsqueda
+  nit       String? // factura a nombre de empresa; también buscable (el cliente dicta CI o NIT)
+  firstName String
+  lastName  String
+  sex       CustomerSex
+  birthDate DateTime?   @db.Date // sin hora — una fecha de nacimiento no lleva hora
+  phone     String?
+  email     String? // la factura electrónica se envía por correo
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  orders Order[]
+
+  @@index([nit])
+  @@index([active])
+  @@map("customers")
+}
+
+// ============================================================================
+// DISCOUNTS (§2.11 — catálogo mínimo, NO motor de reglas)
+// ============================================================================
+
+model Discount {
+  id                    String               @id @default(uuid(7)) @db.Uuid
+  name                  String
+  fixedAmount           Decimal              @db.Decimal(10, 2) // monto fijo en Bs — NO porcentaje en V1
+  availability          DiscountAvailability
+  requiresAuthorization Boolean              @default(false) // si true → necesita DiscountAuthorization por turno
+  active                Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  orders         Order[]
+  vouchers       Voucher[]
+  authorizations DiscountAuthorization[]
+
+  @@index([active])
+  @@map("discounts")
+}
+
+// Habilitación admin → sesión de cajera para un Discount con requiresAuthorization = true.
+// Alcance POR TURNO (no por orden): se extingue al cerrar el turno (§2.11 / FR-016b).
+model DiscountAuthorization {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  discountId     String   @db.Uuid
+  shiftId        String   @db.Uuid
+  cashierId      String   @db.Uuid // sesión/cajera beneficiada
+  authorizedById String   @db.Uuid // admin que la otorgó
+  authorizedAt   DateTime @default(now())
+
+  discount     Discount @relation(fields: [discountId], references: [id], onDelete: Restrict)
+  shift        Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  cashier      User     @relation("DiscountAuthCashier", fields: [cashierId], references: [id], onDelete: Restrict)
+  authorizedBy User     @relation("DiscountAuthAdmin", fields: [authorizedById], references: [id], onDelete: Restrict)
+
+  @@unique([discountId, shiftId, cashierId]) // una autorización por descuento/sesión/turno
+  @@index([shiftId])
+  @@map("discount_authorizations")
+}
+
+// ============================================================================
+// CHICKEN CYCLE (§2.3 — plano CRUDO anotado por el cocinero al cierre; FR-017)
+// ============================================================================
+
+model ShiftChickenLog {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  shiftId        String           @db.Uuid
+  pieceType      ChickenPieceType
+  reprocessRaw   Int // crudo sobrante del turno anterior — autopoblado con rawLeftover del log previo
+  processedRaw   Int // pollo fresco marinado en este turno
+  rawLeftover    Int // sobrante procesado crudo al cierre → reprocessRaw del turno T+1
+  cookedLeftover Int // sobrante cocido en expositor → habilita descuento al personal (§2.11)
+  recordedAt     DateTime         @default(now())
+  closedAt       DateTime?
+  // Cantidad cocinada (derivada, NO se almacena): reprocessRaw + processedRaw − rawLeftover
+
+  recordedById String @db.Uuid
+  recordedBy   User   @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  shift        Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, pieceType]) // un log por turno por tipo de presa
+  @@index([shiftId])
+  @@map("shift_chicken_logs")
 }
