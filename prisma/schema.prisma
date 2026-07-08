@@ -12,8 +12,10 @@
 //         distinto de Order.publicToken = credencial vista privada del cliente (FR-015).
 //   §2.10 Ventas custom: endpoint dedicado, item con customPieces, precio confirmado por cajera.
 //         InventoryItem.salePrice (por presa) alimenta el precio sugerido custom.
-//   §2.11 Descuentos = catálogo Discount (monto fijo) + DiscountAuthorization (por turno).
-//         discountAmount es SNAPSHOT del monto fijo; total es derivado. NO existe internalDiscount.
+//   §2.11 Descuentos = catálogo Discount (monto fijo POR PLATO) + DiscountAuthorization (por turno).
+//         El descuento se aplica POR PLATO, a nivel OrderItem (la cajera marca qué ítems lo llevan).
+//         OrderItem.discountAmount es SNAPSHOT del monto fijo por unidad; los totales son derivados.
+//         Máximo UN descuento por ítem (sin apilamiento). NO existe internalDiscount.
 //   §2.12 Customer = facturación nominada OPCIONAL (Order.customerId nullable → "S/N" si anónimo).
 
 generator client {
@@ -226,13 +228,12 @@ model Order {
   paymentStatus PaymentStatus  @default(PENDING)
   paymentMethod PaymentMethod?
 
-  // §2.11 — originalAmount = suma de ítems ANTES de descuento.
-  // discountAmount = SNAPSHOT del monto fijo del Discount al aplicarlo (NO una resta).
-  // total = derivado: originalAmount − (discountAmount ?? 0). Es lo que entra a caja.
-  originalAmount Decimal  @db.Decimal(10, 2)
-  discountAmount Decimal? @db.Decimal(10, 2)
-  total          Decimal  @db.Decimal(10, 2)
-  isCustom       Boolean  @default(false) // §2.10 — true si vino por POST /orders/custom
+  // §2.11 — originalAmount = suma de ítems ANTES de descuento = Σ(unitPrice × quantity).
+  // El descuento vive a NIVEL ÍTEM (OrderItem.discountId / discountAmount, por plato).
+  // total = derivado: originalAmount − Σ(descuentos de los ítems). Es lo que entra a caja.
+  originalAmount Decimal @db.Decimal(10, 2)
+  total          Decimal @db.Decimal(10, 2)
+  isCustom       Boolean @default(false) // §2.10 — true si vino por POST /orders/custom
 
   cancelReason  String?
   cancelDetails String?
@@ -252,9 +253,6 @@ model Order {
   // §2.12 — cliente registrado (factura nominada); null = venta anónima "S/N"
   customerId    String?   @db.Uuid
   customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  // §2.11 — un solo descuento por orden (sin apilamiento); null si no lleva descuento
-  discountId    String?   @db.Uuid
-  discount      Discount? @relation(fields: [discountId], references: [id], onDelete: Restrict)
 
   items OrderItem[]
 
@@ -269,12 +267,23 @@ model Order {
 }
 
 model OrderItem {
-  id         String  @id @default(uuid(7)) @db.Uuid
-  orderId    String  @db.Uuid
-  productId  String? @db.Uuid // null si pertenece a orden custom (§2.10)
-  variantId  String? @db.Uuid
-  quantity   Int
-  unitPrice  Decimal @db.Decimal(10, 2)
+  id        String  @id @default(uuid(7)) @db.Uuid
+  orderId   String  @db.Uuid
+  productId String? @db.Uuid // null si pertenece a orden custom (§2.10)
+  variantId String? @db.Uuid
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+
+  // §2.11 — descuento POR PLATO (nivel ítem). El discountId llega como referencia en el
+  // payload de CREACIÓN de la orden (una sola llamada, sin endpoint aparte — tech guide §5.0);
+  // el backend valida (disponibilidad + autorización del turno) y congela acá el snapshot.
+  // discountAmount = SNAPSHOT del monto fijo POR UNIDAD al aplicarlo (NO una resta);
+  // aplica a TODAS las unidades del ítem (para descuento parcial, el POS parte el ítem
+  // en dos líneas: N con descuento y M sin). Máximo UN descuento por ítem (sin apilamiento).
+  discountId     String?  @db.Uuid
+  discountAmount Decimal? @db.Decimal(10, 2)
+
+  // totalPrice = derivado: (unitPrice − (discountAmount ?? 0)) × quantity
   totalPrice Decimal @db.Decimal(10, 2)
   notes      String?
 
@@ -295,12 +304,14 @@ model OrderItem {
 
   createdAt DateTime @default(now())
 
-  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
-  variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant  Variant?  @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  discount Discount? @relation(fields: [discountId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([productId])
+  @@index([discountId]) // reportes/arqueo agrupan descuentos aplicados por plato (§2.11)
   @@map("order_items")
 }
 
@@ -536,14 +547,15 @@ model Customer {
 model Discount {
   id                    String               @id @default(uuid(7)) @db.Uuid
   name                  String
-  fixedAmount           Decimal              @db.Decimal(10, 2) // monto fijo en Bs — NO porcentaje en V1
+  fixedAmount           Decimal              @db.Decimal(10, 2) // monto fijo en Bs POR PLATO — NO porcentaje en V1
   availability          DiscountAvailability
   requiresAuthorization Boolean              @default(false) // si true → necesita DiscountAuthorization por turno
   active                Boolean              @default(true)
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
-  orders         Order[]
+  // §2.11 — el descuento se aplica POR PLATO: referencia desde OrderItem, no desde Order
+  orderItems     OrderItem[]
   vouchers       Voucher[]
   authorizations DiscountAuthorization[]
 

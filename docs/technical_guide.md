@@ -3,8 +3,8 @@
 **Complementa:** [docs/pdr.md](pdr.md)
 **Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
-**Versión:** 1.1 (sincroniza feature de descuentos con catálogo/autorización y precio de venta por presa en V1 — PDR §2.10 / §2.11)
-**Fecha:** 2026-06-06
+**Versión:** 1.3 (descuentos en **una sola llamada**: `discountId` por ítem en la creación de la orden, sin endpoint dedicado; nuevo `GET /pos/context` — PDR §2.11 / §5.0)
+**Fecha:** 2026-07-08
 
 > Este documento es la **traducción técnica** de las reglas de negocio definidas en el PDR. Contiene modelo de datos, contrato de la API, requerimientos no funcionales técnicos, máquina de estados con detalles transaccionales, payloads, OpenAPI skeleton, casos de prueba E2E y despliegue.
 >
@@ -37,7 +37,7 @@
   - [6.3 OrderCreateResponse (mesa, pagado, con sustitución)](#63-ordercreateresponse-mesa-pagado-con-sustitución)
   - [6.4 OrderCreateResponse (llevar, pendingPayment)](#64-ordercreateresponse-llevar-pendingpayment)
   - [6.5 CustomOrderCreateResponse (presas surtidas)](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom)
-  - [6.6 OrderWithDiscountResponse (descuento al personal)](#66-orderwithdiscountresponse-descuento-al-personal-aplicado)
+  - [6.6 OrderCreateWithDiscountResponse (descuento al personal por plato, una sola llamada)](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada)
   - [6.6b DiscountCreateResponse (catálogo — admin)](#66b-discountcreateresponse-catálogo--admin)
   - [6.6c DiscountAuthorizationResponse](#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno)
   - [6.7 VoucherCreateResponse](#67-vouchercreateresponse)
@@ -45,6 +45,7 @@
   - [6.9 ManualConsumptionResponse (cierre turno cocina)](#69-manualconsumptionresponse-cierre-turno-cocina)
   - [6.10 CashOpenResponse](#610-cashopenresponse-éxito)
   - [6.11 CancelOrderResponse (anulación)](#611-cancelorderresponse-anulación-de-pedido-pagado)
+  - [6.12 PosContextResponse (carga del POS en una llamada)](#612-poscontextresponse-carga-del-pos-en-una-llamada)
 - [7. OpenAPI skeleton (recomendación)](#7-openapi-skeleton-recomendación)
 - [8. Test cases E2E (casos prioritarios)](#8-test-cases-e2e-casos-prioritarios)
 - [9. Despliegue, backups y sincronización](#9-despliegue-backups-y-sincronización)
@@ -114,12 +115,10 @@
   - `publicToken: string` *(token aleatorio no adivinable — ej. `crypto.randomBytes(16).toString('hex')`, 128 bits — generado al crear la orden, **único** e indexado. Es la **credencial** de la vista pública del cliente: NO se usa el `id` interno ni un valor secuencial. Espacio 2^128 → no enumerable, FR-015)*
   - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)`
   - `paymentStatus: enum(pending, paid, partial)`, `paymentMethod: enum(cash, card, vale)?`
-  - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = suma de los ítems; PDR §2.11)*
-  - `discountId: UUID?` *(referencia al `Discount` aplicado; null si la orden no lleva descuento. Solo se permite **un descuento por orden** — sin apilamiento, PDR §2.11)*
-  - `discountAmount: decimal?` *(**snapshot** del monto fijo del descuento al momento de aplicarlo, ej. 7.00. NO se deriva de una resta: es el `fixedAmount` que tenía el `Discount` en ese instante. Se congela aquí para que, si el admin edita el descuento después, las ventas viejas conserven el monto real cobrado — PDR §2.11)*
-  - `total: decimal` *(total cobrado = `originalAmount − (discountAmount ?? 0)`; es el valor **derivado** y lo que entra a caja — PDR §2.11)*
+  - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = `Σ(unitPrice × quantity)` de los ítems; PDR §2.11)*
+  - `total: decimal` *(total cobrado = `originalAmount − Σ(descuentos de los ítems)`; es el valor **derivado** y lo que entra a caja — PDR §2.11)*
   - `isCustom: boolean` *(PDR §2.10 — true si la orden se creó vía endpoint custom; default false)*
-  - *Nota de migración: el antiguo campo `internalDiscount: boolean` queda **eliminado**. El "descuento al personal" ya no es un flag especial: es una instancia del catálogo `Discount` (availability `endOfShift`, sin autorización) referenciada vía `discountId`. Ver PDR §2.11.*
+  - *Nota de migración (v1.2): el descuento **ya NO vive en `Order`** — los antiguos `Order.discountId` / `Order.discountAmount` quedan **eliminados**. El descuento se aplica **por plato** y vive en `OrderItem.discountId` / `OrderItem.discountAmount` (ver `OrderItem` abajo). El antiguo `internalDiscount: boolean` sigue eliminado: el "descuento al personal" es una instancia del catálogo `Discount` (availability `endOfShift`, sin autorización). Ver PDR §2.11.*
   - `cancelReason: string?`, `cancelDetails: string?`
   - `createdBy: userId`, `createdAt: datetime`, `paidAt: datetime?`, `cancelledAt: datetime?`
   - `readyAt: datetime?` *(timestamp de transición a `ready`; reemplaza una eventual entidad `NotificationLog`)*
@@ -128,7 +127,10 @@
 
 - **OrderItem**
   - `id: UUID`, `orderId: UUID`, `productId: UUID?` *(null si custom)*, `variantId: UUID?`
-  - `quantity: int`, `unitPrice: decimal`, `totalPrice: decimal`
+  - `quantity: int`, `unitPrice: decimal`
+  - `discountId: UUID?` *(referencia al `Discount` aplicado **a este plato**; null si el ítem no lleva descuento. La cajera **marca qué ítems** lo llevan; máximo **un descuento por ítem** — sin apilamiento. En una orden conviven ítems con y sin descuento — PDR §2.11)*
+  - `discountAmount: decimal?` *(**snapshot por unidad** del monto fijo del descuento al aplicarlo, ej. 7.00. NO se deriva de una resta: es el `fixedAmount` que tenía el `Discount` en ese instante. Se congela en el ítem para que, si el admin edita el descuento después, las ventas viejas conserven el monto real cobrado. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas — PDR §2.11)*
+  - `totalPrice: decimal` *(**derivado**: `(unitPrice − (discountAmount ?? 0)) × quantity`)*
   - `notes: string?`, `substitutions: JSON?`
   - `customPieces: JSON?` *(ej. `[{type:"pecho",qty:2},{type:"ala",qty:1}]` — composición libre de presas para ítems de órdenes custom; ver PDR §2.10)*
 
@@ -173,13 +175,13 @@
   - `status: enum(issued, redeemed, cancelled)`, `note: string?`
   - *Nota: el vale **no es un tipo de descuento** (PDR §2.4): no suma a caja y descuenta nómina. Pero **sí puede llevar aplicado** el "Descuento personal" sobre su monto, con el mismo patrón snapshot que `Order` (§2.11). El inventario descuenta las presas reales en ambos casos.*
 
-- **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo, a nivel orden, uno por orden, sin apilamiento.)*
+- **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
   - `id: UUID`, `name: string`
-  - `fixedAmount: decimal` *(monto fijo en Bs — NO porcentaje en V1)*
+  - `fixedAmount: decimal` *(monto fijo en Bs **por plato** — NO porcentaje en V1)*
   - `availability: enum(always, endOfShift)` *(`always` = todo el turno; `endOfShift` = solo a fin de turno)*
   - `requiresAuthorization: boolean` *(si `true`, la cajera solo puede aplicarlo si el admin la autorizó en ese turno — ver `DiscountAuthorization`)*
   - `active: boolean`
-  - *Instancias principales (PDR §2.11): "Descuento personal" (`fixedAmount = 7`, `availability = endOfShift`, `requiresAuthorization = false`) y "Compensación al cliente" (`fixedAmount = 7`, `availability = always`, `requiresAuthorization = true`).*
+  - *Instancias principales (PDR §2.11): "Descuento personal" (`fixedAmount = 7` por plato, `availability = endOfShift`, `requiresAuthorization = false` — dedicado a los **trabajadores del negocio**) y "Compensación al cliente" (`fixedAmount = 7` por plato afectado, `availability = always`, `requiresAuthorization = true`).*
   - *El descuento es **puramente monetario**: el inventario siempre descuenta el producto real vendido, nunca el equivalente al precio descontado.*
 
 - **DiscountAuthorization** *(habilitación que el admin otorga a la sesión de cajera de un turno para aplicar un `Discount` con `requiresAuthorization = true` — PDR §2.11 / FR-016b)*
@@ -214,7 +216,7 @@
 - `OrderItem` → `Product` / `Variant` (ambos opcionales si pertenece a una orden custom — `Order.isCustom = true` con item poblando `customPieces`)
 - `InventoryTransaction` referencia `Order`, `Voucher` o `Expense` por `referenceId`
 - `Shift` vincula `CashRegister`, `User` (cajera), `Expense`, `Voucher`, `Order`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization`
-- `Discount` 1..* `Order` (vía `Order.discountId`, opcional — solo uno por orden)
+- `Discount` 1..* `OrderItem` (vía `OrderItem.discountId`, opcional — el descuento se aplica **por plato**; solo uno por ítem)
 - `Discount` 1..* `Voucher` (vía `Voucher.discountId`, opcional — "Descuento personal" sobre el vale)
 - `Discount` 1..* `DiscountAuthorization`
 - `DiscountAuthorization` vincula `Discount`, `Shift` y `User` (cajera) — autorización por turno otorgada por un admin
@@ -236,7 +238,7 @@ erDiagram
     Shift ||--o{ ShiftChickenLog : "ciclo crudo presas"
     Shift ||--o{ DailyManualConsumption : "consumos manuales"
     Shift ||--o{ DiscountAuthorization : "autoriza por turno"
-    Discount ||--o{ Order : "aplicado (uno por orden)"
+    Discount ||--o{ OrderItem : "aplicado POR PLATO (uno por ítem)"
     Discount ||--o{ Voucher : "descuento personal (opcional)"
     Discount ||--o{ DiscountAuthorization : habilita
     InventoryItem ||--o{ InventoryTransaction : "movimientos"
@@ -250,9 +252,13 @@ erDiagram
         enum status "created..closed|pendingPayment|cancelled"
         uuid customerId "nullable, S/N si anónimo"
         string publicToken "no adivinable, vista pública"
-        decimal originalAmount
-        decimal discountAmount "snapshot fijo"
-        decimal total "derivado"
+        decimal originalAmount "suma de ítems sin descuento"
+        decimal total "derivado: original menos descuentos de ítems"
+    }
+    OrderItem {
+        uuid discountId "nullable, descuento POR PLATO"
+        decimal discountAmount "snapshot por unidad"
+        decimal totalPrice "derivado por ítem"
     }
     Customer {
         string ci "único, buscable"
@@ -278,9 +284,10 @@ erDiagram
     }
 ```
 
-> **Dos sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
+> **Tres sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
 > - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](pdr.md#L380)).
-> - `discountAmount` es un **snapshot** del monto fijo, NO una resta. El `total` es lo derivado ([PDR §2.11](pdr.md#L401)).
+> - El descuento vive en el **ítem**, no en la orden: se aplica **por plato** — la cajera marca qué ítems lo llevan ([PDR §2.11](pdr.md#L401)).
+> - `OrderItem.discountAmount` es un **snapshot por unidad** del monto fijo, NO una resta. `OrderItem.totalPrice` y `Order.total` son los derivados ([PDR §2.11](pdr.md#L401)).
 
 ---
 
@@ -383,7 +390,7 @@ stateDiagram-v2
 ### Las 6 acciones auditadas (§2.9) y su punto de captura
 | Acción (`action`) | Punto de captura | `entity` |
 |---|---|---|
-| `CREATE_SALE` | `POST /orders` y `POST /orders/custom` (al confirmar pago) | `Order` |
+| `CREATE_SALE` | `POST /orders` y `POST /orders/custom` (al confirmar pago). Los **descuentos por ítem** aplicados en la creación van en `details` (`discountId`, `discountAmount`, ítems afectados) — no hay acción de audit separada para "aplicar descuento" | `Order` |
 | `CANCEL_SALE` | `POST /orders/{id}/cancel` | `Order` |
 | `ADJUST_INVENTORY` | `POST /inventory/adjust` | `InventoryItem` |
 | `CREATE_VOUCHER` | `POST /vouchers` | `Voucher` |
@@ -421,8 +428,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, username, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
 2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes, vales, gastos) NO reciben `shiftId`: el backend resuelve el **turno abierto de la sesión de cajera** autenticada (1 sesión activa por turno, FR-008b) y lo asigna. Mismo criterio para cualquier vínculo deducible de la sesión.
 3. **Precios y totales los calcula el backend desde la BD.** En la **orden estándar** el front **NO** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` / `Variant` y calcula `totalPrice` y `total`. **Única excepción:** la **venta custom**, donde la cajera confirma un `unitPrice` (input de negocio legítimo, §2.10). Snapshots (`discountAmount`, `customerName`) también los congela el backend, no el front.
-4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, manda `customerId` (lo obtuvo de `GET /customers`), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para cualquier dato que ya viva en una tabla.
+4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, manda `customerId` (lo obtuvo de `GET /customers`), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para los **descuentos**: el ítem lleva `discountId` (referencia al catálogo) y el backend valida, congela el snapshot y deriva los totales. El front jamás manda montos de descuento.
 5. **Respuestas listas para renderizar.** El backend devuelve todo lo que la UI muestra, **ya calculado y con nombres resueltos**. Los campos de actor se devuelven como objeto `{ id, name }` (ej. `createdBy: { id, name }`), no como id suelto, para que el frontend **solo pinte** sin segundas consultas ni cálculos.
+6. **Una operación de negocio = una llamada.** Todo lo que la cajera decide en una misma pantalla viaja en **un solo request** y el backend lo resuelve en **una sola transacción**. Los descuentos por plato van como `discountId` en cada ítem de `POST /orders` — **no existe** un endpoint separado para "aplicar descuento". Los endpoints separados se reservan para **momentos distintos en el tiempo** (`/pay` cuando el delivery paga al retirar, `/cancel`, `/status`), nunca para pasos de una misma operación.
 
 ## 5.1 Endpoints principales
 
@@ -432,8 +440,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
-- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Admite **N ítems**: platos, extras y bebidas son todos `Product` del catálogo (por `category`), cada uno un ítem con su `quantity`. El backend resuelve `unitPrice` desde `Product.basePrice`, calcula `totalPrice = unitPrice × quantity` por ítem y `total = Σ(totalPrice)` (el front NO manda precios, §5.0). Setea `Order.isCustom = false`.
-- `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR) con presas surtidas. Items llevan `customPieces` + extras/bebidas opcionales y un **precio unitario confirmado** por la cajera. El sistema calcula un **precio sugerido** = `sum(customPieces[].qty × InventoryItem.salePrice)` + extras + bebidas (todo a precio de venta, §2.10, **V1**); la cajera puede aceptarlo o pisarlo. Se persiste el precio **confirmado**, nunca la sugerencia. Setea `Order.isCustom = true`. Endpoint **separado** para mantener DTOs y validaciones limpias por flujo (PDR §2.10).
+- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Admite **N ítems**: platos, extras y bebidas son todos `Product` del catálogo (por `category`), cada uno un ítem con su `quantity`. Cada ítem acepta un **`discountId?` opcional** (§2.11): el backend valida el descuento (activo, ventana `availability` vigente y, si `requiresAuthorization`, autorización de la sesión de cajera en el turno — errores `DISCOUNT_NOT_AVAILABLE` / `DISCOUNT_NOT_AUTHORIZED`), congela `discountAmount` (snapshot por unidad del `fixedAmount` vigente) y deriva los totales — **todo en la misma llamada y transacción de creación**. El backend resuelve `unitPrice` desde `Product.basePrice`, calcula `totalPrice = (unitPrice − (discountAmount ?? 0)) × quantity` por ítem y `total = originalAmount − Σ(descuentos)` (el front NO manda precios ni montos, §5.0). Setea `Order.isCustom = false`.
+  > **No existe endpoint separado para aplicar descuentos** (§5.0, principio 6). Descuento post-creación: sin soporte en V1 (sin caso real) — para una orden `pendingPayment` sin pagar, cancelar (gratis, nada se contabilizó) y recrear con descuento; para una pagada, anulación FR-011b.
+- `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR) con presas surtidas. Items llevan `customPieces` + extras/bebidas opcionales, un **precio unitario confirmado** por la cajera y un **`discountId?` opcional** (mismas validaciones y snapshot que la orden estándar, §2.11). El **precio sugerido** = `sum(customPieces[].qty × salePrice)` + extras + bebidas lo calcula el **POS en el cliente** con los `piecePrices` que ya recibió en `GET /pos/context` (sin llamadas por cada cambio de selección); la cajera puede aceptarlo o pisarlo y se persiste el precio **confirmado**, nunca la sugerencia (§2.10, **V1**). Setea `Order.isCustom = true`. Endpoint **separado** para mantener DTOs y validaciones limpias por flujo (PDR §2.10).
 - `GET /api/v1/orders/{id}` — obtener orden
 - `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
 - `PATCH /api/v1/orders/{id}/status` — cambiar estado
@@ -454,9 +463,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/vouchers` — listar vales con filtros
 - `PATCH /api/v1/inventory/{id}/sale-price` — configurar el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10)
 - `POST /api/v1/discounts` — crear descuento (admin): `name`, `fixedAmount`, `availability`, `requiresAuthorization`, `active`
-- `GET /api/v1/discounts` — listar descuentos (filtros: `availability`, `active`). El POS pide los **aplicables ahora**: `active = true`, disponibilidad vigente (`always`, o `endOfShift` solo en la ventana de fin de turno) y, si `requiresAuthorization`, que exista `DiscountAuthorization` para la sesión de cajera del turno
-- `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `Order` (§2.11)
-- `POST /api/v1/orders/{id}/discount` — aplicar **un** descuento a la orden: valida disponibilidad y autorización; setea `Order.discountId`, copia `discountAmount` (snapshot del `fixedAmount` vigente) y recalcula `total = originalAmount − discountAmount`
+- `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
+- `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
+- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6). Devuelve el contexto operativo completo de la sesión de cajera, **liviano y listo para pintar** (solo datos activos, sin históricos — el menú completo son ~15 productos, pocos KB): `products` (activos, con sus `variants`), `discounts` **aplicables ahora** a la sesión (`active = true`, disponibilidad vigente — `always`, o `endOfShift` solo en su ventana — y, si `requiresAuthorization`, solo los que tienen `DiscountAuthorization` vigente para esta cajera/turno: el POS no filtra nada), `piecePrices` (los `salePrice` de las 4 presas cocidas, para calcular el **precio sugerido custom en el cliente**) y `shift` (`{ id, orderCount, startAt }` del turno activo). Ver payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
 - `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body mínimo: `cashierId`; el `shiftId` se deriva del turno activo de esa cajera y `authorizedBy` del JWT, §5.0). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
 - `GET /api/v1/reports/sales` — reporte ventas
@@ -551,9 +560,9 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /auth/login` | **público** (`@Public()`) |
 | `POST /products`, `POST /variants` | `ADMIN` |
 | `GET /products` | `ADMIN`, `CASHIER` *(el POS lo consume)* |
-| `POST /orders`, `POST /orders/custom` | `CASHIER` |
+| `POST /orders`, `POST /orders/custom` *(incluye descuentos por ítem vía `discountId`)* | `CASHIER` |
 | `POST /orders/{id}/pay`, `POST /orders/{id}/cancel` | `CASHIER` |
-| `POST /orders/{id}/discount` | `CASHIER` |
+| `GET /pos/context` | `CASHIER` |
 | `GET /orders/{id}` | `CASHIER`, `DISPATCHER`, `ADMIN` |
 | `PATCH /orders/{id}/status` (ready / delivered) | `DISPATCHER` |
 | `GET /public/orders/{token}` | **público** (vista del cliente por token no adivinable, sin datos sensibles) |
@@ -567,7 +576,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /inventory/manual-consumption` | `COOK` |
 | `POST/GET /inventory/shift-chicken-log[...]` | `COOK` |
 | `POST /discounts`, `PATCH /discounts/{id}` | `ADMIN` |
-| `GET /discounts` | `CASHIER`, `ADMIN` |
+| `GET /discounts` | `ADMIN` *(el POS recibe los aplicables en `GET /pos/context`)* |
 | `POST /discounts/{id}/authorize`, `GET /discounts/authorizations` | `ADMIN` |
 | `GET /reports/sales`, `GET /reports/inventory-presas` | `ADMIN` |
 | Crear usuarios | `ADMIN` |
@@ -612,7 +621,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 - Frontend valida flujo con `isSuccess`.
 - `error` será singular.
 - `details` será array.
-- `code` será string estable: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `INSUFFICIENT_STOCK`, `DISCOUNT_NOT_AVAILABLE` (descuento fuera de su ventana de disponibilidad), `DISCOUNT_NOT_AUTHORIZED` (la sesión de cajera no tiene autorización vigente para ese descuento), `DISCOUNT_ALREADY_APPLIED` (intento de aplicar un segundo descuento — sin apilamiento), etc.
+- `code` será string estable: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `INSUFFICIENT_STOCK`, `DISCOUNT_NOT_AVAILABLE` (descuento inactivo o fuera de su ventana de disponibilidad — rechaza la creación de la orden completa), `DISCOUNT_NOT_AUTHORIZED` (la sesión de cajera no tiene autorización vigente para ese descuento), etc. *Nota: no existe `DISCOUNT_ALREADY_APPLIED` — con un único campo `discountId` por ítem en el payload de creación, el apilamiento es **irrepresentable por construcción** (no hay estado inválido que validar).*
 - En NestJS se implementará con `ValidationPipe` + excepciones HTTP + `ExceptionFilter` global para mantener este contrato en todos los endpoints.
 
 ---
@@ -783,33 +792,70 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 }
 ```
 
-## 6.6 OrderWithDiscountResponse (descuento al personal aplicado)
-> El "descuento al personal" ya no es un flag: es la instancia `Discount` "Descuento personal" (7 Bs, `endOfShift`) aplicada vía `POST /orders/{id}/discount`. El producto real (Porción Media) se registra tal cual; el inventario descuenta las 2 presas reales. El `total` (23) se deriva de `originalAmount − discountAmount`.
+## 6.6 OrderCreateWithDiscountResponse (descuento al personal POR PLATO en la creación — una sola llamada)
+> El descuento viaja como **`discountId` en cada ítem** del request de `POST /orders` — **no existe llamada separada** para aplicarlo (§5.0, principio 6). El backend valida (disponibilidad + autorización), congela el snapshot por unidad y deriva los totales en la misma transacción. Acá: 3 Porciones Media (2 ítems: uno con qty 2 y otro con qty 1), las 3 con "Descuento personal" (7 Bs por plato, `endOfShift`) → `total = 90 − 21 = 69`. Los productos reales se registran tal cual y el inventario descuenta las presas reales.
+
+Request (lo único que el front decide: referencias + cantidades):
+```json
+{
+  "type": "MESA",
+  "paymentStatus": "paid",
+  "paymentMethod": "cash",
+  "items": [
+    {
+      "productId": "uuid-product-porcion-media",
+      "quantity": 2,
+      "discountId": "uuid-discount-personal",
+      "selectedPieces": [ {"type":"pierna","qty":2}, {"type":"entrepierna","qty":2} ]
+    },
+    {
+      "productId": "uuid-product-porcion-media",
+      "quantity": 1,
+      "discountId": "uuid-discount-personal",
+      "selectedPieces": [ {"type":"pecho","qty":1}, {"type":"ala","qty":1} ]
+    }
+  ]
+}
+```
+
+Response (todo calculado por el backend, listo para pintar):
 ```json
 {
   "isSuccess": true,
-  "message": "Descuento aplicado correctamente",
+  "message": "Pedido creado y pagado correctamente",
   "data": {
     "id": "uuid-order-004",
     "type": "MESA",
     "status": "preparing",
     "paymentStatus": "paid",
-    "discountId": "uuid-discount-personal",
-    "originalAmount": 30.00,
-    "discountAmount": 7.00,
+    "originalAmount": 90.00,
     "items": [
+      {
+        "productId": "uuid-product-porcion-media",
+        "quantity": 2,
+        "unitPrice": 30.00,
+        "discountId": "uuid-discount-personal",
+        "discountAmount": 7.00,
+        "totalPrice": 46.00,
+        "selectedPieces": [
+          {"type":"pierna","qty":2},
+          {"type":"entrepierna","qty":2}
+        ]
+      },
       {
         "productId": "uuid-product-porcion-media",
         "quantity": 1,
         "unitPrice": 30.00,
-        "totalPrice": 30.00,
+        "discountId": "uuid-discount-personal",
+        "discountAmount": 7.00,
+        "totalPrice": 23.00,
         "selectedPieces": [
-          {"type":"pierna","qty":1},
-          {"type":"entrepierna","qty":1}
+          {"type":"pecho","qty":1},
+          {"type":"ala","qty":1}
         ]
       }
     ],
-    "total": 23.00,
+    "total": 69.00,
     "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" }
   }
 }
@@ -931,6 +977,41 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 }
 ```
 
+## 6.12 PosContextResponse (carga del POS en una llamada)
+> `GET /api/v1/pos/context` — el POS carga con **una sola llamada liviana** (solo datos activos, sin históricos; el menú completo son ~15 productos → pocos KB). Los `discounts` ya vienen **filtrados por el backend** para esta sesión (activos + ventana vigente + autorización si corresponde): el POS pinta lo que recibe, no filtra nada (§5.0). Con `piecePrices` el POS calcula el **precio sugerido custom en el cliente**, sin más llamadas.
+```json
+{
+  "isSuccess": true,
+  "message": "Contexto POS",
+  "data": {
+    "shift": { "id": "uuid-shift-001", "orderCount": 27, "startAt": "2026-05-01T09:00:00" },
+    "products": [
+      {
+        "id": "uuid-product-porcion-media",
+        "name": "Porción Media",
+        "basePrice": 30.00,
+        "category": "Plato principal",
+        "variants": [
+          { "id": "uuid-variant-pm-mixto", "name": "Porción Media - Mixto",
+            "components": [ {"type":"presa","count":2}, {"type":"acompanamiento","name":"mixto","count":1} ],
+            "isDefault": true }
+        ]
+      },
+      { "id": "uuid-product-coca-500", "name": "Coca Cola 500 ml", "basePrice": 8.00, "category": "Bebida", "variants": [] }
+    ],
+    "discounts": [
+      { "id": "uuid-discount-personal", "name": "Descuento personal", "fixedAmount": 7.00, "availability": "endOfShift" }
+    ],
+    "piecePrices": [
+      { "type": "pecho", "salePrice": 12.00 },
+      { "type": "ala", "salePrice": 10.00 },
+      { "type": "pierna", "salePrice": 11.00 },
+      { "type": "entrepierna", "salePrice": 11.00 }
+    ]
+  }
+}
+```
+
 ---
 
 # 7. OpenAPI skeleton (recomendación)
@@ -938,7 +1019,7 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 El LLM debe generar `openapi: 3.0.3` con:
 - `securitySchemes` JWT Bearer
 - `paths` para todos los endpoints listados en §5.1
-- `tags` para agrupar requests (Products, Orders, Inventory, Shifts, Vouchers, Discounts, Reports, Print)
+- `tags` para agrupar requests (Products, Orders, Pos, Inventory, Shifts, Vouchers, Discounts, Reports, Print)
 - `components/schemas` con los DTOs de request y response
 - Ejemplos de request/response basados en los payloads de §6
 
@@ -962,9 +1043,10 @@ El LLM debe generar `openapi: 3.0.3` con:
 10. Cliente pide factura → impresora térmica imprime; impresora desconectada → PDF se descarga.
 11. Anular pedido pagado → motivo y detalles obligatorios → inventario revertido → aparece en arqueo.
 12. Reconciliación diaria: comparar `InventoryTransaction` vs `InventoryItem.currentStock`.
-13. Descuento al personal: aplicar el `Discount` "Descuento personal" (7 Bs, `endOfShift`) a una Porción Media (30 Bs) vía `POST /orders/{id}/discount` → `total = 23`, `originalAmount = 30`, `discountAmount = 7` (snapshot), `discountId` referenciado; el producto real (Porción Media) e inventario (2 presas) descuentan correcto; caja cuadra. Fuera de la ventana de fin de turno el descuento NO se ofrece (`DISCOUNT_NOT_AVAILABLE`).
-13b. Descuento que requiere autorización: sin `DiscountAuthorization`, aplicar "Compensación al cliente" (7 Bs, `always`, `requiresAuthorization`) falla con `DISCOUNT_NOT_AUTHORIZED`. El admin autoriza la sesión de cajera vía `POST /discounts/{id}/authorize` (queda `AuditLog`) → la cajera lo aplica a **uno o varios** pedidos del turno sin renovar la autorización por orden. Al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente.
-13c. Snapshot del monto: aplicar un descuento de 7 Bs a una orden → el admin luego edita el `Discount` a 10 Bs (`PATCH /discounts/{id}`) → la orden vieja conserva `discountAmount = 7`; una orden nueva toma 10.
+13. Descuento al personal POR PLATO en **una sola llamada**: `POST /orders` con 3 Porciones Media (30 Bs c/u) donde cada ítem lleva `discountId` del "Descuento personal" (7 Bs por plato, `endOfShift`) → la orden se crea con `originalAmount = 90`, cada ítem con `discountAmount = 7` (snapshot por unidad) y `total = 90 − 21 = 69`, todo en la misma transacción (sin segunda llamada); los productos reales e inventario (6 presas) descuentan correcto; caja cuadra; el audit `CREATE_SALE` incluye los descuentos en `details`. Mandar `discountId` solo en 2 de los 3 platos → descuento 14, `total = 76`. Fuera de la ventana de fin de turno, la creación se rechaza completa con `DISCOUNT_NOT_AVAILABLE` (no se crea orden parcial).
+13b. Descuento que requiere autorización: sin `DiscountAuthorization`, `POST /orders` con ítems que llevan `discountId` de "Compensación al cliente" (7 Bs por plato, `always`, `requiresAuthorization`) se rechaza con `DISCOUNT_NOT_AUTHORIZED`. El admin autoriza la sesión de cajera vía `POST /discounts/{id}/authorize` (queda `AuditLog`) → la cajera crea **una o varias órdenes** del turno con ese `discountId` en los platos afectados, sin renovar la autorización por orden ni por plato. Al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente.
+13c. Snapshot del monto: crear una orden con platos a 7 Bs de descuento → el admin luego edita el `Discount` a 10 Bs (`PATCH /discounts/{id}`) → los ítems viejos conservan `discountAmount = 7`; una orden nueva toma 10.
+13d. Contexto POS: `GET /pos/context` con sesión de cajera autorizada para "Compensación al cliente" → `discounts` incluye ambas instancias vigentes; sin autorización → "Compensación al cliente" NO aparece (el backend filtra, el POS no); fuera de la ventana de fin de turno → "Descuento personal" NO aparece. `piecePrices` trae los 4 `salePrice` y el precio sugerido custom se calcula en el cliente sin llamadas adicionales.
 14. Cocinero registra consumos manuales al cierre → se vinculan al `Shift` y aparecen en reporte diario.
 14b. Ciclo crudo de presas — continuidad entre turnos: al cierre del turno mañana, cocinero registra `ShiftChickenLog` con `rawLeftover = 64` para cada `pieceType`. Al abrir el turno noche, `GET /api/v1/inventory/shift-chicken-log/{shiftIdNoche}` devuelve `reprocessRaw = 64` autopoblado por `pieceType`. Cocinero confirma o ajusta. Al cerrar el turno noche, el sistema reconcilia `(reprocessRaw + processedRaw − rawLeftover) − vendido_cocido_del_turno` vs `cookedLeftover` anotado y reporta discrepancia si existe.
 15. Usuario logueado como CASHIER intenta logear como DISPATCHER en mismo turno → falla.
@@ -991,10 +1073,10 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Venta custom de presas surtidas (§2.10) | Endpoint `POST /api/v1/orders/custom`; flag `Order.isCustom = true`; ítem con `customPieces: JSON` |
 | Tipo de pedido (MESA / LLEVAR) (§2.8) | `Order.type: enum(MESA, LLEVAR)` — CUSTOM **no** es un valor de `type` |
 | Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions: JSON` con `{from, to}`; sin campo de ajuste de precio |
-| Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount` (`name`, `fixedAmount`, `availability`, `requiresAuthorization`, `active`); CRUD vía `/api/v1/discounts` |
-| Aplicar descuento a la orden (§2.11 / FR-016) | `POST /orders/{id}/discount`; `Order.discountId` + `Order.discountAmount` (snapshot) + `Order.originalAmount`; `total` derivado; uno por orden (sin apilamiento) |
-| Descuento al personal por sobrante de pollo cocido (§2.11) | Instancia de `Discount` "Descuento personal" (`fixedAmount = 7`, `availability = endOfShift`, `requiresAuthorization = false`) referenciada vía `Order.discountId`. **El antiguo `Order.internalDiscount` queda eliminado** |
-| Compensación al cliente por pollo defectuoso (§2.11) | Instancia de `Discount` "Compensación al cliente" (`fixedAmount = 7`, `availability = always`, `requiresAuthorization = true`) |
+| Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount` (`name`, `fixedAmount` **por plato**, `availability`, `requiresAuthorization`, `active`); CRUD vía `/api/v1/discounts` |
+| Aplicar descuento POR PLATO (§2.11 / FR-016) | `discountId?` opcional **en cada ítem** de `POST /orders` / `POST /orders/custom` — una sola llamada, sin endpoint dedicado (§5.0 principio 6); el backend valida, congela `OrderItem.discountAmount` (snapshot por unidad) y deriva `OrderItem.totalPrice` y `Order.total`; uno por ítem (apilamiento irrepresentable) |
+| Descuento al personal por sobrante de pollo cocido (§2.11) | Instancia de `Discount` "Descuento personal" (`fixedAmount = 7` por plato, `availability = endOfShift`, `requiresAuthorization = false`) referenciada vía `OrderItem.discountId`. **Los antiguos `Order.internalDiscount` y `Order.discountId`/`Order.discountAmount` quedan eliminados** |
+| Compensación al cliente por pollo defectuoso (§2.11) | Instancia de `Discount` "Compensación al cliente" (`fixedAmount = 7` por plato afectado, `availability = always`, `requiresAuthorization = true`) |
 | Autorización de descuentos por turno (§2.11 / FR-016b) | Entidad `DiscountAuthorization` (admin → sesión de cajera del turno); `POST /discounts/{id}/authorize`; se extingue al cerrar turno; acto auditado en `AuditLog` |
 | Precio sugerido en venta custom (§2.10) — **V1** | `InventoryItem.salePrice` por presa cocida (config admin vía `PATCH /inventory/{id}/sale-price`); cálculo `sum(customPieces[].qty × salePrice) + extras + bebidas`; la cajera puede pisarlo, se persiste el confirmado |
 | Pedido con pago pendiente (§2.5) | `Order.status = pendingPayment` + `paymentStatus = pending`; cancelación solo manual |

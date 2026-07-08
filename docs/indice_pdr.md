@@ -192,9 +192,9 @@ Una misma idea (ej. *descuentos*) aparece en los tres documentos, pero **en dist
 
 ```mermaid
 flowchart TB
-    A["🧠 PDR §2.11<br/><b>Regla de negocio</b><br/>'El admin crea descuentos de monto fijo;<br/>la cajera los aplica a la orden'"]
-    B["✅ requirements.md FR-016 / FR-016b<br/><b>Requerimiento + criterio de aceptación</b><br/>'El total baja en ese monto; queda registrado<br/>precio original, monto y referencia'"]
-    C["⚙️ technical guide §3 / §5<br/><b>Entidades + endpoints</b><br/>Discount · DiscountAuthorization ·<br/>POST /orders/{id}/discount"]
+    A["🧠 PDR §2.11<br/><b>Regla de negocio</b><br/>'El admin crea descuentos de monto fijo POR PLATO;<br/>la cajera marca qué platos los llevan'"]
+    B["✅ requirements.md FR-016 / FR-016b<br/><b>Requerimiento + criterio de aceptación</b><br/>'Cada plato marcado baja en ese monto; queda registrado<br/>el snapshot por plato y la referencia al descuento'"]
+    C["⚙️ technical guide §3 / §5<br/><b>Entidades + endpoints</b><br/>Discount · DiscountAuthorization ·<br/>discountId por ítem en POST /orders"]
     D["⚙️ technical guide §6 / §8<br/><b>Payload + caso E2E</b><br/>OrderWithDiscountResponse ·<br/>Test 13 / 13b / 13c"]
 
     A ==origina==> B

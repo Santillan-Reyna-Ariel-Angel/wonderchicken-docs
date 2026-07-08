@@ -53,7 +53,7 @@ erDiagram
     Order ||--|{ OrderItem : "compone"
     Order ||--o{ InventoryTransaction : "reason=sale"
 
-    Discount ||--o{ Order : "aplicado, uno por orden"
+    Discount ||--o{ OrderItem : "aplicado POR PLATO, uno por ítem"
     Discount ||--o{ Voucher : "descuento personal (opcional)"
     Discount ||--o{ DiscountAuthorization : "habilita"
 
@@ -128,10 +128,8 @@ erDiagram
         enum status "created..closed|pendingPayment|cancelled|onHold"
         enum paymentStatus "pending|paid|partial"
         enum paymentMethod "cash|card|vale, nullable"
-        decimal originalAmount "antes de descuento"
-        uuid discountId FK "nullable, uno por orden"
-        decimal discountAmount "snapshot del monto fijo"
-        decimal total "derivado: original menos descuento"
+        decimal originalAmount "suma de ítems antes de descuento"
+        decimal total "derivado: original menos descuentos de ítems"
         bool isCustom "marca, no es un tipo"
         string cancelReason "nullable"
         string cancelDetails "nullable"
@@ -152,7 +150,9 @@ erDiagram
         uuid variantId FK "nullable"
         int quantity
         decimal unitPrice
-        decimal totalPrice
+        uuid discountId FK "nullable, descuento POR PLATO"
+        decimal discountAmount "nullable, snapshot por unidad"
+        decimal totalPrice "derivado: (unitPrice - descuento) x qty"
         string notes "nullable"
         json substitutions "nullable"
         json customPieces "nullable, presas surtidas"
@@ -233,7 +233,7 @@ erDiagram
     Discount {
         uuid id PK
         string name
-        decimal fixedAmount "monto fijo, no porcentaje"
+        decimal fixedAmount "monto fijo POR PLATO, no porcentaje"
         enum availability "always|endOfShift"
         bool requiresAuthorization
         bool active
@@ -288,7 +288,7 @@ erDiagram
 | `ShiftChickenLog` | Ciclo **crudo** de presas por turno (§2.3). |
 | `DailyManualConsumption` | Consumos manuales por turno (bolsas, vasos, etc.). |
 | `Voucher` | Vale de consumo del personal (descuenta nómina, no caja). |
-| `Discount` / `DiscountAuthorization` | Catálogo de descuentos y su autorización por turno (§2.11). |
+| `Discount` / `DiscountAuthorization` | Catálogo de descuentos (monto fijo **por plato**, aplicado a nivel `OrderItem`) y su autorización por turno (§2.11). |
 | `Expense` | Gasto pagado desde caja. |
 | `AuditLog` | Rastro inmutable de acciones críticas (§2.9). |
 
@@ -384,6 +384,7 @@ Request (datos mínimos — ver [principios §5.0](technical_guide.md#50-princip
       "productId": "uuid-product-wonder",
       "variantId": "uuid-variant-wonder",
       "quantity": 2,
+      "discountId": "uuid-discount-compensacion",
       "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ],
       "substitutions": [ {"from":"mixto","to":"arroz"} ]
     },
@@ -393,7 +394,8 @@ Request (datos mínimos — ver [principios §5.0](technical_guide.md#50-princip
 }
 ```
 > **N ítems libres:** un pedido estándar mezcla **platos + bebidas + extras** en cualquier cantidad (acá: Wonder×2, Fanta×1, Porción de Papas×2). Cada uno es un `Product`; el front solo manda `productId` + `quantity`, el backend pone el precio y suma el total (§2.2 / §5.0).
-> **Mínimos:** `customerId` es **opcional** (omitirlo = venta anónima "S/N"); el backend lee `Customer` y snapshotea `customerName`. NO se envían `createdBy` ni `shiftId` (los deriva del JWT y del turno activo) ni precios (los calcula desde `Product`/`Variant`). Para venta nominada, el front ya obtuvo el `customerId` vía `GET /customers`.
+> **Descuento por plato en la MISMA llamada (§2.11):** el ítem que lleva descuento manda su `discountId` (opcional) — **no existe endpoint separado** para aplicarlo. El backend valida (disponibilidad + autorización del turno), congela `discountAmount` (snapshot por unidad) y deriva `totalPrice` y `total` en la misma transacción. Errores: `DISCOUNT_NOT_AVAILABLE`, `DISCOUNT_NOT_AUTHORIZED`.
+> **Mínimos:** `customerId` es **opcional** (omitirlo = venta anónima "S/N"); el backend lee `Customer` y snapshotea `customerName`. NO se envían `createdBy` ni `shiftId` (los deriva del JWT y del turno activo) ni precios ni montos de descuento (los calcula desde `Product`/`Variant`/`Discount`). Para venta nominada, el front ya obtuvo el `customerId` vía `GET /customers`.
 Response:
 ```json
 {
@@ -409,26 +411,29 @@ Response:
     "status": "preparing",
     "paymentStatus": "paid",
     "paymentMethod": "cash",
+    "originalAmount": 104.00,
     "items": [
       {
         "productId": "uuid-product-wonder",
         "variantId": "uuid-variant-wonder",
         "quantity": 2,
         "unitPrice": 36.00,
-        "totalPrice": 72.00,
+        "discountId": "uuid-discount-compensacion",
+        "discountAmount": 7.00,
+        "totalPrice": 58.00,
         "substitutions": [ {"from":"mixto","to":"arroz"} ],
         "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ]
       },
       { "productId": "uuid-product-fanta", "quantity": 1, "unitPrice": 8.00, "totalPrice": 8.00 },
       { "productId": "uuid-product-papas", "quantity": 2, "unitPrice": 12.00, "totalPrice": 24.00 }
     ],
-    "total": 104.00,
+    "total": 90.00,
     "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
     "paidAt": "2026-05-01T22:10:00"
   }
 }
 ```
-> **Listo para render:** `createdBy` viene como `{ id, name }` (no id suelto); `customerName` ya resuelto desde `Customer`; `unitPrice`/`totalPrice`/`total` calculados. El frontend solo pinta.
+> **Listo para render:** `createdBy` viene como `{ id, name }` (no id suelto); `customerName` ya resuelto desde `Customer`; `unitPrice`/`totalPrice`/`total` calculados. El descuento del Wonder quedó congelado en el ítem: `discountAmount = 7` por unidad → `totalPrice = (36 − 7) × 2 = 58`; `total = 104 − 14 = 90`. El frontend solo pinta.
 
 **`POST /api/v1/orders/custom`** — crear orden custom (presas surtidas). Rol: `CASHIER`. La cajera arma las presas y confirma el precio.
 
@@ -450,7 +455,7 @@ Request:
   ]
 }
 ```
-> **Excepción de precio (§5.0):** acá el `unitPrice` **sí** lo envía el front porque es el **precio confirmado por la cajera** (§2.10). El backend igualmente calcula el **sugerido** para mostrarlo; lo que se persiste es el confirmado. `customerId` opcional; `createdBy`/`shiftId` del token/sesión.
+> **Excepción de precio (§5.0):** acá el `unitPrice` **sí** lo envía el front porque es el **precio confirmado por la cajera** (§2.10). El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `GET /pos/context`; lo que se persiste es el confirmado. Los ítems custom también aceptan `discountId?` opcional (mismas validaciones que la orden estándar, §2.11). `customerId` opcional; `createdBy`/`shiftId` del token/sesión.
 Response:
 ```json
 {
@@ -503,28 +508,24 @@ Response:
 }
 ```
 
-**`POST /api/v1/orders/{id}/discount`** — aplicar **un** descuento a la orden. Rol: `CASHIER`.
+> **Descuentos por plato — sin endpoint separado:** el descuento viaja como `discountId` opcional en cada ítem de `POST /orders` / `POST /orders/custom` (ver request de arriba). El `discountAmount` es **snapshot por unidad** y aplica a todas las unidades del ítem (para descuento parcial, el POS parte el ítem en dos líneas). Errores en la creación: `DISCOUNT_NOT_AVAILABLE` (inactivo o fuera de su ventana), `DISCOUNT_NOT_AUTHORIZED` (la cajera no fue autorizada). No existe `DISCOUNT_ALREADY_APPLIED`: con un solo campo `discountId` por ítem, el apilamiento es irrepresentable.
 
-Request:
-```json
-{ "discountId": "uuid-discount-personal" }
-```
-Response:
+**`GET /api/v1/pos/context`** — carga del POS en **una sola llamada liviana** (solo datos activos, listos para pintar). Rol: `CASHIER`.
+
+Response (resumen — payload completo en [`technical_guide.md` §6.12](technical_guide.md#612-poscontextresponse-carga-del-pos-en-una-llamada)):
 ```json
 {
   "isSuccess": true,
-  "message": "Descuento aplicado correctamente",
+  "message": "Contexto POS",
   "data": {
-    "id": "uuid-order-004",
-    "discountId": "uuid-discount-personal",
-    "originalAmount": 30.00,
-    "discountAmount": 7.00,
-    "total": 23.00,
-    "paymentStatus": "paid"
+    "shift": { "id": "uuid-shift-001", "orderCount": 27, "startAt": "2026-05-01T09:00:00" },
+    "products": [ { "id": "...", "name": "Porción Media", "basePrice": 30.00, "category": "Plato principal", "variants": [ ... ] } ],
+    "discounts": [ { "id": "...", "name": "Descuento personal", "fixedAmount": 7.00, "availability": "endOfShift" } ],
+    "piecePrices": [ { "type": "pecho", "salePrice": 12.00 }, { "type": "ala", "salePrice": 10.00 } ]
   }
 }
 ```
-> Errores posibles: `DISCOUNT_NOT_AVAILABLE` (fuera de su ventana), `DISCOUNT_NOT_AUTHORIZED` (la cajera no fue autorizada), `DISCOUNT_ALREADY_APPLIED` (sin apilamiento).
+> `discounts` ya viene **filtrado por el backend** para esta sesión (activos + ventana vigente + autorización si corresponde) — el POS no filtra nada. Con `piecePrices` el precio sugerido custom se calcula **en el cliente**, sin llamadas por cada cambio de selección.
 
 **`POST /api/v1/orders/{id}/cancel`** — anular pedido pagado (revierte inventario). Rol: `CASHIER`. `reason` y `details` obligatorios.
 

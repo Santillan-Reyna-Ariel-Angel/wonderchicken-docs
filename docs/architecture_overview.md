@@ -203,7 +203,7 @@ erDiagram
     InventoryItem ||--o{ DailyManualConsumption : "anotacion por turno"
 
     Shift ||--o{ ShiftChickenLog : "ciclo crudo presas §2.3"
-    Discount ||--o{ Order : "aplicado (uno por orden) §2.11"
+    Discount ||--o{ OrderItem : "aplicado POR PLATO (uno por item) §2.11"
     Discount ||--o{ DiscountAuthorization : "habilita"
     Shift ||--o{ DiscountAuthorization : "autoriza por turno"
 ```
@@ -220,7 +220,7 @@ erDiagram
 | Numeracion por turno (FR-007) | `Order.orderNumber` con `@@unique([shiftId, orderNumber])` + `Shift.lastOrderNumber` como contador atomico. |
 | Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog` (a agregar en el schema — ver technical guide §3.1). |
 | Vale no suma caja (§2.4) | `Voucher` no genera fila en ningun campo de monto de `Shift`. Aparece como linea separada en el arqueo via query. |
-| Descuento al personal ya no es un flag (§2.11) | Se eliminó `Order.internalDiscount`. Ahora `Order.discountId` apunta al catálogo `Discount`; la autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). Detalle de campos en technical_guide §3.1. |
+| Descuento al personal ya no es un flag, y aplica POR PLATO (§2.11) | Se eliminó `Order.internalDiscount`. El descuento vive a **nivel ítem**: `OrderItem.discountId` apunta al catálogo `Discount` y `OrderItem.discountAmount` congela el snapshot por unidad; la cajera marca qué platos lo llevan. La autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). Detalle de campos en technical_guide §3.1. |
 
 > El schema actual NO tiene aun el modelo `ShiftChickenLog` listado en [`docs/technical_guide.md` §3.1](technical_guide.md). Es deuda explicita del Sprint 0 / Sprint 2.
 
