@@ -173,3 +173,4 @@ Una vez se escucho que se tuvo de hacer la devolucion de dinero a un cliente, pu
 Como se puede modelar/cubrir este caso en el pdr, requerimiento funcional, DB y codigo?
 
 separar recomendaciones de UI del pdr? 
+El admin crea a al cajera y le asigna el turno(para todoa la semana o dias), recordar que valeria trabaja algunos dias en la mañana y otras en la noche
