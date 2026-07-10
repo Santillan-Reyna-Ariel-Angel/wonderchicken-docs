@@ -457,6 +457,9 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 - Reporte de **productos más vendidos** (deseable, no obligatorio MVP — FR-010).
 - Reporte de **discrepancias automáticas** entre caja esperada y contada.
 
+### Agenda semanal de personal (rostering)
+- Asignación **persona → día → turno → rol**: qué días trabaja cada quien, en qué período (Mañana/Noche) y con qué rol. Caso real que la motiva: el personal rota (Valeria trabaja unos días de mañana y otros de noche, y no siempre con el mismo rol — §2.7). En V1 el período del turno se confirma en la apertura de caja (§13.3); la agenda automatiza esa preselección y habilita validaciones ("hoy no te toca") en V2.
+
 ### Backups y persistencia
 - **Backup diario automático** de la base de datos.
 - **Backup manual on-demand** para el administrador desde la UI.
@@ -481,6 +484,9 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 | Política ante discrepancia en cierre (§2.6) | Registrar y permitir / Registrar + alertar + permitir / Bloquear hasta validación admin | Registrar + alertar + permitir |
 | Reporte de discrepancias automáticas | Entra en V1 / Difiere a V2 | Difiere a V2 |
 | Política contable formal de vales | Cerrar con contabilidad ahora / Difiere a V2 | Difiere a V2 |
+| Quién confirma el **período del turno** (Mañana/Noche) al abrir la caja | Se confirma en la pantalla de apertura (el admin la inicia/supervisa — ver descripción organizacional en business_context) / El admin lo fija por cajera / Agenda semanal (V2) | Se confirma en la pantalla de apertura, con preselección sugerida **editable** (misma filosofía que el autopoblado del reproceso crudo §2.3: el cálculo automático es una ayuda). NO es atributo fijo del usuario: el personal rota días, turnos y roles (§2.7 — caso real: Valeria trabaja unos días de mañana y otros de noche) |
+
+> **Descartado — inferir el período por hora (reloj local o API externa de hora):** se evaluó y **NO** se adopta. Motivos: (1) el sistema es on-premise sin nube en V1 ([§11](#11-despliegue)) — depender de una API de internet para una operación tan básica como abrir caja deja al negocio sin poder vender si falla la conexión; (2) el problema de fondo no es "de dónde sale la hora" sino usar la hora para **decidir** un dato de negocio — ninguna hora exacta sabe que el dueño movió el horario de un turno o creó uno nuevo, eso solo lo sabe el catálogo de turnos. Si se quiere reducir el clic de la cajera, la **preselección sugerida** (fila de arriba) puede apoyarse en el reloj **local del dispositivo** sin red ni inferencia en el backend — sigue siendo la cajera quien confirma.
 
 ---
 

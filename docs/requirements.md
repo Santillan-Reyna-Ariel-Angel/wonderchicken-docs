@@ -69,8 +69,8 @@
 - **Criterio de aceptación:** Al confirmar el pedido, la comanda aparece en el panel de despacho de inmediato. El botón de imprimir factura está disponible solo bajo demanda. Si la impresora térmica falla, el sistema descarga el PDF de la factura automáticamente.
 
 ### FR-004 — Control de caja por turno (Alta)
-- **Funcionalidad:** La cajera abre y cierra su turno. El arqueo muestra el desglose por método de pago, vales, gastos y anulaciones. Solo 1 caja por cajera por turno.
-- **Criterio de aceptación:** Al abrir el turno se crea un registro con el monto inicial; al cerrar, no se pueden registrar más ventas en esa caja; el arqueo se exporta a CSV con totales por método, vales, anulaciones y diferencia.
+- **Funcionalidad:** La cajera abre y cierra su turno. Al abrir se indican el monto inicial, la caja y el **período del turno** (Mañana / Noche, de un catálogo ampliable): el período se **declara**, el sistema nunca lo infiere del reloj ([PDR §13.3](pdr.md)). El arqueo muestra el desglose por método de pago, vales, gastos y anulaciones. Solo 1 caja por cajera por turno.
+- **Criterio de aceptación:** Al abrir el turno se crea un registro con el monto inicial y el período elegido (la pantalla lo trae preseleccionado, pero es editable y la elección es la que persiste); abrir sin período falla con error de validación; al cerrar, no se pueden registrar más ventas en esa caja; el arqueo se exporta a CSV con totales por método, vales, anulaciones y diferencia.
 
 ### FR-005 — Vales de trabajadores (Media)
 - **Funcionalidad:** La cajera o el administrador registran un vale con nombre del trabajador, plato consumido, fecha y monto. El vale descuenta presas y bebidas del inventario, pero NO suma al ingreso de caja del turno.

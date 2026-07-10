@@ -17,6 +17,9 @@
 //         OrderItem.discountAmount es SNAPSHOT del monto fijo por unidad; los totales son derivados.
 //         Máximo UN descuento por ítem (sin apilamiento). NO existe internalDiscount.
 //   §2.12 Customer = facturación nominada OPCIONAL (Order.customerId nullable → "S/N" si anónimo).
+//   §13.3 Shift.periodId se DECLARA al abrir el turno (catálogo ShiftPeriod), NUNCA se infiere
+//         del reloj ni de una API de hora. AuditLog.shiftId hace que el log nazca sabiendo su
+//         turno (null = acción de admin fuera de caja) — consulta por turno sin ventanas horarias.
 
 generator client {
   provider = "prisma-client"
@@ -447,6 +450,28 @@ model CashRegister {
   @@map("cash_registers")
 }
 
+// Catálogo de períodos de turno ("Mañana", "Noche" — el dueño puede crear "Tarde").
+// Es catálogo y NO enum para que un nuevo turno no requiera migración.
+// El período se DECLARA al abrir la caja (POST /shifts/open) — el sistema JAMÁS lo
+// infiere del reloj: la hora puede estar mal configurada y los horarios cambian.
+// referenceStart/End son informativos (nunca clasifican). Descarte de la inferencia
+// por hora (reloj o API externa) documentado en pdr §13.3.
+model ShiftPeriod {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  name           String   @unique // "Mañana" | "Noche" | ...
+  displayOrder   Int // orden dentro del día (1 = primero)
+  referenceStart String? // horario de REFERENCIA informativo (ej. "09:00") — NO clasifica nada
+  referenceEnd   String? // ej. "16:00"
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shifts Shift[]
+
+  @@index([active, displayOrder])
+  @@map("shift_periods")
+}
+
 model Shift {
   id              String      @id @default(uuid(7)) @db.Uuid
   status          ShiftStatus @default(OPEN)
@@ -464,6 +489,12 @@ model Shift {
   cashier        User          @relation("ShiftCashier", fields: [cashierId], references: [id], onDelete: Restrict)
   cashRegisterId String?       @db.Uuid
   cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: Restrict)
+  // Período del turno ("Mañana"/"Noche"/...). Se asigna al ABRIR el turno (preselección
+  // sugerida editable) y NUNCA se deriva del reloj. NO es atributo del User: el personal
+  // rota días/turnos/roles (§2.7). Política fina de quién confirma → pdr §13.3;
+  // agenda semanal (persona→día→turno→rol) → V2 (pdr §13.2).
+  periodId       String        @db.Uuid
+  period         ShiftPeriod   @relation(fields: [periodId], references: [id], onDelete: Restrict)
 
   orders                 Order[]
   vouchers               Voucher[]
@@ -471,10 +502,12 @@ model Shift {
   manualConsumptions     DailyManualConsumption[]
   chickenLogs            ShiftChickenLog[]
   discountAuthorizations DiscountAuthorization[]
+  auditLogs              AuditLog[]
 
   @@index([status])
   @@index([cashierId])
   @@index([startAt])
+  @@index([periodId, startAt]) // consulta de auditoría/arqueo: turnos de una fecha+período
   @@map("shifts")
 }
 
@@ -499,19 +532,35 @@ model Expense {
 // ============================================================================
 
 model AuditLog {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  entity    String // "Order" | "Voucher" | "InventoryItem" | "Shift"
-  entityId  String   @db.Uuid
-  action    String // "CREATE_SALE" | "CANCEL_ORDER" | "ADJUST_INVENTORY" | "ISSUE_VOUCHER" | "OPEN_SHIFT" | "CLOSE_SHIFT"
+  id       String @id @default(uuid(7)) @db.Uuid
+  // Verbos y entidades: la fuente de verdad es technical_guide §4.3 (tabla de acciones).
+  // entity: "Order" | "Voucher" | "InventoryItem" | "Shift" | "DiscountAuthorization" | "Report"
+  entity   String
+  // Referencia POLIMÓRFICA (apunta a distintas tablas según `entity`) → NO tiene FK, y por eso
+  // @db.Uuid no aportaba integridad, solo impedía identificadores no-UUID. Es String:
+  //   - entidad persistida → su UUID (ej. "019a3f7c-...")
+  //   - entidad lógica ("Report") → clave legible y consultable (ej. "sales:2026-07")
+  // Siempre requerido: toda fila de auditoría responde "sobre qué".
+  entityId String
+  // "CREATE_SALE" | "CANCEL_SALE" | "ADJUST_INVENTORY" | "CREATE_VOUCHER"
+  // | "OPEN_SHIFT" | "CLOSE_SHIFT" | "GENERATE_REPORT" | "AUTHORIZE_DISCOUNT"
+  action    String
   details   Json?
   timestamp DateTime @default(now())
 
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
+  // Turno en el que ocurrió la acción — el log nace sabiendo su turno (sin cálculos
+  // de ventana horaria). NULL = acción crítica fuera de una sesión de caja
+  // (ADJUST_INVENTORY / GENERATE_REPORT del admin). En OPEN/CLOSE_SHIFT es el propio turno.
+  shiftId String? @db.Uuid
+  shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
   @@index([entity, entityId])
   @@index([userId])
   @@index([timestamp])
+  @@index([shiftId]) // consulta de auditoría por turno (caja+período vía Shift)
   @@map("audit_logs")
 }
 

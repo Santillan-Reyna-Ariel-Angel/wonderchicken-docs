@@ -184,12 +184,14 @@ erDiagram
     User ||--o{ AuditLog : "auditada"
 
     CashRegister ||--o{ Shift : "tiene turnos"
+    ShiftPeriod ||--o{ Shift : "periodo declarado al abrir §13.3"
 
     Shift ||--o{ Order : "agrupa ventas del turno"
     Customer ||--o{ Order : "factura nominada / pedidos del dia (opcional)"
     Shift ||--o{ Voucher : "agrupa vales emitidos"
     Shift ||--o{ Expense : "agrupa gastos del turno"
     Shift ||--o{ DailyManualConsumption : "consumos manuales"
+    Shift ||--o{ AuditLog : "acciones del turno (nullable) §2.9"
 
     Product ||--o{ Variant : "tiene variantes"
     Product ||--o{ OrderItem : "se vende en"
@@ -218,11 +220,11 @@ erDiagram
 | Sustitucion no cambia precio (§2.1) | `OrderItem.substitutions: Json` existe, pero **NO hay** campo `priceAdjustment`. |
 | Inventario decrementa al pagar (§2.3) | El decremento se hace en el service de `POST /orders/:id/pay`, NO al pasar a `preparing`. |
 | Numeracion por turno (FR-007) | `Order.orderNumber` con `@@unique([shiftId, orderNumber])` + `Shift.lastOrderNumber` como contador atomico. |
-| Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog` (a agregar en el schema — ver technical guide §3.1). |
+| Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog`, con `@@unique([shiftId, pieceType])`. |
 | Vale no suma caja (§2.4) | `Voucher` no genera fila en ningun campo de monto de `Shift`. Aparece como linea separada en el arqueo via query. |
-| Descuento al personal ya no es un flag, y aplica POR PLATO (§2.11) | Se eliminó `Order.internalDiscount`. El descuento vive a **nivel ítem**: `OrderItem.discountId` apunta al catálogo `Discount` y `OrderItem.discountAmount` congela el snapshot por unidad; la cajera marca qué platos lo llevan. La autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). Detalle de campos en technical_guide §3.1. |
-
-> El schema actual NO tiene aun el modelo `ShiftChickenLog` listado en [`docs/technical_guide.md` §3.1](technical_guide.md). Es deuda explicita del Sprint 0 / Sprint 2.
+| Descuento al personal ya no es un flag, y aplica POR PLATO (§2.11) | Se eliminó `Order.internalDiscount`. El descuento vive a **nivel ítem**: `OrderItem.discountId` apunta al catálogo `Discount` y `OrderItem.discountAmount` congela el snapshot por unidad; la cajera marca qué platos lo llevan. El `discountId` viaja en cada ítem al **crear** la orden — no hay endpoint aparte para aplicarlo (technical guide §5.0). La autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). |
+| El período del turno se declara, no se infiere (§13.3) | `ShiftPeriod` es **catálogo** (no enum): un tercer turno no requiere migración. `Shift.periodId` se asigna al abrir la caja; el sistema **nunca** lo deriva del reloj ni de una API de hora. NO es atributo del `User`: el personal rota días, turnos y roles (§2.7). |
+| Auditoría por turno sin ventanas horarias (§2.9) | `AuditLog.shiftId` (nullable) — el log **nace sabiendo su turno**; `null` = acción de admin fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`). La consulta por caja+período es una FK directa. |
 
 ---
 

@@ -21,8 +21,8 @@ pnpm seed -- --no-reset   # seed completo SIN borrar antes (modo append)
 
 ## Seeders disponibles (orden de dependencias)
 
-`users` · `cash-registers` · `products` · `inventory` · `customers` · `discounts` ·
-`shifts` · `discount-authorizations` · `orders` · `vouchers` ·
+`users` · `cash-registers` · `shift-periods` · `products` · `inventory` · `customers` ·
+`discounts` · `shifts` · `discount-authorizations` · `orders` · `vouchers` ·
 `inventory-transactions` · `daily-manual-consumptions` · `shift-chicken-logs` ·
 `expenses` · `audit-logs`
 

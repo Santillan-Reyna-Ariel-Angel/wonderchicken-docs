@@ -3,8 +3,8 @@
 **Complementa:** [docs/pdr.md](pdr.md)
 **Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
-**Versión:** 1.3 (descuentos en **una sola llamada**: `discountId` por ítem en la creación de la orden, sin endpoint dedicado; nuevo `GET /pos/context` — PDR §2.11 / §5.0)
-**Fecha:** 2026-07-08
+**Versión:** 1.6 (catálogo `ShiftPeriod` + `Shift.periodId` + `AuditLog.shiftId`: el turno se **declara al abrir**, nunca se infiere del reloj; consulta de auditoría por caja+turno vía FK directa, sin ventanas horarias)
+**Fecha:** 2026-07-09
 
 > Este documento es la **traducción técnica** de las reglas de negocio definidas en el PDR. Contiene modelo de datos, contrato de la API, requerimientos no funcionales técnicos, máquina de estados con detalles transaccionales, payloads, OpenAPI skeleton, casos de prueba E2E y despliegue.
 >
@@ -46,6 +46,8 @@
   - [6.10 CashOpenResponse](#610-cashopenresponse-éxito)
   - [6.11 CancelOrderResponse (anulación)](#611-cancelorderresponse-anulación-de-pedido-pagado)
   - [6.12 PosContextResponse (carga del POS en una llamada)](#612-poscontextresponse-carga-del-pos-en-una-llamada)
+  - [6.13 ExpenseCreateResponse (gasto desde caja — FR-009)](#613-expensecreateresponse-gasto-desde-caja--fr-009)
+  - [6.14 AuditLogsByShiftResponse (consulta del rastro por turno — admin)](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
 - [7. OpenAPI skeleton (recomendación)](#7-openapi-skeleton-recomendación)
 - [8. Test cases E2E (casos prioritarios)](#8-test-cases-e2e-casos-prioritarios)
 - [9. Despliegue, backups y sincronización](#9-despliegue-backups-y-sincronización)
@@ -197,8 +199,15 @@
   - `id: UUID`, `name: string`, `role: enum(ADMIN, CASHIER, DISPATCHER, COOK)`
   - `username: string`, `passwordHash: string`, `active: boolean`
 
+- **ShiftPeriod** *(catálogo de períodos de turno — "Mañana", "Noche"; el dueño puede crear "Tarde" sin migración. Por eso es catálogo y NO enum.)*
+  - `id: UUID`, `name: string` *(único)*, `displayOrder: int` *(orden dentro del día)*
+  - `referenceStart: string?`, `referenceEnd: string?` *(horarios de REFERENCIA informativos, ej. "09:00"–"16:00" — **jamás se usan para clasificar**: el reloj puede estar mal configurado y los horarios cambian)*
+  - `active: boolean`
+  - *El período se **declara al abrir el turno** (preselección sugerida editable en la pantalla de apertura). NO es atributo del `User`: el personal rota días/turnos/roles (PDR §2.7). Política de quién confirma → PDR §13.3; agenda semanal → V2 (PDR §13.2).*
+
 - **Shift / CashRegister**
   - `id: UUID`, `cashierId: UUID`, `cashRegisterId: UUID?`
+  - `periodId: UUID` *(período del turno, del catálogo `ShiftPeriod` — asignado al abrir, nunca inferido del reloj)*
   - `startAt: datetime`, `endAt: datetime?`
   - `openingAmount: decimal`, `closingAmount: decimal?`, `expectedAmount: decimal?`, `discrepancy: decimal?`
 
@@ -206,7 +215,9 @@
   - `id: UUID`, `description: string`, `amount: decimal`, `paidBy: enum(cash, register)`, `shiftId: UUID`, `createdBy: userId`, `createdAt: datetime`
 
 - **AuditLog**
-  - `id: UUID`, `entity: string`, `entityId: UUID`, `action: string`, `userId: UUID`, `timestamp: datetime`, `details: JSON?`
+  - `id: UUID`, `entity: string`, `action: string`, `userId: UUID`, `timestamp: datetime`, `details: JSON?`
+  - `entityId: string` *(**no** UUID: es una referencia **polimórfica** — apunta a distintas tablas según `entity`, por lo que **no lleva FK** y el tipo `uuid` no aportaba integridad alguna. Guarda el UUID cuando la entidad está persistida (`Order`, `Shift`, …) y una **clave legible** cuando es lógica (`Report` → `"sales:2026-07"`). Siempre requerido.)*
+  - `shiftId: UUID?` *(turno en el que ocurrió la acción — el log **nace sabiendo su turno**, sin cálculos de ventana horaria. NULL = acción crítica fuera de una sesión de caja: `ADJUST_INVENTORY` / `GENERATE_REPORT` del admin. En `OPEN_SHIFT`/`CLOSE_SHIFT` es el propio turno.)*
 
 ## 3.2 Relaciones clave
 
@@ -215,7 +226,8 @@
 - `Order` 1..* `OrderItem`
 - `OrderItem` → `Product` / `Variant` (ambos opcionales si pertenece a una orden custom — `Order.isCustom = true` con item poblando `customPieces`)
 - `InventoryTransaction` referencia `Order`, `Voucher` o `Expense` por `referenceId`
-- `Shift` vincula `CashRegister`, `User` (cajera), `Expense`, `Voucher`, `Order`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization`
+- `Shift` vincula `CashRegister`, `ShiftPeriod` (período del turno), `User` (cajera), `Expense`, `Voucher`, `Order`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization`, `AuditLog` (vía `AuditLog.shiftId`, nullable)
+- `ShiftPeriod` 1..* `Shift` (vía `Shift.periodId` — el turno se autodescribe: caja + período + cajera)
 - `Discount` 1..* `OrderItem` (vía `OrderItem.discountId`, opcional — el descuento se aplica **por plato**; solo uno por ítem)
 - `Discount` 1..* `Voucher` (vía `Voucher.discountId`, opcional — "Descuento personal" sobre el vale)
 - `Discount` 1..* `DiscountAuthorization`
@@ -231,6 +243,7 @@ erDiagram
     Order ||--o{ OrderItem : contiene
     OrderItem }o--o| Product : "referencia (null si custom)"
     OrderItem }o--o| Variant : "referencia (null si custom)"
+    ShiftPeriod ||--o{ Shift : "período del turno (declarado al abrir)"
     Shift ||--o{ Order : agrupa
     Customer ||--o{ Order : "factura nominada / pedidos del día (opcional)"
     Shift ||--o{ Voucher : agrupa
@@ -238,6 +251,7 @@ erDiagram
     Shift ||--o{ ShiftChickenLog : "ciclo crudo presas"
     Shift ||--o{ DailyManualConsumption : "consumos manuales"
     Shift ||--o{ DiscountAuthorization : "autoriza por turno"
+    Shift ||--o{ AuditLog : "acciones del turno (nullable)"
     Discount ||--o{ OrderItem : "aplicado POR PLATO (uno por ítem)"
     Discount ||--o{ Voucher : "descuento personal (opcional)"
     Discount ||--o{ DiscountAuthorization : habilita
@@ -395,14 +409,18 @@ stateDiagram-v2
 | `ADJUST_INVENTORY` | `POST /inventory/adjust` | `InventoryItem` |
 | `CREATE_VOUCHER` | `POST /vouchers` | `Voucher` |
 | `OPEN_SHIFT` / `CLOSE_SHIFT` | `POST /shifts/open` · `/close` | `Shift` |
-| `GENERATE_REPORT` | `GET /reports/...` | `Report` (lógico) |
+| `GENERATE_REPORT` | `GET /reports/...` | `Report` (lógico — sin fila en BD; `entityId` es una clave legible, ver abajo) |
 
 > El **acto de autorizar un descuento** ya queda auditado aparte (`AUTHORIZE_DISCOUNT`, §2.11 / FR-016b) — ver [§5.1](#51-endpoints-principales).
 
 ### Cómo se llena cada campo
 - **`userId`** (quién): del JWT, `request.user.sub`. Disponible en toda petición autenticada.
+- **`shiftId`** (en qué turno): del **turno activo de la sesión** que ejecuta la acción (en `OPEN_SHIFT`/`CLOSE_SHIFT` es el propio `Shift`). NULL en acciones de admin fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`). El log nace sabiendo su turno — la consulta por turno es una FK directa, sin ventanas horarias.
 - **`timestamp`** (cuándo): reloj del server (`@default(now())`).
 - **`entity` + `entityId`** (qué entidad): tipo e id del registro afectado. En una **creación**, el `entityId` está disponible **tras el insert dentro de la misma `tx`**.
+  - `entityId` es **`string`, no `uuid`** (ver [§3.1](#31-entidades-principales)): al ser una referencia polimórfica no tiene FK, así que el tipo `uuid` no daba integridad — solo impedía representar entidades **lógicas**.
+  - **Entidades persistidas** (`Order`, `Voucher`, `InventoryItem`, `Shift`, `DiscountAuthorization`): se guarda su UUID.
+  - **Entidad lógica `Report`** (`GENERATE_REPORT` no crea fila en ninguna tabla): se guarda una **clave legible y consultable** con formato `<reporte>:<alcance>` — ej. `"sales:2026-07"`, `"inventory-presas:2026-07-08"`. Nunca un UUID inventado: un identificador falso en la tabla que existe para ser prueba destruye su valor. Así el admin puede filtrar por `entityId` y ver quién generó ese reporte exacto.
 - **`action` + `details`** (qué cambió): `action` es el verbo fijo del endpoint; `details: JSON` guarda el cambio concreto:
   - **Creaciones** (venta, vale): qué se creó → `{ total, items, paymentMethod }`, `{ worker, product, amount }`.
   - **Mutaciones** (ajuste de inventario, cierre de caja): estado previo y nuevo → `{ before, after, reason }`, `{ expected, counted, difference }`.
@@ -411,7 +429,7 @@ stateDiagram-v2
 - A `AuditLog` solo se le hace **`INSERT`** y **`SELECT`**. **Nunca `UPDATE` ni `DELETE`.** Un registro de auditoría editable no sirve como prueba — la inmutabilidad **es** la feature.
 
 ### Consulta
-- Hace falta un endpoint de **lectura** del rastro para el admin (filtros por `entity`, `userId`, rango de fechas). Auditar sin poder consultar no aporta valor.
+- El rastro se consulta **como lo piensa el negocio, sin paginación** (admin): **`POST /api/v1/audit-logs/shift`** con `{ date, periodId, cashRegisterId? }` → los logs de ese turno (~50-80 filas; caja opcional — omitida = todas las cajas de ese período), y **`POST /api/v1/audit-logs/month`** con `{ month }` → el mes completo. Resolución por **FK directa**: `Shift` por fecha + período (+ caja) → `AuditLog WHERE shiftId IN (...)` — cero ventanas horarias. URLs limpias, datos por body, orden `timestamp DESC`. Ver [§5.1](#51-endpoints-principales) y payload en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin). Auditar sin poder consultar no aporta valor — por eso la consulta es parte del contrato V1.
 
 ### Por qué NO un interceptor genérico en V1
 - Un `AuditInterceptor` global corre **fuera de la transacción** del service y **no tiene el estado previo**, así que no puede garantizar atomicidad ni llenar `details` con el *antes/después*. Por eso V1 usa audit explícito.
@@ -457,19 +475,25 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
 - `POST /api/v1/inventory/shift-chicken-log` — registrar/actualizar el ciclo crudo del turno (reproceso, procesado, sobrante crudo, sobrante cocido en expositor) por tipo de presa
 - `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
-- `POST /api/v1/shifts/open` — abrir caja/turno
+- `POST /api/v1/shifts/open` — abrir caja/turno. Body: `{ openingAmount, cashRegisterId, periodId }` — el **período se declara** (la pantalla de apertura lo trae preseleccionado como sugerencia **editable**; quién lo confirma → PDR §13.3). El backend valida que el `periodId` exista y esté activo; **nunca lo infiere del reloj**
 - `POST /api/v1/shifts/close` — cerrar caja/turno (arqueo con anulaciones, vales, métodos)
+- `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
+- `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
+- `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
+- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009). Body mínimo: `{ description, amount, paidBy }` — `createdBy` sale del JWT y `shiftId` del turno activo de la cajera (§5.0); falla con error claro si no hay turno abierto. El gasto aparece en el arqueo (`totals.expenses`) y en reportes; NO es acción crítica auditada (§2.9). Sin GET de listado en V1: los gastos se leen en arqueo y reportes (se agrega con un caso real)
 - `POST /api/v1/vouchers` — crear vale
 - `GET /api/v1/vouchers` — listar vales con filtros
 - `PATCH /api/v1/inventory/{id}/sale-price` — configurar el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10)
 - `POST /api/v1/discounts` — crear descuento (admin): `name`, `fixedAmount`, `availability`, `requiresAuthorization`, `active`
 - `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
 - `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
-- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6). Devuelve el contexto operativo completo de la sesión de cajera, **liviano y listo para pintar** (solo datos activos, sin históricos — el menú completo son ~15 productos, pocos KB): `products` (activos, con sus `variants`), `discounts` **aplicables ahora** a la sesión (`active = true`, disponibilidad vigente — `always`, o `endOfShift` solo en su ventana — y, si `requiresAuthorization`, solo los que tienen `DiscountAuthorization` vigente para esta cajera/turno: el POS no filtra nada), `piecePrices` (los `salePrice` de las 4 presas cocidas, para calcular el **precio sugerido custom en el cliente**) y `shift` (`{ id, orderCount, startAt }` del turno activo). Ver payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
+- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6). Devuelve el contexto operativo completo de la sesión de cajera, **liviano y listo para pintar** (solo datos activos, sin históricos — el menú completo son ~15 productos, pocos KB): `products` (activos, con sus `variants`), `discounts` **aplicables ahora** a la sesión (`active = true`, disponibilidad vigente — `always`, o `endOfShift` solo en su ventana — y, si `requiresAuthorization`, solo los que tienen `DiscountAuthorization` vigente para esta cajera/turno: el POS no filtra nada), `piecePrices` (los `salePrice` de las 4 presas cocidas, para calcular el **precio sugerido custom en el cliente**), `shiftPeriods` (períodos activos del catálogo — la pantalla de apertura los ofrece) y `shift` (`{ id, orderCount, startAt, period }` del turno activo, o `null` si aún no abrió). Ver payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
 - `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body mínimo: `cashierId`; el `shiftId` se deriva del turno activo de esa cajera y `authorizedBy` del JWT, §5.0). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
 - `GET /api/v1/reports/sales` — reporte ventas
 - `GET /api/v1/reports/inventory-presas` — reporte inventario presas
+- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; §4.3). Body mínimo: `{ date: "2026-07-08", periodId: "uuid-period-noche", cashRegisterId?: "uuid-caja-2" }` — `cashRegisterId` **opcional**: omitido = todas las cajas de ese período (hoy hay 1 caja; el contrato ya soporta N simultáneas, §2.7). **Sin paginación**: un turno son ~50-80 filas. Resolución por **FK directa, sin ventanas horarias**: `Shift` por fecha + `periodId` (+ caja) → `AuditLog WHERE shiftId IN (...)`, filas **tal cual** (rastro crudo) con `user` resuelto `{ id, name }` (§5.0), orden `timestamp DESC`. Día sin turnos en ese período → `shifts: []`, `rows: []` (no es error). Ver payload en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
+- `POST /api/v1/audit-logs/month` — logs de auditoría de un **mes calendario completo** (admin). Body: `{ month: "2026-07" }`. **Sin paginación**: un mes ≈ 3-4 mil filas (~cientos de KB) — aceptable para pantalla de admin. Un **año** completo NO se consulta por acá: eso es un export CSV de reportes (V2), no una consulta de pantalla. Incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que NO aparecen en `/shift`. Misma forma de fila. **Solo lectura** en ambos — coherente con la tabla append-only; la consulta en sí NO se audita (no es una de las 6 acciones críticas)
 - `POST /api/v1/print/invoice` — imprimir factura térmica (a demanda)
 - `GET /api/v1/print/invoice/{orderId}/pdf` — descargar PDF factura (fallback)
 
@@ -568,6 +592,9 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /public/orders/{token}` | **público** (vista del cliente por token no adivinable, sin datos sensibles) |
 | `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
 | `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
+| `GET /shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
+| `POST /shift-periods`, `PATCH /shift-periods/{id}` | `ADMIN` |
+| `POST /expenses` | `CASHIER` |
 | `POST /vouchers` | `CASHIER` |
 | `GET /vouchers` | `CASHIER`, `ADMIN` |
 | `POST /print/invoice`, `GET /print/invoice/{id}/pdf` | `CASHIER` |
@@ -579,6 +606,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /discounts` | `ADMIN` *(el POS recibe los aplicables en `GET /pos/context`)* |
 | `POST /discounts/{id}/authorize`, `GET /discounts/authorizations` | `ADMIN` |
 | `GET /reports/sales`, `GET /reports/inventory-presas` | `ADMIN` |
+| `POST /audit-logs/shift`, `POST /audit-logs/month` | `ADMIN` |
 | Crear usuarios | `ADMIN` |
 
 > El **payload del JWT** lleva `{ sub: userId, username, role }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
@@ -948,6 +976,7 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.10 CashOpenResponse (éxito)
+> Request: `{ openingAmount, cashRegisterId, periodId }` — el período viene preseleccionado en la pantalla (sugerencia **editable**, PDR §13.3), nunca inferido del reloj.
 ```json
 {
   "isSuccess": true,
@@ -955,6 +984,8 @@ Response (todo calculado por el backend, listo para pintar):
   "data": {
     "id": "uuid-shift-001",
     "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
+    "period": { "id": "uuid-period-manana", "name": "Mañana" },
     "openingAmount": 200.00,
     "startAt": "2026-05-01T09:00:00"
   }
@@ -984,7 +1015,12 @@ Response (todo calculado por el backend, listo para pintar):
   "isSuccess": true,
   "message": "Contexto POS",
   "data": {
-    "shift": { "id": "uuid-shift-001", "orderCount": 27, "startAt": "2026-05-01T09:00:00" },
+    "shift": { "id": "uuid-shift-001", "orderCount": 27, "startAt": "2026-05-01T09:00:00",
+               "period": { "id": "uuid-period-manana", "name": "Mañana" } },
+    "shiftPeriods": [
+      { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00" },
+      { "id": "uuid-period-noche", "name": "Noche", "displayOrder": 2, "referenceStart": "16:00", "referenceEnd": "23:00" }
+    ],
     "products": [
       {
         "id": "uuid-product-porcion-media",
@@ -1012,6 +1048,95 @@ Response (todo calculado por el backend, listo para pintar):
 }
 ```
 
+## 6.13 ExpenseCreateResponse (gasto desde caja — FR-009)
+> `POST /api/v1/expenses` — body mínimo `{ description, amount, paidBy }`; `createdBy` sale del JWT y `shiftId` del turno activo (§5.0). Sin turno abierto → error claro.
+```json
+{
+  "isSuccess": true,
+  "message": "Gasto registrado correctamente",
+  "data": {
+    "id": "uuid-expense-001",
+    "description": "Compra de arroz",
+    "amount": 35.50,
+    "paidBy": "cash",
+    "shiftId": "uuid-shift-001",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "createdAt": "2026-05-01T11:20:00"
+  }
+}
+```
+
+## 6.14 AuditLogsByShiftResponse (consulta del rastro por turno — admin)
+> `POST /api/v1/audit-logs/shift` — body mínimo `{ date, periodId, cashRegisterId? }`, **sin paginación** (un turno son ~50-80 filas). Resolución por **FK directa** (`Shift` por fecha+período+caja → `AuditLog.shiftId IN`), sin ventanas horarias. Filas **tal cual** están en `audit_logs` (rastro crudo), con `user` resuelto (§5.0), orden `timestamp DESC`. La respuesta **ecoa lo resuelto** (`period`, `shifts` con su caja) para transparencia.
+
+Request (`cashRegisterId` opcional — omitido = todas las cajas de ese período):
+```json
+{ "date": "2026-07-07", "periodId": "uuid-period-noche" }
+```
+
+Response:
+```json
+{
+  "isSuccess": true,
+  "message": "Registros de auditoría del turno",
+  "data": {
+    "date": "2026-07-07",
+    "period": { "id": "uuid-period-noche", "name": "Noche" },
+    "shifts": [
+      { "id": "uuid-shift-002",
+        "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
+        "cashier": { "id": "uuid-user-roxana", "name": "Roxana" } }
+    ],
+    "count": 2,
+    "rows": [
+      {
+        "id": "uuid-audit-002",
+        "entity": "Order",
+        "entityId": "uuid-order-004",
+        "action": "CREATE_SALE",
+        "user": { "id": "uuid-user-roxana", "name": "Roxana" },
+        "timestamp": "2026-07-07T21:42:00",
+        "details": {
+          "total": 69.00,
+          "paymentMethod": "cash",
+          "discounts": [ { "discountId": "uuid-discount-personal", "amount": 7.00, "items": 3 } ]
+        }
+      },
+      {
+        "id": "uuid-audit-003",
+        "entity": "Shift",
+        "entityId": "uuid-shift-002",
+        "action": "CLOSE_SHIFT",
+        "user": { "id": "uuid-user-roxana", "name": "Roxana" },
+        "timestamp": "2026-07-07T23:05:00",
+        "details": { "expected": 1455.00, "counted": 1450.00, "difference": -5.00 }
+      }
+    ]
+  }
+}
+```
+
+**`POST /api/v1/audit-logs/month`** — misma forma de fila, ventana = mes calendario:
+
+Request / response (resumen):
+```json
+{ "month": "2026-07" }
+```
+```json
+{ "isSuccess": true, "message": "Registros de auditoría del mes",
+  "data": { "month": "2026-07", "count": 3180, "rows": [ "..." ] } }
+```
+> Día sin turnos en el período pedido → `shifts: []`, `rows: []` (no es error). `/month` incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que no aparecen en `/shift`. Un **año** completo no se consulta por acá: es un export CSV de reportes (V2).
+
+**`GET /api/v1/shift-periods`** — catálogo para la pantalla de apertura y el admin:
+```json
+{ "isSuccess": true, "message": "Períodos de turno",
+  "data": [
+    { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00", "active": true },
+    { "id": "uuid-period-noche", "name": "Noche", "displayOrder": 2, "referenceStart": "16:00", "referenceEnd": "23:00", "active": true }
+  ] }
+```
+
 ---
 
 # 7. OpenAPI skeleton (recomendación)
@@ -1019,7 +1144,7 @@ Response (todo calculado por el backend, listo para pintar):
 El LLM debe generar `openapi: 3.0.3` con:
 - `securitySchemes` JWT Bearer
 - `paths` para todos los endpoints listados en §5.1
-- `tags` para agrupar requests (Products, Orders, Pos, Inventory, Shifts, Vouchers, Discounts, Reports, Print)
+- `tags` para agrupar requests (Products, Orders, Pos, Inventory, Shifts, Expenses, Vouchers, Discounts, Reports, Audit, Print)
 - `components/schemas` con los DTOs de request y response
 - Ejemplos de request/response basados en los payloads de §6
 
@@ -1050,6 +1175,10 @@ El LLM debe generar `openapi: 3.0.3` con:
 14. Cocinero registra consumos manuales al cierre → se vinculan al `Shift` y aparecen en reporte diario.
 14b. Ciclo crudo de presas — continuidad entre turnos: al cierre del turno mañana, cocinero registra `ShiftChickenLog` con `rawLeftover = 64` para cada `pieceType`. Al abrir el turno noche, `GET /api/v1/inventory/shift-chicken-log/{shiftIdNoche}` devuelve `reprocessRaw = 64` autopoblado por `pieceType`. Cocinero confirma o ajusta. Al cerrar el turno noche, el sistema reconcilia `(reprocessRaw + processedRaw − rawLeftover) − vendido_cocido_del_turno` vs `cookedLeftover` anotado y reporta discrepancia si existe.
 15. Usuario logueado como CASHIER intenta logear como DISPATCHER en mismo turno → falla.
+16. Registro de gastos (FR-009): `POST /expenses` con `{ description, amount, paidBy }` → el gasto queda ligado al turno activo de la cajera (`shiftId` derivado, no enviado) y aparece en el arqueo del cierre bajo `totals.expenses`; intentar registrar sin turno abierto → error claro; el gasto NO genera `AuditLog` (no es acción crítica §2.9).
+17. Consulta de auditoría por turno (FK directa): generar ventas en turno Mañana y turno Noche del mismo día → `POST /audit-logs/shift` con `{ date, periodId: noche }` devuelve **solo** los logs con `shiftId` de ese turno (los de la mañana no aparecen), orden `timestamp DESC`, con `user`, `period` y `shifts` (con su `cashRegister`) resueltos; con **dos cajas** abiertas en el mismo período, agregar `cashRegisterId` al body separa los logs por caja y omitirlo devuelve ambas; día sin turnos → `shifts: []`, `rows: []` (no error); la respuesta NO tiene `page`/`pageSize` (sin paginación). Un `ADJUST_INVENTORY` del admin (sin turno, `shiftId = null`) NO aparece en `/shift` pero SÍ en `POST /audit-logs/month`. Con token de CASHIER → **403**. La consulta en sí NO crea filas de audit.
+17b. Catálogo de períodos sin migración: el admin crea el período "Tarde" vía `POST /shift-periods` → aparece en `GET /shift-periods` y en `pos/context.shiftPeriods` → una cajera abre turno con ese `periodId` → `POST /audit-logs/shift` con ese período lo consulta normalmente. Todo sin tocar schema ni código. Los horarios de referencia son informativos: editarlos (`PATCH /shift-periods/{id}`) no reclasifica ningún turno existente.
+17c. El período se declara, no se infiere: abrir un turno a las 20:00 declarando `periodId = Mañana` → el sistema lo acepta (el reloj NO clasifica); `shifts/open` sin `periodId` → `VALIDATION_ERROR`.
 
 ---
 
@@ -1092,7 +1221,9 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Caja = 1 cajera por turno (§2.7) | `Shift.cashierId` único activo por `cashRegisterId` |
 | Sesión única por turno (FR-008b) | Constraint a nivel servicio: 1 sesión activa por `userId` por `shiftId` |
 | Roles funcionales (§2.7) | `User.role: enum(ADMIN, CASHIER, DISPATCHER, COOK)` — enforcement por rol en el backend vía `RolesGuard` + `@Roles` (V1, FR-018); ver §5.2 |
-| Auditoría de acciones críticas (§2.9) | Entidad `AuditLog` con `userId`, `entity`, `entityId`, `action`, `details: JSON` |
+| Auditoría de acciones críticas (§2.9) | Entidad `AuditLog` con `userId`, `shiftId?` (el log nace sabiendo su turno; null = acción de admin fuera de turno), `entity`, `entityId`, `action`, `details: JSON`; consulta **sin paginación** vía `POST /audit-logs/shift` (`{ date, periodId, cashRegisterId? }` — FK directa, sin ventanas horarias) y `POST /audit-logs/month` (`{ month }`) — admin, §4.3 |
+| Turnos del día (Mañana/Noche, §2.3) y tercer turno futuro | Catálogo `ShiftPeriod` (no enum — sin migración para "Tarde"); `Shift.periodId` **declarado al abrir** (`POST /shifts/open`), nunca inferido del reloj; horarios de referencia informativos; política de confirmación → PDR §13.3; agenda semanal → V2 (PDR §13.2) |
+| Registro de gastos desde caja (§2.6 / FR-009) | `POST /expenses` (`description`, `amount`, `paidBy`); `Expense.shiftId` derivado del turno activo y `createdBy` del JWT (§5.0); aparece en arqueo (`totals.expenses`) y reportes |
 | Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); búsqueda por CI/NIT vía `GET /customers?search=`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
 | Vista del cliente — por pedido y pedidos del día (§7.4 / FR-015 / FR-019) | `Order.publicToken` no adivinable; `GET /public/orders/{token}` (público); identidad (`customerId`) **agrupa** los pedidos del día, el **token** da acceso — el NIT no es llave |
 | Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total se calcula automáticamente con `InventoryItem.salePrice` (ya definido en V1), sin intervención de la cajera |

@@ -21,6 +21,8 @@
   - [3.4 Caja y turno](#34-caja-y-turno)
   - [3.5 Vales](#35-vales)
   - [3.6 Descuentos](#36-descuentos)
+  - [3.7 Gastos](#37-gastos)
+  - [3.8 Auditoría](#38-auditoría)
 
 ---
 
@@ -36,6 +38,8 @@ erDiagram
     User ||--o{ DiscountAuthorization : "admin / cajera"
 
     CashRegister ||--o{ Shift : "tiene turnos"
+    ShiftPeriod ||--o{ Shift : "período declarado al abrir"
+    Shift ||--o{ AuditLog : "acciones del turno (nullable)"
 
     Shift ||--o{ Order : "agrupa"
     Customer ||--o{ Order : "factura nominada / pedidos del día (opcional)"
@@ -76,10 +80,20 @@ erDiagram
         bool active
     }
 
+    ShiftPeriod {
+        uuid id PK
+        string name "Mañana | Noche | ... (único)"
+        int displayOrder
+        string referenceStart "informativo, no clasifica"
+        string referenceEnd "informativo"
+        bool active
+    }
+
     Shift {
         uuid id PK
         uuid cashierId FK
         uuid cashRegisterId FK "nullable"
+        uuid periodId FK "declarado al abrir, nunca inferido"
         datetime startAt
         datetime endAt "nullable"
         decimal openingAmount
@@ -261,9 +275,10 @@ erDiagram
     AuditLog {
         uuid id PK
         string entity
-        uuid entityId
+        string entityId "polimórfico sin FK: uuid o clave lógica"
         string action
         uuid userId FK
+        uuid shiftId FK "nullable, turno de la acción"
         datetime timestamp
         json details "nullable, before/after"
     }
@@ -279,6 +294,7 @@ erDiagram
 |---|---|
 | `User` | Personal del sistema con su rol (ADMIN, CASHIER, DISPATCHER, COOK). |
 | `CashRegister` / `Shift` | Caja física y turno de trabajo (apertura/cierre, arqueo). |
+| `ShiftPeriod` | Catálogo de períodos del día ("Mañana", "Noche"; ampliable sin migración). El turno lo **declara** al abrir — nunca se infiere del reloj. |
 | `Product` / `Variant` | Catálogo de platos y sus variantes (composición). |
 | `Order` / `OrderItem` | Pedido y sus ítems (estándar o custom; MESA/LLEVAR). |
 | `Customer` | Cliente registrado (CI/NIT, datos personales) para **factura nominada** y la vista de **"pedidos del día"**. Opcional por venta — anónimo = "S/N". |
@@ -602,8 +618,10 @@ Response:
 
 Request:
 ```json
-{ "openingAmount": 200.00, "cashRegisterId": "uuid-caja-1" }
+{ "openingAmount": 200.00, "cashRegisterId": "uuid-caja-1", "periodId": "uuid-period-manana" }
 ```
+> El `periodId` viene del catálogo `ShiftPeriod` (la pantalla lo preselecciona como sugerencia **editable** — quién lo confirma es decisión residual, [PDR §13.3](pdr.md)). El sistema **nunca** lo infiere del reloj.
+
 Response:
 ```json
 {
@@ -612,6 +630,8 @@ Response:
   "data": {
     "id": "uuid-shift-001",
     "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
+    "period": { "id": "uuid-period-manana", "name": "Mañana" },
     "openingAmount": 200.00,
     "startAt": "2026-05-01T09:00:00"
   }
@@ -735,6 +755,78 @@ Response:
   }
 }
 ```
+
+### 3.7 Gastos
+
+**`POST /api/v1/expenses`** — registrar gasto pagado desde caja (FR-009). Rol: `CASHIER`.
+
+Request:
+```json
+{ "description": "Compra de arroz", "amount": 35.50, "paidBy": "cash" }
+```
+> **Mínimos (§5.0):** `createdBy` sale del JWT y `shiftId` del **turno activo** de la cajera (no se envían). Sin turno abierto → error claro. El gasto aparece en el arqueo (`totals.expenses`) y en reportes; no genera `AuditLog`.
+
+Response:
+```json
+{
+  "isSuccess": true,
+  "message": "Gasto registrado correctamente",
+  "data": {
+    "id": "uuid-expense-001",
+    "description": "Compra de arroz",
+    "amount": 35.50,
+    "paidBy": "cash",
+    "shiftId": "uuid-shift-001",
+    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "createdAt": "2026-05-01T11:20:00"
+  }
+}
+```
+
+### 3.8 Auditoría
+
+**`POST /api/v1/audit-logs/shift`** — logs de **UN turno** (fecha + período + caja opcional). Rol: `ADMIN`. **Sin paginación** (~50-80 filas por turno). Resolución por **FK directa**: `Shift` por fecha + `periodId` (+ `cashRegisterId` si se envía) → `AuditLog WHERE shiftId IN (...)` — el log nace sabiendo su turno, cero ventanas horarias.
+
+Request (`cashRegisterId` opcional — omitido = todas las cajas de ese período):
+```json
+{ "date": "2026-07-07", "periodId": "uuid-period-noche", "cashRegisterId": "uuid-caja-1" }
+```
+Response (resumen — payload completo en [`technical_guide.md` §6.14](technical_guide.md#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)):
+```json
+{
+  "isSuccess": true,
+  "message": "Registros de auditoría del turno",
+  "data": {
+    "date": "2026-07-07",
+    "period": { "id": "uuid-period-noche", "name": "Noche" },
+    "shifts": [
+      { "id": "uuid-shift-002",
+        "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
+        "cashier": { "id": "uuid-user-roxana", "name": "Roxana" } }
+    ],
+    "count": 42,
+    "rows": [
+      {
+        "id": "uuid-audit-002",
+        "entity": "Order",
+        "entityId": "uuid-order-004",
+        "action": "CREATE_SALE",
+        "user": { "id": "uuid-user-roxana", "name": "Roxana" },
+        "timestamp": "2026-07-07T21:42:00",
+        "details": { "total": 69.00, "paymentMethod": "cash" }
+      }
+    ]
+  }
+}
+```
+
+**`POST /api/v1/audit-logs/month`** — logs de un **mes calendario completo**. Rol: `ADMIN`. Sin paginación (~3-4 mil filas/mes). Misma forma de fila; incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que no aparecen en `/shift`.
+
+Request:
+```json
+{ "month": "2026-07" }
+```
+> Día sin turnos → `shifts: []`, `rows: []` (no es error). Un **año** completo no va por acá: es un export CSV de reportes (V2). Ambos endpoints son solo lectura — la tabla es append-only y la consulta en sí no se audita.
 
 ---
 
