@@ -57,11 +57,11 @@
 - **Criterio de aceptación:** El administrador crea un producto y su variante; la variante queda disponible en el POS de inmediato; el POS muestra la descomposición de la variante y el precio calculado.
 
 ### FR-002 — Registro de pedidos POS (Alta)
-- **Funcionalidad:** El POS de la cajera ofrece un flujo rápido: seleccionar producto → elegir variante → elegir las presas → (opcional) aplicar 1 sustitución de acompañamiento → agregar bebidas o extras → confirmar pago o dejar pago pendiente. Soporta pedidos **MESA** y **LLEVAR** estándar. Un mismo pedido admite **N platos del menú** y, de forma **opcional**, **extras y/o bebidas sueltos en cualquier cantidad** (todos `Product` del catálogo, cada uno un ítem con su `quantity`). Extras y bebidas no son obligatorios; una bebida suelta se puede agregar incluso a un plato que **no** trae bebida incluida (ej. Porción Media 30 Bs + bebida 2 L 16 Bs). El backend calcula el total como la **suma de todos los ítems** (`precio del producto × cantidad`). Las ventas de presas surtidas se manejan en un flujo separado (FR-002b).
+- **Funcionalidad:** El POS ofrece el flujo rápido de venta **MESA**/**LLEVAR**: producto → variante → presas → (opcional) 1 sustitución → bebidas/extras → pago (o pago pendiente). Un pedido admite **N ítems** con extras y bebidas sueltos opcionales, y el **backend calcula el total** — composición y reglas de precio en [PDR §2.2](pdr.md#22-variantes-y-componentes). Las presas surtidas van por el flujo separado FR-002b.
 - **Criterio de aceptación:** La cajera puede registrar un pedido en 3 pasos o menos; un pedido con varios platos + extras + bebidas en distintas cantidades arroja el **total correcto** = suma de (`precio × cantidad`) de cada ítem; al confirmar, la comanda aparece en el panel de despacho.
 
 ### FR-002b — Venta custom de presas surtidas (Alta)
-- **Funcionalidad:** El POS tiene un flujo dedicado **"Venta Custom"** para combinaciones que no encajan con el menú (ej. "2 pechos sueltos", "1 ala + 1 pierna + arroz"). La cajera indica cantidad y tipo de cada presa, acompañamientos opcionales y bebidas opcionales. El sistema muestra un **precio sugerido** = suma del precio de venta de cada presa seleccionada + extras + bebidas (precio de venta por presa configurado por el admin, [PDR §2.10](pdr.md)); la cajera puede **aceptarlo o pisarlo** y confirma el precio final. La venta puede ser **MESA o LLEVAR**. CUSTOM no es un tipo de pedido aparte: es una marca sobre la orden (ver [PDR §2.10](pdr.md)).
+- **Funcionalidad:** Flujo dedicado **"Venta Custom"** para combinaciones fuera del menú: la cajera arma las presas (+acompañamientos/bebidas opcionales), ve un **precio sugerido** que puede aceptar o pisar, y confirma el final. MESA o LLEVAR; CUSTOM es marca, no tipo — reglas y estructura del ítem en [PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas).
 - **Criterio de aceptación:** Registrar una venta custom LLEVAR de "2 pechos + 1 papa + 1 cocacola" muestra un precio sugerido (suma de los precios de venta configurados) que la cajera puede modificar; descuenta exactamente 2 pechos del inventario y 1 unidad de cocacola al confirmar el pago; persiste el precio **confirmado**, no la sugerencia. La comanda muestra "LLEVAR" en la cabecera y la composición real del ítem. Los reportes pueden filtrar ventas custom.
 
 ### FR-003 — Comanda digital y factura opcional (Alta)
@@ -77,10 +77,7 @@
 - **Criterio de aceptación:** El vale aparece como línea separada en el arqueo; descuenta inventario; existe una interfaz que lista todos los vales con filtros por trabajador, fecha y monto.
 
 ### FR-006 — Inventario por presas (Alta)
-- **Funcionalidad:** El sistema lleva los **dos planos** de inventario de pollo definidos en [PDR §2.3](pdr.md):
-  - **Plano cocido (transaccional):** descuenta por venta **al confirmar el pago** por tipo (pecho, ala, pierna, entrepierna); muestra un dashboard de stock cocido por tipo y delta del turno.
-  - **Plano crudo (anotado por turno):** registra por turno y por tipo de presa el reproceso crudo, procesado crudo, sobrante procesado crudo y sobrante cocido en expositor; aplica la regla de continuidad (sobrante crudo del turno T → reproceso crudo del turno T+1).
-- Permite además registrar los consumos manuales del turno (bolsas de papa, smile, vasos, etc.) — ver FR-017.
+- **Funcionalidad:** El sistema lleva los **dos planos** de inventario de pollo de [PDR §2.3](pdr.md#23-inventario-por-presas): **cocido** (transaccional, descuenta al confirmar pago, dashboard por tipo) y **crudo** (anotado por turno con la regla de continuidad T → T+1). Consumos manuales del turno → FR-017.
 - **Criterio de aceptación:** Una venta pagada descuenta el stock cocido; un pedido pendiente de pago NO descuenta hasta confirmar; el dashboard muestra el stock cocido actual por tipo y el delta del turno; al abrir un nuevo turno, el reproceso crudo se autopobla con el sobrante crudo del turno anterior; la reconciliación diaria es posible (vendido cocido + sobrante cocido en expositor vs cocinado en turno).
 
 ### FR-007 — Notificación de pedido listo (Alta)
@@ -105,7 +102,7 @@
 - **Criterio de aceptación:** Se puede generar un reporte por rango de fechas; la exportación a CSV es correcta.
 
 ### FR-011 — Pedidos con pago pendiente (Alta)
-- **Funcionalidad:** La cajera puede registrar pedidos LLEVAR/delivery con pago pendiente. **Se preparan de inmediato**, pero NO descuentan inventario ni contabilizan ingreso hasta confirmar el pago. **No hay timeout automático**: la cancelación es siempre manual, la decide la cajera, en cualquier momento, sin requerir motivo ([PDR §2.5](pdr.md)).
+- **Funcionalidad:** Pedidos LLEVAR/delivery con pago pendiente según las reglas de [PDR §2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente): se preparan de inmediato, inventario e ingreso recién al confirmar pago, cancelación siempre manual sin timeout.
 - **Criterio de aceptación:** Un pedido con pago pendiente aparece en el panel de despacho y se prepara; al confirmar el pago, descuenta inventario y suma al ingreso del turno; el sistema no auto-cancela por tiempo.
 
 ### FR-011b — Anulación de pedido pagado (Alta)
@@ -129,14 +126,11 @@
 - **Criterio de aceptación:** El cliente entra a la URL/QR de su pedido (con su token) y ve su comanda; probar un token aleatorio o el `id` interno → no funciona (no enumerable); el acceso no expone datos sensibles ni pedidos de otros.
 
 ### FR-016 — Gestión de descuentos y aplicación en POS (Media)
-- **Funcionalidad:** El administrador crea **descuentos** (nombre, **monto fijo por plato** en Bs, disponibilidad `siempre` / `solo a fin de turno`, **requiere autorización** `sí` / `no`, activo). La cajera aplica el descuento **por plato** desde el POS: **marca qué ítems de la orden lo llevan** (uno, varios o todos; un descuento por plato, sin apilamiento; pueden convivir platos con y sin descuento en la misma orden). Hay dos instancias principales ([PDR §2.11](pdr.md)):
-  - **Descuento al personal** (sobrante de pollo cocido): "Descuento personal", **7 Bs por plato**, disponibilidad `solo a fin de turno`, sin autorización. Cualquier cajera lo aplica cuando está disponible. Es la instancia **dedicada a los trabajadores del negocio**.
-  - **Compensación al cliente** (pollo defectuoso): "Compensación al cliente", **7 Bs por plato afectado**, disponibilidad `siempre`, **requiere autorización**. La cajera solo lo puede aplicar si el admin la autorizó en ese turno.
-- El descuento es puramente monetario: el inventario descuenta el producto real, sin trucos ([PDR §2.11](pdr.md)).
+- **Funcionalidad:** El admin crea **descuentos** de monto fijo **por plato** (disponibilidad `siempre`/`fin de turno`, flag `requiere autorización`); la cajera **marca qué ítems de la orden los llevan** (uno por plato, sin apilamiento). Las dos instancias principales — **descuento al personal** (fin de turno, sin autorización) y **compensación al cliente** (todo el turno, requiere autorización) — con sus configs, contextos y el carácter puramente monetario, en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal).
 - **Criterio de aceptación:** El admin crea un descuento de monto fijo por plato; la cajera lo aplica a 3 platos de 30 Bs **en el mismo registro de la venta (una sola operación, sin pasos adicionales)** y el total baja 21 Bs (7 × 3 → total 69); en cada ítem marcado queda registrado el monto descontado (snapshot) y la referencia al descuento; a nivel orden quedan el precio original y el total derivado; aparece en arqueo y reportes; el descuento `solo a fin de turno` no se ofrece fuera de esa ventana; el inventario descuenta lo correcto y la caja cuadra.
 
 ### FR-016b — Autorización de descuentos por turno (Media)
-- **Funcionalidad:** Para los descuentos marcados con `requiere autorización = sí`, el administrador otorga una **autorización por turno a la sesión de cajera**. Una vez autorizada, la cajera puede aplicar ese descuento **las veces que necesite hasta el cierre del turno**; sin autorización, el POS no le ofrece el descuento. La autorización se da **una vez por turno** (no por orden), queda atada a la sesión de cajera de ese turno ([PDR §2.7](pdr.md), FR-008b) y **se extingue al cerrar el turno**. El acto de autorizar queda auditado ([PDR §2.9](pdr.md)).
+- **Funcionalidad:** Para descuentos con `requiere autorización = sí`, el admin otorga una **autorización por turno a la sesión de cajera** — alcance, extinción al cierre y auditabilidad del acto según [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) (subsección "Autorización de descuentos por turno"). Sin autorización, el POS no ofrece el descuento.
 - **Criterio de aceptación:** Sin autorización, la cajera no ve/no puede aplicar el descuento "Compensación al cliente"; tras autorizarla el admin, puede aplicarlo a uno o varios platos de uno o varios pedidos del turno; la autorización no se renueva por pedido ni por plato; al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente; queda registrado quién autorizó, a qué cajera y cuándo.
 
 ### FR-017 — Registro de consumos manuales y ciclo crudo de presas por turno (Media)
@@ -155,7 +149,7 @@
   - Petición con token válido y rol **autorizado** → procede normalmente.
 
 ### FR-019 — Registro y búsqueda de clientes (Alta)
-- **Funcionalidad:** El sistema gestiona una entidad **`Customer`** (cliente) para **facturación nominada** y la vista de **"pedidos del día"**. La cajera puede **registrar** un cliente (CI, NIT opcional, nombres, apellidos, sexo `HOMBRE`/`MUJER`, fecha de nacimiento opcional, celular, correo) y **buscar** uno ya registrado por **CI o NIT** (el cliente, para su factura, puede dictar su CI o su NIT). Una orden puede **vincularse opcionalmente** a un cliente (`Order.customerId`): si el cliente no se identifica, la orden queda como **"S/N"** (válido por ley para ventas ≤ Bs 1.000, ver [PDR §2.12](pdr.md)). Para un cliente identificado, la vista pública de cualquiera de sus pedidos lista además **sus pedidos del día**, **agrupados por `customerId`**; el **acceso lo habilita el token del pedido, NO el NIT** (el NIT no es secreto y nunca es llave de acceso).
+- **Funcionalidad:** Entidad **`Customer`** para **facturación nominada** y la vista de **"pedidos del día"**: la cajera registra clientes y los busca por **CI o NIT**; el vínculo a la orden es **opcional** (anónimo = "S/N"). Datos del cliente, regla legal de nominatividad y la regla de seguridad **identidad ≠ acceso** (el token habilita, el NIT jamás es llave) en [PDR §2.12](pdr.md#212-clientes-y-facturación-nominada).
 - **Criterio de aceptación:**
   - La cajera registra un cliente nuevo y luego lo encuentra buscando por **CI** o por **NIT**.
   - Una orden se crea vinculada a un `customerId`; otra se crea sin cliente y queda como "S/N".

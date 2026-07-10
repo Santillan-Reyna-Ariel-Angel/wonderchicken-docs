@@ -11,7 +11,7 @@
 
 > Si un diagrama no coincide con el código, gana el código. Este documento se actualiza, no al revés.
 >
-> **Altitud de este documento:** el [ER de §3](#3-modelo-relacional-vista-resumida-del-prisma) es una **vista resumida** — solo relaciones críticas, **sin campos**. Es para **ubicarte, no para implementar**. El modelo lógico completo (todos los campos, snapshots, enums — el contrato del dato) vive en [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd). Mismo sistema, distinta altitud.
+> **Altitud de este documento:** la [§3](#3-modelo-relacional-vista-resumida-del-prisma) resume las **decisiones de modelado** para ubicarte, no para implementar. El modelo lógico completo vive en [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd); los diagramas ER **se generan** desde [`prisma/schema.prisma`](../prisma/schema.prisma), no se dibujan a mano.
 
 ---
 
@@ -172,43 +172,7 @@ sequenceDiagram
 
 ## 3. Modelo relacional (vista resumida del Prisma)
 
-Vista compacta del `schema.prisma` real. **Solo las relaciones criticas**, no campos. Para campos completos ir al schema.
-
-```mermaid
-erDiagram
-    User ||--o{ Shift : "abre como cajera"
-    User ||--o{ Order : "crea"
-    User ||--o{ Order : "entrega"
-    User ||--o{ Voucher : "emite"
-    User ||--o{ InventoryTransaction : "ejecuta"
-    User ||--o{ AuditLog : "auditada"
-
-    CashRegister ||--o{ Shift : "tiene turnos"
-    ShiftPeriod ||--o{ Shift : "periodo declarado al abrir §13.3"
-
-    Shift ||--o{ Order : "agrupa ventas del turno"
-    Customer ||--o{ Order : "factura nominada / pedidos del dia (opcional)"
-    Shift ||--o{ Voucher : "agrupa vales emitidos"
-    Shift ||--o{ Expense : "agrupa gastos del turno"
-    Shift ||--o{ DailyManualConsumption : "consumos manuales"
-    Shift ||--o{ AuditLog : "acciones del turno (nullable) §2.9"
-
-    Product ||--o{ Variant : "tiene variantes"
-    Product ||--o{ OrderItem : "se vende en"
-    Variant ||--o{ OrderItem : "elegida en"
-    Product ||--o{ Voucher : "vale puede referir producto"
-
-    Order ||--|{ OrderItem : "compone"
-
-    InventoryItem ||--o{ InventoryTransaction : "todo movimiento queda registrado"
-    InventoryItem ||--o{ InventoryBatch : "lotes opcional"
-    InventoryItem ||--o{ DailyManualConsumption : "anotacion por turno"
-
-    Shift ||--o{ ShiftChickenLog : "ciclo crudo presas §2.3"
-    Discount ||--o{ OrderItem : "aplicado POR PLATO (uno por item) §2.11"
-    Discount ||--o{ DiscountAuthorization : "habilita"
-    Shift ||--o{ DiscountAuthorization : "autoriza por turno"
-```
+> **El ER no se dibuja a mano** — quedaba desactualizado en silencio con cada cambio del schema (pasó con `ShiftChickenLog`). Generalo on-demand desde [`prisma/schema.prisma`](../prisma/schema.prisma) con una extensión de VS Code (ej. *Prisma ERD Visualizer*) o una herramienta externa (`prisma-erd-generator`, dbdiagram.io). Las decisiones de modelado que SÍ hay que tener en la cabeza están en la tabla de abajo.
 
 **Decisiones modeladas que vale la pena tener en la cabeza:**
 

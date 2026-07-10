@@ -10,7 +10,7 @@
 >
 > **Precedencia:** Si una decisión técnica de este documento entra en conflicto con una regla de negocio del PDR, **la regla de negocio del PDR gana**. Este documento se actualiza para reflejar el negocio, no al revés.
 >
-> **Altitud de este documento:** el modelo de datos de §3 (incluido el [ER de §3.3](#33-diagrama-de-relaciones-er)) es el **modelo lógico completo** — todos los campos, snapshots y enums. Es el **contrato del dato**. Para la vista estructural resumida (cómo se conectan las entidades, sin campos) mirá [`architecture_overview.md` §3](architecture_overview.md#3-modelo-relacional-vista-resumida-del-prisma). Misma realidad, distinto zoom.
+> **Altitud de este documento:** el modelo de datos de §3 es el **modelo lógico completo** — todos los campos, snapshots y enums. Es el **contrato del dato**. Los diagramas ER no se dibujan a mano: se **generan** desde [`prisma/schema.prisma`](../prisma/schema.prisma) (ver [§3.3](#33-diagrama-de-relaciones-er)).
 
 ---
 
@@ -108,7 +108,7 @@
   - `birthDate: date?` *(opcional — tipo `date`, NO `datetime`: una fecha de nacimiento no lleva hora)*
   - `phone: string?` *(celular)*, `email: string?` *(la factura electrónica se envía por correo)*
   - `active: boolean`, `createdAt: datetime`, `updatedAt: datetime`
-  - *Nota legal (SIN / RND 102100000011): registrar al cliente es **opcional por venta**. La nominatividad solo es obligatoria para ventas **> Bs 1.000**; bajo ese umbral se factura **"S/N" (sin nombre, sin NIT)**. Por eso `Order.customerId` es nullable. NO usar NIT `99001` para "sin nombre" (es exclusivo de misiones diplomáticas).*
+  - *Registrar al cliente es **opcional por venta** → `Order.customerId` nullable ("S/N" si anónimo). La regla legal completa (umbral Bs 1.000, RND del SIN, por qué NO usar NIT `99001`) vive en [PDR §2.12](pdr.md#212-clientes-y-facturación-nominada).*
 
 - **Order**
   - `id: UUID`, `type: enum(MESA, LLEVAR)` *(CUSTOM no es un tipo — es propiedad de la orden vía `isCustom`; ver PDR §2.8 / §2.10)*
@@ -130,8 +130,8 @@
 - **OrderItem**
   - `id: UUID`, `orderId: UUID`, `productId: UUID?` *(null si custom)*, `variantId: UUID?`
   - `quantity: int`, `unitPrice: decimal`
-  - `discountId: UUID?` *(referencia al `Discount` aplicado **a este plato**; null si el ítem no lleva descuento. La cajera **marca qué ítems** lo llevan; máximo **un descuento por ítem** — sin apilamiento. En una orden conviven ítems con y sin descuento — PDR §2.11)*
-  - `discountAmount: decimal?` *(**snapshot por unidad** del monto fijo del descuento al aplicarlo, ej. 7.00. NO se deriva de una resta: es el `fixedAmount` que tenía el `Discount` en ese instante. Se congela en el ítem para que, si el admin edita el descuento después, las ventas viejas conserven el monto real cobrado. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas — PDR §2.11)*
+  - `discountId: UUID?` *(el `Discount` aplicado **a este plato**; null sin descuento. Máximo **uno por ítem** — sin apilamiento; la mecánica de negocio vive en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
+  - `discountAmount: decimal?` *(**snapshot por unidad** del `fixedAmount` vigente — NO una resta: se congela para que editar el catálogo no altere ventas pasadas. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas)*
   - `totalPrice: decimal` *(**derivado**: `(unitPrice − (discountAmount ?? 0)) × quantity`)*
   - `notes: string?`, `substitutions: JSON?`
   - `customPieces: JSON?` *(ej. `[{type:"pecho",qty:2},{type:"ala",qty:1}]` — composición libre de presas para ítems de órdenes custom; ver PDR §2.10)*
@@ -175,7 +175,7 @@
   - `amount: decimal` *(monto final que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`; **derivado** por el backend, no lo manda el front)*
   - `issuedBy: userId`, `issuedAt: datetime`, `shiftId: UUID`
   - `status: enum(issued, redeemed, cancelled)`, `note: string?`
-  - *Nota: el vale **no es un tipo de descuento** (PDR §2.4): no suma a caja y descuenta nómina. Pero **sí puede llevar aplicado** el "Descuento personal" sobre su monto, con el mismo patrón snapshot que `Order` (§2.11). El inventario descuenta las presas reales en ambos casos.*
+  - *El vale no es un descuento (no suma a caja, descuenta nómina — [PDR §2.4](pdr.md#24-vales-ventas-internas--descuento-por-nómina)); puede llevar el "Descuento personal" con el mismo patrón snapshot de los ítems.*
 
 - **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
   - `id: UUID`, `name: string`
@@ -183,17 +183,14 @@
   - `availability: enum(always, endOfShift)` *(`always` = todo el turno; `endOfShift` = solo a fin de turno)*
   - `requiresAuthorization: boolean` *(si `true`, la cajera solo puede aplicarlo si el admin la autorizó en ese turno — ver `DiscountAuthorization`)*
   - `active: boolean`
-  - *Instancias principales (PDR §2.11): "Descuento personal" (`fixedAmount = 7` por plato, `availability = endOfShift`, `requiresAuthorization = false` — dedicado a los **trabajadores del negocio**) y "Compensación al cliente" (`fixedAmount = 7` por plato afectado, `availability = always`, `requiresAuthorization = true`).*
-  - *El descuento es **puramente monetario**: el inventario siempre descuenta el producto real vendido, nunca el equivalente al precio descontado.*
+  - *Las dos instancias principales ("Descuento personal" y "Compensación al cliente") con sus configs, contextos y porqués viven en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal). Puramente monetario: ver nota de `InventoryTransaction`.*
 
 - **DiscountAuthorization** *(habilitación que el admin otorga a la sesión de cajera de un turno para aplicar un `Discount` con `requiresAuthorization = true` — PDR §2.11 / FR-016b)*
   - `id: UUID`, `discountId: UUID`
   - `shiftId: UUID`, `cashierId: UUID` *(sesión/cajera beneficiada del turno)*
   - `authorizedBy: UUID` *(admin que la otorgó)*, `authorizedAt: datetime`
-  - *Alcance **por turno, no por orden**: se otorga una sola vez y vale para todo el turno. Una vez autorizada, la cajera aplica el descuento las veces que necesite hasta el cierre.*
-  - *Se **extingue al cerrar el turno** (vive y muere con la sesión de cajera, §2.7 / FR-008b) y no se hereda al turno siguiente.*
-  - *El **acto de autorizar** es auditable por sí mismo (`AuditLog`), independientemente de cada aplicación posterior del descuento sobre una venta.*
-  - *Constraint sugerido: `UNIQUE(discountId, shiftId, cashierId)` — una autorización por descuento por sesión de cajera por turno.*
+  - *Alcance por turno, extinción al cierre y auditabilidad del acto de autorizar: reglas en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) (subsección "Autorización de descuentos por turno").*
+  - *Constraint: `UNIQUE(discountId, shiftId, cashierId)` — una autorización por descuento por sesión de cajera por turno.*
 
 - **User**
   - `id: UUID`, `name: string`, `role: enum(ADMIN, CASHIER, DISPATCHER, COOK)`
@@ -203,7 +200,7 @@
   - `id: UUID`, `name: string` *(único)*, `displayOrder: int` *(orden dentro del día)*
   - `referenceStart: string?`, `referenceEnd: string?` *(horarios de REFERENCIA informativos, ej. "09:00"–"16:00" — **jamás se usan para clasificar**: el reloj puede estar mal configurado y los horarios cambian)*
   - `active: boolean`
-  - *El período se **declara al abrir el turno** (preselección sugerida editable en la pantalla de apertura). NO es atributo del `User`: el personal rota días/turnos/roles (PDR §2.7). Política de quién confirma → PDR §13.3; agenda semanal → V2 (PDR §13.2).*
+  - *El período se **declara al abrir el turno** — nunca se infiere del reloj. Quién confirma, por qué NO es atributo del `User` y el descarte de la inferencia por hora: [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); agenda semanal → V2 (PDR §13.2).*
 
 - **Shift / CashRegister**
   - `id: UUID`, `cashierId: UUID`, `cashRegisterId: UUID?`
@@ -235,68 +232,7 @@
 
 ## 3.3 Diagrama de relaciones (ER)
 
-Así se conectan las entidades clave descritas en [§3.1](#31-entidades-principales). Es el corazón transaccional del sistema.
-
-```mermaid
-erDiagram
-    Product ||--o{ Variant : tiene
-    Order ||--o{ OrderItem : contiene
-    OrderItem }o--o| Product : "referencia (null si custom)"
-    OrderItem }o--o| Variant : "referencia (null si custom)"
-    ShiftPeriod ||--o{ Shift : "período del turno (declarado al abrir)"
-    Shift ||--o{ Order : agrupa
-    Customer ||--o{ Order : "factura nominada / pedidos del día (opcional)"
-    Shift ||--o{ Voucher : agrupa
-    Shift ||--o{ Expense : agrupa
-    Shift ||--o{ ShiftChickenLog : "ciclo crudo presas"
-    Shift ||--o{ DailyManualConsumption : "consumos manuales"
-    Shift ||--o{ DiscountAuthorization : "autoriza por turno"
-    Shift ||--o{ AuditLog : "acciones del turno (nullable)"
-    Discount ||--o{ OrderItem : "aplicado POR PLATO (uno por ítem)"
-    Discount ||--o{ Voucher : "descuento personal (opcional)"
-    Discount ||--o{ DiscountAuthorization : habilita
-    InventoryItem ||--o{ InventoryTransaction : "movimientos"
-    Order ||--o{ InventoryTransaction : "reason=sale"
-    User ||--o{ Order : "createdBy"
-    User ||--o{ Shift : "cashierId"
-
-    Order {
-        enum type "MESA|LLEVAR"
-        bool isCustom "custom = marca, no tipo"
-        enum status "created..closed|pendingPayment|cancelled"
-        uuid customerId "nullable, S/N si anónimo"
-        string publicToken "no adivinable, vista pública"
-        decimal originalAmount "suma de ítems sin descuento"
-        decimal total "derivado: original menos descuentos de ítems"
-    }
-    OrderItem {
-        uuid discountId "nullable, descuento POR PLATO"
-        decimal discountAmount "snapshot por unidad"
-        decimal totalPrice "derivado por ítem"
-    }
-    Customer {
-        string ci "único, buscable"
-        string nit "nullable, buscable"
-        string firstName
-        string lastName
-        enum sex "HOMBRE|MUJER"
-        date birthDate "opcional"
-        string phone "nullable"
-        string email "nullable"
-    }
-    Discount {
-        decimal fixedAmount "monto fijo, no %"
-        enum availability "always|endOfShift"
-        bool requiresAuthorization
-    }
-    ShiftChickenLog {
-        enum pieceType "pecho|ala|pierna|entrepierna"
-        int reprocessRaw "autopoblado del turno previo"
-        int processedRaw
-        int rawLeftover "→ reprocessRaw del turno T+1"
-        int cookedLeftover
-    }
-```
+> **El ER no se dibuja a mano acá** — el modelo cambia seguido y un diagrama estático queda desactualizado en silencio. La fuente de verdad es [`prisma/schema.prisma`](../prisma/schema.prisma); el diagrama se **genera on-demand** desde el schema con una extensión de VS Code (ej. *Prisma ERD Visualizer*) o una herramienta externa ([`prisma-erd-generator`](https://github.com/keonik/prisma-erd-generator), dbdiagram.io). Las entidades y campos, con sus notas, están en [§3.1](#31-entidades-principales); las relaciones clave en [§3.2](#32-relaciones-clave).
 
 > **Tres sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
 > - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas)).
@@ -344,7 +280,7 @@ stateDiagram-v2
 > **Reglas clave que el diagrama codifica:**
 > - El inventario se descuenta **al confirmar el pago**, nunca antes ([PDR §2.3](pdr.md#23-inventario-por-presas)).
 > - `pendingPayment` se prepara **igual** que un pedido pagado, pero sin tocar inventario ni caja ([PDR §2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente)).
-> - Cancelar pendiente: **manual, sin motivo**. Anular pagado: **motivo + detalle obligatorios** + revierte inventario ([FR-011b](requirements.md#L74)).
+> - Cancelar pendiente: **manual, sin motivo**. Anular pagado: **motivo + detalle obligatorios** + revierte inventario ([FR-011b](requirements.md#fr-011b--anulación-de-pedido-pagado-alta)).
 
 ## 4.1 Transiciones y efectos
 
@@ -458,9 +394,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
-- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR). Solo acepta items con `productId`/`variantId` (sin `customPieces`). Admite **N ítems**: platos, extras y bebidas son todos `Product` del catálogo (por `category`), cada uno un ítem con su `quantity`. Cada ítem acepta un **`discountId?` opcional** (§2.11): el backend valida el descuento (activo, ventana `availability` vigente y, si `requiresAuthorization`, autorización de la sesión de cajera en el turno — errores `DISCOUNT_NOT_AVAILABLE` / `DISCOUNT_NOT_AUTHORIZED`), congela `discountAmount` (snapshot por unidad del `fixedAmount` vigente) y deriva los totales — **todo en la misma llamada y transacción de creación**. El backend resuelve `unitPrice` desde `Product.basePrice`, calcula `totalPrice = (unitPrice − (discountAmount ?? 0)) × quantity` por ítem y `total = originalAmount − Σ(descuentos)` (el front NO manda precios ni montos, §5.0). Setea `Order.isCustom = false`.
-  > **No existe endpoint separado para aplicar descuentos** (§5.0, principio 6). Descuento post-creación: sin soporte en V1 (sin caso real) — para una orden `pendingPayment` sin pagar, cancelar (gratis, nada se contabilizó) y recrear con descuento; para una pagada, anulación FR-011b.
-- `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR) con presas surtidas. Items llevan `customPieces` + extras/bebidas opcionales, un **precio unitario confirmado** por la cajera y un **`discountId?` opcional** (mismas validaciones y snapshot que la orden estándar, §2.11). El **precio sugerido** = `sum(customPieces[].qty × salePrice)` + extras + bebidas lo calcula el **POS en el cliente** con los `piecePrices` que ya recibió en `GET /pos/context` (sin llamadas por cada cambio de selección); la cajera puede aceptarlo o pisarlo y se persiste el precio **confirmado**, nunca la sugerencia (§2.10, **V1**). Setea `Order.isCustom = true`. Endpoint **separado** para mantener DTOs y validaciones limpias por flujo (PDR §2.10).
+- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR) con **N ítems** (`productId` + `quantity`; sin `customPieces`). Cada ítem acepta `discountId?` opcional: el backend valida (disponibilidad + autorización — `DISCOUNT_NOT_AVAILABLE` / `DISCOUNT_NOT_AUTHORIZED`), congela el snapshot y deriva `totalPrice` y `total` — **una sola llamada y transacción** (§5.0 princ. 6; el front NO manda precios ni montos). Request/response y la cuenta completa en [§6.3](#63-ordercreateresponse-mesa-pagado-con-sustitución) / [§6.6](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada).
+  > **No existe endpoint separado para aplicar descuentos.** Descuento post-creación: sin soporte en V1 (sin caso real) — `pendingPayment` sin pagar → cancelar y recrear; pagada → anulación FR-011b.
+- `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR): ítems con `customPieces`, extras/bebidas opcionales, **precio unitario confirmado** por la cajera y `discountId?` opcional. El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `pos/context`; se persiste el confirmado, nunca la sugerencia (§2.10). Endpoint **separado** para DTOs y validaciones limpias por flujo. Payload en [§6.5](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
 - `GET /api/v1/orders/{id}` — obtener orden
 - `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
 - `PATCH /api/v1/orders/{id}/status` — cambiar estado
@@ -480,20 +416,20 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
 - `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
 - `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
-- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009). Body mínimo: `{ description, amount, paidBy }` — `createdBy` sale del JWT y `shiftId` del turno activo de la cajera (§5.0); falla con error claro si no hay turno abierto. El gasto aparece en el arqueo (`totals.expenses`) y en reportes; NO es acción crítica auditada (§2.9). Sin GET de listado en V1: los gastos se leen en arqueo y reportes (se agrega con un caso real)
+- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009). Body: `{ description, amount, paidBy }`; `createdBy`/`shiftId` derivados (§5.0), error claro sin turno abierto. Aparece en arqueo y reportes; no se audita (§2.9). Sin GET de listado en V1 (se agrega con un caso real). Payload en [§6.13](#613-expensecreateresponse-gasto-desde-caja--fr-009)
 - `POST /api/v1/vouchers` — crear vale
 - `GET /api/v1/vouchers` — listar vales con filtros
 - `PATCH /api/v1/inventory/{id}/sale-price` — configurar el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10)
 - `POST /api/v1/discounts` — crear descuento (admin): `name`, `fixedAmount`, `availability`, `requiresAuthorization`, `active`
 - `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
 - `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
-- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6). Devuelve el contexto operativo completo de la sesión de cajera, **liviano y listo para pintar** (solo datos activos, sin históricos — el menú completo son ~15 productos, pocos KB): `products` (activos, con sus `variants`), `discounts` **aplicables ahora** a la sesión (`active = true`, disponibilidad vigente — `always`, o `endOfShift` solo en su ventana — y, si `requiresAuthorization`, solo los que tienen `DiscountAuthorization` vigente para esta cajera/turno: el POS no filtra nada), `piecePrices` (los `salePrice` de las 4 presas cocidas, para calcular el **precio sugerido custom en el cliente**), `shiftPeriods` (períodos activos del catálogo — la pantalla de apertura los ofrece) y `shift` (`{ id, orderCount, startAt, period }` del turno activo, o `null` si aún no abrió). Ver payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
+- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6), liviana (solo datos activos, pocos KB): `products`+`variants`, `discounts` **ya filtrados por el backend** para la sesión (activos + ventana vigente + autorización si corresponde — el POS no filtra nada), `piecePrices` (para el precio sugerido custom **en el cliente**), `shiftPeriods` y `shift` activo (o `null`). Detalle y payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
 - `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body mínimo: `cashierId`; el `shiftId` se deriva del turno activo de esa cajera y `authorizedBy` del JWT, §5.0). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
 - `GET /api/v1/reports/sales` — reporte ventas
 - `GET /api/v1/reports/inventory-presas` — reporte inventario presas
-- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; §4.3). Body mínimo: `{ date: "2026-07-08", periodId: "uuid-period-noche", cashRegisterId?: "uuid-caja-2" }` — `cashRegisterId` **opcional**: omitido = todas las cajas de ese período (hoy hay 1 caja; el contrato ya soporta N simultáneas, §2.7). **Sin paginación**: un turno son ~50-80 filas. Resolución por **FK directa, sin ventanas horarias**: `Shift` por fecha + `periodId` (+ caja) → `AuditLog WHERE shiftId IN (...)`, filas **tal cual** (rastro crudo) con `user` resuelto `{ id, name }` (§5.0), orden `timestamp DESC`. Día sin turnos en ese período → `shifts: []`, `rows: []` (no es error). Ver payload en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
-- `POST /api/v1/audit-logs/month` — logs de auditoría de un **mes calendario completo** (admin). Body: `{ month: "2026-07" }`. **Sin paginación**: un mes ≈ 3-4 mil filas (~cientos de KB) — aceptable para pantalla de admin. Un **año** completo NO se consulta por acá: eso es un export CSV de reportes (V2), no una consulta de pantalla. Incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que NO aparecen en `/shift`. Misma forma de fila. **Solo lectura** en ambos — coherente con la tabla append-only; la consulta en sí NO se audita (no es una de las 6 acciones críticas)
+- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; §4.3). Body: `{ date, periodId, cashRegisterId? }` (caja opcional = todas las cajas del período). **Sin paginación** (~50-80 filas/turno); resolución por **FK directa** vía `AuditLog.shiftId` — sin ventanas horarias (§4.3). Payload y comportamiento completo en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
+- `POST /api/v1/audit-logs/month` — logs de un **mes calendario** (admin). Body: `{ month }`. Sin paginación (~3-4 mil filas/mes); incluye los logs con `shiftId = null` que no aparecen en `/shift`. Un **año** es export CSV de reportes (V2), no consulta de pantalla. Solo lectura en ambos; la consulta no se audita
 - `POST /api/v1/print/invoice` — imprimir factura térmica (a demanda)
 - `GET /api/v1/print/invoice/{orderId}/pdf` — descargar PDF factura (fallback)
 
@@ -1202,11 +1138,10 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Venta custom de presas surtidas (§2.10) | Endpoint `POST /api/v1/orders/custom`; flag `Order.isCustom = true`; ítem con `customPieces: JSON` |
 | Tipo de pedido (MESA / LLEVAR) (§2.8) | `Order.type: enum(MESA, LLEVAR)` — CUSTOM **no** es un valor de `type` |
 | Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions: JSON` con `{from, to}`; sin campo de ajuste de precio |
-| Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount` (`name`, `fixedAmount` **por plato**, `availability`, `requiresAuthorization`, `active`); CRUD vía `/api/v1/discounts` |
-| Aplicar descuento POR PLATO (§2.11 / FR-016) | `discountId?` opcional **en cada ítem** de `POST /orders` / `POST /orders/custom` — una sola llamada, sin endpoint dedicado (§5.0 principio 6); el backend valida, congela `OrderItem.discountAmount` (snapshot por unidad) y deriva `OrderItem.totalPrice` y `Order.total`; uno por ítem (apilamiento irrepresentable) |
-| Descuento al personal por sobrante de pollo cocido (§2.11) | Instancia de `Discount` "Descuento personal" (`fixedAmount = 7` por plato, `availability = endOfShift`, `requiresAuthorization = false`) referenciada vía `OrderItem.discountId`. **Los antiguos `Order.internalDiscount` y `Order.discountId`/`Order.discountAmount` quedan eliminados** |
-| Compensación al cliente por pollo defectuoso (§2.11) | Instancia de `Discount` "Compensación al cliente" (`fixedAmount = 7` por plato afectado, `availability = always`, `requiresAuthorization = true`) |
-| Autorización de descuentos por turno (§2.11 / FR-016b) | Entidad `DiscountAuthorization` (admin → sesión de cajera del turno); `POST /discounts/{id}/authorize`; se extingue al cerrar turno; acto auditado en `AuditLog` |
+| Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount`; CRUD vía `/api/v1/discounts` |
+| Aplicar descuento POR PLATO (§2.11 / FR-016) | `discountId?` por ítem en `POST /orders[/custom]` (una llamada, §5.0 princ. 6) → `OrderItem.discountAmount` (snapshot) + totales derivados |
+| Instancias: descuento al personal / compensación al cliente (§2.11) | Filas del catálogo `Discount` referenciadas vía `OrderItem.discountId` (configs en PDR §2.11). Los antiguos `Order.internalDiscount`/`discountId`/`discountAmount` quedan **eliminados** |
+| Autorización de descuentos por turno (§2.11 / FR-016b) | `DiscountAuthorization`; `POST /discounts/{id}/authorize`; se extingue al cerrar turno; acto auditado |
 | Precio sugerido en venta custom (§2.10) — **V1** | `InventoryItem.salePrice` por presa cocida (config admin vía `PATCH /inventory/{id}/sale-price`); cálculo `sum(customPieces[].qty × salePrice) + extras + bebidas`; la cajera puede pisarlo, se persiste el confirmado |
 | Pedido con pago pendiente (§2.5) | `Order.status = pendingPayment` + `paymentStatus = pending`; cancelación solo manual |
 | Confirmación de pago | Endpoint `POST /api/v1/orders/{id}/pay`; transición a `paid` + decremento atómico de inventario |
@@ -1221,9 +1156,9 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Caja = 1 cajera por turno (§2.7) | `Shift.cashierId` único activo por `cashRegisterId` |
 | Sesión única por turno (FR-008b) | Constraint a nivel servicio: 1 sesión activa por `userId` por `shiftId` |
 | Roles funcionales (§2.7) | `User.role: enum(ADMIN, CASHIER, DISPATCHER, COOK)` — enforcement por rol en el backend vía `RolesGuard` + `@Roles` (V1, FR-018); ver §5.2 |
-| Auditoría de acciones críticas (§2.9) | Entidad `AuditLog` con `userId`, `shiftId?` (el log nace sabiendo su turno; null = acción de admin fuera de turno), `entity`, `entityId`, `action`, `details: JSON`; consulta **sin paginación** vía `POST /audit-logs/shift` (`{ date, periodId, cashRegisterId? }` — FK directa, sin ventanas horarias) y `POST /audit-logs/month` (`{ month }`) — admin, §4.3 |
-| Turnos del día (Mañana/Noche, §2.3) y tercer turno futuro | Catálogo `ShiftPeriod` (no enum — sin migración para "Tarde"); `Shift.periodId` **declarado al abrir** (`POST /shifts/open`), nunca inferido del reloj; horarios de referencia informativos; política de confirmación → PDR §13.3; agenda semanal → V2 (PDR §13.2) |
-| Registro de gastos desde caja (§2.6 / FR-009) | `POST /expenses` (`description`, `amount`, `paidBy`); `Expense.shiftId` derivado del turno activo y `createdBy` del JWT (§5.0); aparece en arqueo (`totals.expenses`) y reportes |
+| Auditoría de acciones críticas (§2.9) | `AuditLog` (+`shiftId?`: el log nace sabiendo su turno); consulta sin paginación vía `POST /audit-logs/shift` y `/month` (§4.3, §6.14) |
+| Turnos del día y tercer turno futuro (§13.3 PDR) | Catálogo `ShiftPeriod` (no enum); `Shift.periodId` **declarado al abrir**, nunca inferido del reloj |
+| Registro de gastos desde caja (§2.6 / FR-009) | `POST /expenses`; `shiftId`/`createdBy` derivados (§5.0); aparece en arqueo y reportes |
 | Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); búsqueda por CI/NIT vía `GET /customers?search=`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
 | Vista del cliente — por pedido y pedidos del día (§7.4 / FR-015 / FR-019) | `Order.publicToken` no adivinable; `GET /public/orders/{token}` (público); identidad (`customerId`) **agrupa** los pedidos del día, el **token** da acceso — el NIT no es llave |
 | Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total se calcula automáticamente con `InventoryItem.salePrice` (ya definido en V1), sin intervención de la cajera |

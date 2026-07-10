@@ -2,9 +2,9 @@
 
 **Sistema Informático de Ventas — Wonder Chicken**
 
-> **Qué es este documento:** una **vista de referencia rápida** (cheat-sheet) que reúne en un solo lugar (a) el **diagrama entidad-relación con todos los campos** y (b) los **endpoints más importantes con ejemplos de request/response**.
+> **Qué es este documento:** el **cheat-sheet de endpoints** — los requests mínimos que envía el frontend (con sus notas de diseño §5.0) y respuestas resumidas. Para entidades y campos, la fuente es [`prisma/schema.prisma`](../prisma/schema.prisma); el ER se genera desde ahí (ver §1).
 >
-> **No es fuente de verdad.** Es una **derivación** de [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd) (modelo) y [`technical_guide.md` §6](technical_guide.md#6-json-payloads-de-ejemplo) (payloads). Ante cualquier conflicto, **gana `technical_guide.md`**. El esquema real, cuando exista, vive en [`prisma/schema.prisma`](../prisma/schema.prisma).
+> **No es fuente de verdad.** Es una **derivación** de [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd) (modelo) y [`technical_guide.md` §6](technical_guide.md#6-json-payloads-de-ejemplo) (payloads completos). Ante cualquier conflicto, **gana `technical_guide.md`**.
 >
 > Todas las respuestas siguen el **contrato estándar** `{ isSuccess, message, data }` ([§5.3](technical_guide.md#53-estructura-de-respuesta-estándar)). Todos los endpoints exigen `Authorization: Bearer <token>` salvo los marcados **público**.
 
@@ -12,7 +12,7 @@
 
 ## Índice
 
-- [1. Diagrama entidad-relación (con campos)](#1-diagrama-entidad-relación-con-campos)
+- [1. Diagrama entidad-relación (generado desde el schema)](#1-diagrama-entidad-relación-generado-desde-el-schema)
 - [2. Resumen de entidades](#2-resumen-de-entidades)
 - [3. Endpoints importantes (request / response)](#3-endpoints-importantes-request--response)
   - [3.1 Autenticación](#31-autenticación)
@@ -26,263 +26,14 @@
 
 ---
 
-## 1. Diagrama entidad-relación (con campos)
+## 1. Diagrama entidad-relación (generado desde el schema)
 
-```mermaid
-erDiagram
-    User ||--o{ Order : "createdBy / deliveredBy"
-    User ||--o{ Shift : "cashierId"
-    User ||--o{ Voucher : "issuedBy"
-    User ||--o{ InventoryTransaction : "ejecuta"
-    User ||--o{ AuditLog : "actor"
-    User ||--o{ DiscountAuthorization : "admin / cajera"
-
-    CashRegister ||--o{ Shift : "tiene turnos"
-    ShiftPeriod ||--o{ Shift : "período declarado al abrir"
-    Shift ||--o{ AuditLog : "acciones del turno (nullable)"
-
-    Shift ||--o{ Order : "agrupa"
-    Customer ||--o{ Order : "factura nominada / pedidos del día (opcional)"
-    Shift ||--o{ Voucher : "agrupa"
-    Shift ||--o{ Expense : "agrupa"
-    Shift ||--o{ DailyManualConsumption : "consumos"
-    Shift ||--o{ ShiftChickenLog : "ciclo crudo"
-    Shift ||--o{ DiscountAuthorization : "autoriza por turno"
-
-    Product ||--o{ Variant : "tiene"
-    Product ||--o{ OrderItem : "se vende en"
-    Product ||--o{ Voucher : "puede referir"
-    Variant ||--o{ OrderItem : "elegida en"
-
-    Order ||--|{ OrderItem : "compone"
-    Order ||--o{ InventoryTransaction : "reason=sale"
-
-    Discount ||--o{ OrderItem : "aplicado POR PLATO, uno por ítem"
-    Discount ||--o{ Voucher : "descuento personal (opcional)"
-    Discount ||--o{ DiscountAuthorization : "habilita"
-
-    InventoryItem ||--o{ InventoryTransaction : "movimientos"
-    InventoryItem ||--o{ InventoryBatch : "lotes"
-    InventoryItem ||--o{ DailyManualConsumption : "anotacion"
-
-    User {
-        uuid id PK
-        string name
-        enum role "ADMIN|CASHIER|DISPATCHER|COOK"
-        string username
-        string passwordHash
-        bool active
-    }
-
-    CashRegister {
-        uuid id PK
-        string name
-        bool active
-    }
-
-    ShiftPeriod {
-        uuid id PK
-        string name "Mañana | Noche | ... (único)"
-        int displayOrder
-        string referenceStart "informativo, no clasifica"
-        string referenceEnd "informativo"
-        bool active
-    }
-
-    Shift {
-        uuid id PK
-        uuid cashierId FK
-        uuid cashRegisterId FK "nullable"
-        uuid periodId FK "declarado al abrir, nunca inferido"
-        datetime startAt
-        datetime endAt "nullable"
-        decimal openingAmount
-        decimal closingAmount "nullable"
-        decimal expectedAmount "nullable"
-        decimal discrepancy "nullable"
-    }
-
-    Product {
-        uuid id PK
-        string name
-        decimal basePrice
-        string category
-        bool active
-        string description
-    }
-
-    Variant {
-        uuid id PK
-        uuid productId FK
-        string name
-        json components
-        bool isDefault
-    }
-
-    Customer {
-        uuid id PK
-        string ci "único, buscable"
-        string nit "nullable, buscable"
-        string firstName
-        string lastName
-        enum sex "HOMBRE|MUJER"
-        date birthDate "nullable"
-        string phone "nullable"
-        string email "nullable"
-        bool active
-    }
-
-    Order {
-        uuid id PK
-        enum type "MESA|LLEVAR"
-        string tableNumber "nullable"
-        string customerName "nullable, snapshot / S/N si anónimo"
-        uuid customerId FK "nullable, cliente registrado"
-        string publicToken "único, no adivinable: vista pública"
-        enum status "created..closed|pendingPayment|cancelled|onHold"
-        enum paymentStatus "pending|paid|partial"
-        enum paymentMethod "cash|card|vale, nullable"
-        decimal originalAmount "suma de ítems antes de descuento"
-        decimal total "derivado: original menos descuentos de ítems"
-        bool isCustom "marca, no es un tipo"
-        string cancelReason "nullable"
-        string cancelDetails "nullable"
-        uuid createdBy FK
-        datetime createdAt
-        datetime paidAt "nullable"
-        datetime cancelledAt "nullable"
-        datetime readyAt "nullable"
-        datetime deliveredAt "nullable"
-        uuid deliveredBy FK "nullable"
-        uuid shiftId FK
-    }
-
-    OrderItem {
-        uuid id PK
-        uuid orderId FK
-        uuid productId FK "nullable si custom"
-        uuid variantId FK "nullable"
-        int quantity
-        decimal unitPrice
-        uuid discountId FK "nullable, descuento POR PLATO"
-        decimal discountAmount "nullable, snapshot por unidad"
-        decimal totalPrice "derivado: (unitPrice - descuento) x qty"
-        string notes "nullable"
-        json substitutions "nullable"
-        json customPieces "nullable, presas surtidas"
-    }
-
-    InventoryItem {
-        uuid id PK
-        string sku
-        string name
-        enum unit "presa|bolsa|unidad"
-        enum type "pecho|ala|pierna|entrepierna|bebida|insumo"
-        int currentStock
-        string unitMeasure
-        decimal salePrice "nullable, precio venta por presa"
-    }
-
-    InventoryBatch {
-        uuid id PK
-        uuid inventoryItemId FK
-        string batchCode
-        datetime processedAt
-        int quantityReceived
-        int quantityRemaining
-        string origin
-    }
-
-    InventoryTransaction {
-        uuid id PK
-        uuid inventoryItemId FK
-        int delta
-        enum reason "sale|adjustment|reception|vale|manualConsumption"
-        uuid referenceId FK "nullable"
-        uuid userId FK
-        string note "nullable"
-        datetime timestamp
-    }
-
-    DailyManualConsumption {
-        uuid id PK
-        uuid shiftId FK
-        uuid inventoryItemId FK
-        int quantity
-        uuid recordedBy FK
-        datetime recordedAt
-    }
-
-    ShiftChickenLog {
-        uuid id PK
-        uuid shiftId FK
-        enum pieceType "pecho|ala|pierna|entrepierna"
-        int reprocessRaw "autopoblado del turno previo"
-        int processedRaw
-        int rawLeftover "pasa a reprocessRaw del turno T+1"
-        int cookedLeftover "habilita descuento personal"
-        uuid recordedBy FK
-        datetime recordedAt
-        datetime closedAt "nullable"
-    }
-
-    Voucher {
-        uuid id PK
-        string code
-        uuid workerId FK "nullable"
-        string workerName "si no es usuario"
-        uuid productId FK "nullable"
-        string productName
-        decimal originalAmount "precio del producto"
-        uuid discountId FK "nullable, descuento personal"
-        decimal discountAmount "nullable, snapshot"
-        decimal amount "derivado: original menos descuento"
-        uuid issuedBy FK
-        datetime issuedAt
-        uuid shiftId FK
-        enum status "issued|redeemed|cancelled"
-        string note "nullable"
-    }
-
-    Discount {
-        uuid id PK
-        string name
-        decimal fixedAmount "monto fijo POR PLATO, no porcentaje"
-        enum availability "always|endOfShift"
-        bool requiresAuthorization
-        bool active
-    }
-
-    DiscountAuthorization {
-        uuid id PK
-        uuid discountId FK
-        uuid shiftId FK
-        uuid cashierId FK
-        uuid authorizedBy FK "admin"
-        datetime authorizedAt
-    }
-
-    Expense {
-        uuid id PK
-        string description
-        decimal amount
-        enum paidBy "cash|register"
-        uuid shiftId FK
-        uuid createdBy FK
-        datetime createdAt
-    }
-
-    AuditLog {
-        uuid id PK
-        string entity
-        string entityId "polimórfico sin FK: uuid o clave lógica"
-        string action
-        uuid userId FK
-        uuid shiftId FK "nullable, turno de la acción"
-        datetime timestamp
-        json details "nullable, before/after"
-    }
-```
+> **El diagrama ER no se dibuja a mano acá** — el modelo cambia seguido y un diagrama estático queda desactualizado en silencio (ya pasó). La **fuente de verdad de entidades y campos** es [`prisma/schema.prisma`](../prisma/schema.prisma); el diagrama se **genera on-demand** desde el schema:
+>
+> - **Extensión de VS Code:** *Prisma ERD Visualizer* (o similar) — abre el schema y renderiza el ER al instante.
+> - **Herramienta externa:** [`prisma-erd-generator`](https://github.com/keonik/prisma-erd-generator) (genera mermaid/SVG desde el schema) o importar el SQL a [dbdiagram.io](https://dbdiagram.io).
+>
+> Para entender qué es cada entidad, ver el [resumen de entidades (§2)](#2-resumen-de-entidades); para el detalle lógico campo por campo, [`technical_guide.md` §3.1](technical_guide.md#31-entidades-principales).
 
 > **Nota:** `Component` es una entidad **opcional** (`id`, `name`, `type`, `unitPrice`) que el modelo contempla para descomponer platos; no es obligatoria en V1. Detalle en [`technical_guide.md` §3.1](technical_guide.md#31-entidades-principales).
 
@@ -412,44 +163,14 @@ Request (datos mínimos — ver [principios §5.0](technical_guide.md#50-princip
 > **N ítems libres:** un pedido estándar mezcla **platos + bebidas + extras** en cualquier cantidad (acá: Wonder×2, Fanta×1, Porción de Papas×2). Cada uno es un `Product`; el front solo manda `productId` + `quantity`, el backend pone el precio y suma el total (§2.2 / §5.0).
 > **Descuento por plato en la MISMA llamada (§2.11):** el ítem que lleva descuento manda su `discountId` (opcional) — **no existe endpoint separado** para aplicarlo. El backend valida (disponibilidad + autorización del turno), congela `discountAmount` (snapshot por unidad) y deriva `totalPrice` y `total` en la misma transacción. Errores: `DISCOUNT_NOT_AVAILABLE`, `DISCOUNT_NOT_AUTHORIZED`.
 > **Mínimos:** `customerId` es **opcional** (omitirlo = venta anónima "S/N"); el backend lee `Customer` y snapshotea `customerName`. NO se envían `createdBy` ni `shiftId` (los deriva del JWT y del turno activo) ni precios ni montos de descuento (los calcula desde `Product`/`Variant`/`Discount`). Para venta nominada, el front ya obtuvo el `customerId` vía `GET /customers`.
-Response:
+Response (resumen — payloads completos en [`technical_guide.md` §6.3](technical_guide.md#63-ordercreateresponse-mesa-pagado-con-sustitución) y, con descuentos por plato, [§6.6](technical_guide.md#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada)):
 ```json
-{
-  "isSuccess": true,
-  "message": "Pedido creado y pagado correctamente",
-  "data": {
-    "id": "uuid-order-001",
-    "type": "MESA",
-    "tableNumber": "70",
-    "customerName": "GOMEZ",
-    "customerId": "uuid-customer-001",
-    "publicToken": "a3f9c2e81b4d7f60a9e35c8d2b1f4a7e",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "paymentMethod": "cash",
-    "originalAmount": 104.00,
-    "items": [
-      {
-        "productId": "uuid-product-wonder",
-        "variantId": "uuid-variant-wonder",
-        "quantity": 2,
-        "unitPrice": 36.00,
-        "discountId": "uuid-discount-compensacion",
-        "discountAmount": 7.00,
-        "totalPrice": 58.00,
-        "substitutions": [ {"from":"mixto","to":"arroz"} ],
-        "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ]
-      },
-      { "productId": "uuid-product-fanta", "quantity": 1, "unitPrice": 8.00, "totalPrice": 8.00 },
-      { "productId": "uuid-product-papas", "quantity": 2, "unitPrice": 12.00, "totalPrice": 24.00 }
-    ],
-    "total": 90.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "paidAt": "2026-05-01T22:10:00"
-  }
-}
+{ "data": { "id": "...", "publicToken": "a3f9c2e8...", "status": "preparing",
+            "originalAmount": 104.00,
+            "items": [ { "unitPrice": 36.00, "discountAmount": 7.00, "totalPrice": 58.00, "...": "..." } ],
+            "total": 90.00, "createdBy": { "id": "...", "name": "Roxana" } } }
 ```
-> **Listo para render:** `createdBy` viene como `{ id, name }` (no id suelto); `customerName` ya resuelto desde `Customer`; `unitPrice`/`totalPrice`/`total` calculados. El descuento del Wonder quedó congelado en el ítem: `discountAmount = 7` por unidad → `totalPrice = (36 − 7) × 2 = 58`; `total = 104 − 14 = 90`. El frontend solo pinta.
+> **Listo para render (§5.0):** actores como `{ id, name }`, `customerName` resuelto, precios y totales calculados. El descuento quedó congelado en el ítem: `totalPrice = (36 − 7) × 2 = 58`; `total = 104 − 14 = 90`. El frontend solo pinta.
 
 **`POST /api/v1/orders/custom`** — crear orden custom (presas surtidas). Rol: `CASHIER`. La cajera arma las presas y confirma el precio.
 
@@ -472,35 +193,7 @@ Request:
 }
 ```
 > **Excepción de precio (§5.0):** acá el `unitPrice` **sí** lo envía el front porque es el **precio confirmado por la cajera** (§2.10). El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `GET /pos/context`; lo que se persiste es el confirmado. Los ítems custom también aceptan `discountId?` opcional (mismas validaciones que la orden estándar, §2.11). `customerId` opcional; `createdBy`/`shiftId` del token/sesión.
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Pedido custom creado correctamente",
-  "data": {
-    "id": "uuid-order-003",
-    "type": "LLEVAR",
-    "isCustom": true,
-    "customerName": "JUAN PEREZ",
-    "customerId": "uuid-customer-002",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "items": [
-      {
-        "customPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":1} ],
-        "extras": [ {"name":"papa","qty":1} ],
-        "drinks": [ {"productId":"uuid-coca-500","qty":1} ],
-        "quantity": 1,
-        "unitPrice": 35.00,
-        "totalPrice": 35.00
-      }
-    ],
-    "total": 35.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "paidAt": "2026-05-01T13:20:00"
-  }
-}
-```
+Response: `Order` con `isCustom: true` y el ítem con sus `customPieces` — payload completo en [`technical_guide.md` §6.5](technical_guide.md#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
 
 **`POST /api/v1/orders/{id}/pay`** — confirmar pago (`pendingPayment` → `paid`). Acá se descuenta inventario. Rol: `CASHIER`.
 
@@ -523,8 +216,6 @@ Response:
   }
 }
 ```
-
-> **Descuentos por plato — sin endpoint separado:** el descuento viaja como `discountId` opcional en cada ítem de `POST /orders` / `POST /orders/custom` (ver request de arriba). El `discountAmount` es **snapshot por unidad** y aplica a todas las unidades del ítem (para descuento parcial, el POS parte el ítem en dos líneas). Errores en la creación: `DISCOUNT_NOT_AVAILABLE` (inactivo o fuera de su ventana), `DISCOUNT_NOT_AUTHORIZED` (la cajera no fue autorizada). No existe `DISCOUNT_ALREADY_APPLIED`: con un solo campo `discountId` por ítem, el apilamiento es irrepresentable.
 
 **`GET /api/v1/pos/context`** — carga del POS en **una sola llamada liviana** (solo datos activos, listos para pintar). Rol: `CASHIER`.
 
@@ -552,21 +243,7 @@ Request:
   "details": "Se devolvió el dinero en efectivo. Sin factura emitida."
 }
 ```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Pedido anulado correctamente",
-  "data": {
-    "id": "uuid-order-001",
-    "status": "cancelled",
-    "cancelReason": "Cliente cambió de opinión",
-    "cancelDetails": "Se devolvió el dinero en efectivo. Sin factura emitida.",
-    "cancelledAt": "2026-05-01T22:30:00",
-    "inventoryReverted": true
-  }
-}
-```
+Response: orden `cancelled` con `inventoryReverted: true` — payload completo en [`technical_guide.md` §6.11](technical_guide.md#611-cancelorderresponse-anulación-de-pedido-pagado).
 
 **`PATCH /api/v1/orders/{id}/status`** — despacho marca `ready` / `delivered`. Rol: `DISPATCHER`.
 
@@ -596,21 +273,7 @@ Request:
   "note": "Merma por presas quebradas"
 }
 ```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Ajuste de inventario registrado correctamente",
-  "data": {
-    "id": "uuid-invtx-001",
-    "inventoryItemId": "uuid-inv-pecho",
-    "delta": -2,
-    "reason": "adjustment",
-    "userId": { "id": "uuid-user-admin", "name": "Admin" }
-  }
-}
-```
-> `userId` se deriva del JWT (no del body) y se devuelve resuelto como `{ id, name }` (§5.0).
+Response: la `InventoryTransaction` creada, con `userId` derivado del JWT y resuelto `{ id, name }` (§5.0) — payload completo en [`technical_guide.md` §6.8](technical_guide.md#68-inventoryadjustresponse-éxito).
 
 ### 3.4 Caja y turno
 
@@ -622,21 +285,7 @@ Request:
 ```
 > El `periodId` viene del catálogo `ShiftPeriod` (la pantalla lo preselecciona como sugerencia **editable** — quién lo confirma es decisión residual, [PDR §13.3](pdr.md)). El sistema **nunca** lo infiere del reloj.
 
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Caja abierta correctamente",
-  "data": {
-    "id": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
-    "period": { "id": "uuid-period-manana", "name": "Mañana" },
-    "openingAmount": 200.00,
-    "startAt": "2026-05-01T09:00:00"
-  }
-}
-```
+Response: el `Shift` creado con `cashier`, `cashRegister` y `period` resueltos `{ id, name }` — payload completo en [`technical_guide.md` §6.10](technical_guide.md#610-cashopenresponse-éxito).
 
 **`POST /api/v1/shifts/close`** — cerrar caja/turno con arqueo. Rol: `CASHIER`.
 
@@ -680,27 +329,7 @@ Request (con descuento personal aplicado):
 ```
 > **Mínimos (§5.0):** el `amount` **NO se envía** — el backend toma `originalAmount` de `productId` y, si viene `discountId`, le resta el `fixedAmount` (snapshot). `discountId` es **opcional** (sin él, el vale vale el precio pleno). `issuedBy` y `shiftId` salen del JWT y del turno activo; el `code` lo genera el backend.
 
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Vale registrado correctamente",
-  "data": {
-    "id": "uuid-voucher-001",
-    "code": "V-20260501-001",
-    "workerName": "MARIA LOPEZ",
-    "productName": "Porción Media",
-    "originalAmount": 30.00,
-    "discountId": "uuid-discount-personal",
-    "discountAmount": 7.00,
-    "amount": 23.00,
-    "issuedBy": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "issuedAt": "2026-05-01T14:30:00",
-    "shiftId": "uuid-shift-001",
-    "status": "issued"
-  }
-}
-```
+Response: el vale con `originalAmount` (30), `discountAmount` (7, snapshot) y `amount` (23) derivados — payload completo en [`technical_guide.md` §6.7](technical_guide.md#67-vouchercreateresponse).
 
 ### 3.6 Descuentos
 
@@ -716,21 +345,7 @@ Request:
   "active": true
 }
 ```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Descuento creado correctamente",
-  "data": {
-    "id": "uuid-discount-compensacion",
-    "name": "Compensación al cliente",
-    "fixedAmount": 7.00,
-    "availability": "always",
-    "requiresAuthorization": true,
-    "active": true
-  }
-}
-```
+Response: el `Discount` creado (mismos campos + `id`) — payload completo en [`technical_guide.md` §6.6b](technical_guide.md#66b-discountcreateresponse-catálogo--admin).
 
 **`POST /api/v1/discounts/{id}/authorize`** — el admin autoriza a la sesión de cajera del turno. Rol: `ADMIN`. Deja `AuditLog`.
 
@@ -740,21 +355,7 @@ Request:
 ```
 > **Mínimos (§5.0):** solo `cashierId` (a qué cajera se habilita). El `shiftId` lo deriva el backend del **turno activo de esa cajera**; `authorizedBy` sale del JWT del admin.
 
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Cajera autorizada para el descuento en este turno",
-  "data": {
-    "id": "uuid-auth-001",
-    "discountId": "uuid-discount-compensacion",
-    "shiftId": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "authorizedBy": { "id": "uuid-user-admin", "name": "Admin" },
-    "authorizedAt": "2026-06-06T15:05:00"
-  }
-}
-```
+Response: la `DiscountAuthorization` creada con cajera y admin resueltos `{ id, name }` — payload completo en [`technical_guide.md` §6.6c](technical_guide.md#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno).
 
 ### 3.7 Gastos
 
@@ -766,22 +367,7 @@ Request:
 ```
 > **Mínimos (§5.0):** `createdBy` sale del JWT y `shiftId` del **turno activo** de la cajera (no se envían). Sin turno abierto → error claro. El gasto aparece en el arqueo (`totals.expenses`) y en reportes; no genera `AuditLog`.
 
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Gasto registrado correctamente",
-  "data": {
-    "id": "uuid-expense-001",
-    "description": "Compra de arroz",
-    "amount": 35.50,
-    "paidBy": "cash",
-    "shiftId": "uuid-shift-001",
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "createdAt": "2026-05-01T11:20:00"
-  }
-}
-```
+Response: el `Expense` creado ligado al turno activo — payload completo en [`technical_guide.md` §6.13](technical_guide.md#613-expensecreateresponse-gasto-desde-caja--fr-009).
 
 ### 3.8 Auditoría
 
