@@ -299,9 +299,9 @@ erDiagram
 ```
 
 > **Tres sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
-> - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](pdr.md#L380)).
-> - El descuento vive en el **ítem**, no en la orden: se aplica **por plato** — la cajera marca qué ítems lo llevan ([PDR §2.11](pdr.md#L401)).
-> - `OrderItem.discountAmount` es un **snapshot por unidad** del monto fijo, NO una resta. `OrderItem.totalPrice` y `Order.total` son los derivados ([PDR §2.11](pdr.md#L401)).
+> - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas)).
+> - El descuento vive en el **ítem**, no en la orden: se aplica **por plato** — la cajera marca qué ítems lo llevan ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)).
+> - `OrderItem.discountAmount` es un **snapshot por unidad** del monto fijo, NO una resta. `OrderItem.totalPrice` y `Order.total` son los derivados ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)).
 
 ---
 
@@ -311,7 +311,7 @@ erDiagram
 `created → confirmed → preparing → ready → delivered → closed`
 Estados adicionales: `pendingPayment`, `cancelled`, `onHold`.
 
-El flujo de vida de una orden. Negocio en [PDR §4](pdr.md#L444), efectos transaccionales en [§4.1](#41-transiciones-y-efectos).
+El flujo de vida de una orden. Negocio en [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos), efectos transaccionales en [§4.1](#41-transiciones-y-efectos).
 
 ```mermaid
 stateDiagram-v2
@@ -342,8 +342,8 @@ stateDiagram-v2
 ```
 
 > **Reglas clave que el diagrama codifica:**
-> - El inventario se descuenta **al confirmar el pago**, nunca antes ([PDR §2.3](pdr.md#L324)).
-> - `pendingPayment` se prepara **igual** que un pedido pagado, pero sin tocar inventario ni caja ([PDR §2.5](pdr.md#L344)).
+> - El inventario se descuenta **al confirmar el pago**, nunca antes ([PDR §2.3](pdr.md#23-inventario-por-presas)).
+> - `pendingPayment` se prepara **igual** que un pedido pagado, pero sin tocar inventario ni caja ([PDR §2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente)).
 > - Cancelar pendiente: **manual, sin motivo**. Anular pagado: **motivo + detalle obligatorios** + revierte inventario ([FR-011b](requirements.md#L74)).
 
 ## 4.1 Transiciones y efectos
