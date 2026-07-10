@@ -3,8 +3,8 @@
 **Complementa:** [docs/pdr.md](pdr.md)
 **Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
-**Versión:** 1.6 (catálogo `ShiftPeriod` + `Shift.periodId` + `AuditLog.shiftId`: el turno se **declara al abrir**, nunca se infiere del reloj; consulta de auditoría por caja+turno vía FK directa, sin ventanas horarias)
-**Fecha:** 2026-07-09
+**Versión:** 1.7 (fusiona `data_model_and_endpoints.md` — eliminado: §6 pasa a **request + response por endpoint** y §3.1 gana el mapa rápido de entidades)
+**Fecha:** 2026-07-10
 
 > Este documento es la **traducción técnica** de las reglas de negocio definidas en el PDR. Contiene modelo de datos, contrato de la API, requerimientos no funcionales técnicos, máquina de estados con detalles transaccionales, payloads, OpenAPI skeleton, casos de prueba E2E y despliegue.
 >
@@ -31,11 +31,12 @@
   - [5.2 Autenticación y autorización](#52-autenticación-y-autorización)
   - [5.3 Estructura de respuesta estándar](#53-estructura-de-respuesta-estándar)
   - [5.4 Reglas del contrato](#54-reglas-del-contrato)
-- [6. JSON payloads de ejemplo](#6-json-payloads-de-ejemplo)
+- [6. JSON payloads de ejemplo (request/response por endpoint)](#6-json-payloads-de-ejemplo-requestresponse-por-endpoint)
+  - [6.0 AuthLoginResponse](#60-authloginresponse)
   - [6.1 ProductCreateResponse](#61-productcreateresponse-éxito)
-  - [6.2 VariantCreateResponse](#62-variantcreateresponse-éxito)
+  - [6.2 VariantCreateResponse](#62-variantcreateresponse-éxito) · [6.2a Customer create/search](#62a-customercreateresponse--customersearchresponse)
   - [6.3 OrderCreateResponse (mesa, pagado, con sustitución)](#63-ordercreateresponse-mesa-pagado-con-sustitución)
-  - [6.4 OrderCreateResponse (llevar, pendingPayment)](#64-ordercreateresponse-llevar-pendingpayment)
+  - [6.4 OrderCreateResponse (llevar, pendingPayment)](#64-ordercreateresponse-llevar-pendingpayment) · [6.4b PayOrderResponse](#64b-payorderresponse-confirmar-pago-de-un-pendiente)
   - [6.5 CustomOrderCreateResponse (presas surtidas)](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom)
   - [6.6 OrderCreateWithDiscountResponse (descuento al personal por plato, una sola llamada)](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada)
   - [6.6b DiscountCreateResponse (catálogo — admin)](#66b-discountcreateresponse-catálogo--admin)
@@ -43,8 +44,8 @@
   - [6.7 VoucherCreateResponse](#67-vouchercreateresponse)
   - [6.8 InventoryAdjustResponse](#68-inventoryadjustresponse-éxito)
   - [6.9 ManualConsumptionResponse (cierre turno cocina)](#69-manualconsumptionresponse-cierre-turno-cocina)
-  - [6.10 CashOpenResponse](#610-cashopenresponse-éxito)
-  - [6.11 CancelOrderResponse (anulación)](#611-cancelorderresponse-anulación-de-pedido-pagado)
+  - [6.10 CashOpenResponse](#610-cashopenresponse-éxito) · [6.10b CashCloseResponse (arqueo)](#610b-cashcloseresponse-arqueo)
+  - [6.11 CancelOrderResponse (anulación)](#611-cancelorderresponse-anulación-de-pedido-pagado) · [6.11b OrderStatusUpdate](#611b-orderstatusupdateresponse-despacho)
   - [6.12 PosContextResponse (carga del POS en una llamada)](#612-poscontextresponse-carga-del-pos-en-una-llamada)
   - [6.13 ExpenseCreateResponse (gasto desde caja — FR-009)](#613-expensecreateresponse-gasto-desde-caja--fr-009)
   - [6.14 AuditLogsByShiftResponse (consulta del rastro por turno — admin)](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
@@ -88,6 +89,24 @@
 > Entidades principales y campos mínimos. Diseñado para ORM (**Prisma**) y para que el LLM genere migraciones.
 
 ## 3.1 Entidades principales
+
+Mapa rápido (el detalle campo por campo, abajo):
+
+| Entidad | Para qué sirve |
+|---|---|
+| `User` | Personal del sistema con su rol (ADMIN, CASHIER, DISPATCHER, COOK). |
+| `CashRegister` / `Shift` | Caja física y turno de trabajo (apertura/cierre, arqueo). |
+| `ShiftPeriod` | Catálogo de períodos del día ("Mañana", "Noche"; ampliable sin migración). |
+| `Product` / `Variant` | Catálogo de platos y sus variantes (composición). |
+| `Order` / `OrderItem` | Pedido y sus ítems (estándar o custom; MESA/LLEVAR). |
+| `Customer` | Cliente registrado (CI/NIT) para factura nominada y "pedidos del día"; opcional por venta. |
+| `InventoryItem` / `InventoryTransaction` / `InventoryBatch` | Inventario **cocido** transaccional, sus movimientos y lotes (opcional). |
+| `ShiftChickenLog` | Ciclo **crudo** de presas por turno (PDR §2.3). |
+| `DailyManualConsumption` | Consumos manuales por turno (bolsas, vasos, etc.). |
+| `Voucher` | Vale del personal (descuenta nómina, no caja). |
+| `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno (PDR §2.11). |
+| `Expense` | Gasto pagado desde caja. |
+| `AuditLog` | Rastro inmutable de acciones críticas (PDR §2.9). |
 
 - **Product**
   - `id: UUID`, `name: string`, `basePrice: decimal`, `category: string`, `active: boolean`, `description: string`
@@ -390,7 +409,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 > El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
 
-- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica con `username` + `password`; responde **200** + `{ token, user: { id, username, role } }`. El `token` es un JWT con payload `{ sub: userId, username, role }` que el frontend envía como `Bearer` en el resto de las llamadas. Sin token o token expirado/ inválido → **401** (FR-018).
+- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, username, role }`) que el frontend envía como `Bearer` (FR-018). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
@@ -399,11 +418,11 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR): ítems con `customPieces`, extras/bebidas opcionales, **precio unitario confirmado** por la cajera y `discountId?` opcional. El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `pos/context`; se persiste el confirmado, nunca la sugerencia (§2.10). Endpoint **separado** para DTOs y validaciones limpias por flujo. Payload en [§6.5](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
 - `GET /api/v1/orders/{id}` — obtener orden
 - `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
-- `PATCH /api/v1/orders/{id}/status` — cambiar estado
-- `POST /api/v1/orders/{id}/pay` — confirmar pago (transita `pendingPayment` → `paid`)
-- `POST /api/v1/orders/{id}/cancel` — anular pedido pagado (requiere `reason` + `details`)
+- `PATCH /api/v1/orders/{id}/status` — despacho marca `ready`/`delivered` ([§6.11b](#611b-orderstatusupdateresponse-despacho))
+- `POST /api/v1/orders/{id}/pay` — confirmar pago: `pendingPayment` → `paid` ([§6.4b](#64b-payorderresponse-confirmar-pago-de-un-pendiente))
+- `POST /api/v1/orders/{id}/cancel` — anular pedido pagado, motivo y detalle obligatorios ([§6.11](#611-cancelorderresponse-anulación-de-pedido-pagado))
 - `GET /api/v1/customers?search=<ci|nit|nombre>` — buscar cliente registrado por CI, NIT o nombre (la cajera lo usa al facturar nominado)
-- `POST /api/v1/customers` — registrar cliente (`ci`, `nit?`, `firstName`, `lastName`, `sex`, `birthDate?`, `phone?`, `email?`)
+- `POST /api/v1/customers` — registrar cliente ([§6.2a](#62a-customercreateresponse--customersearchresponse))
 - `GET /api/v1/customers/{id}` — obtener datos del cliente
 - `PATCH /api/v1/customers/{id}` — editar datos personales del cliente
 - `POST /api/v1/inventory/adjust` — ajustar inventario (admin, con motivo)
@@ -411,25 +430,25 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
 - `POST /api/v1/inventory/shift-chicken-log` — registrar/actualizar el ciclo crudo del turno (reproceso, procesado, sobrante crudo, sobrante cocido en expositor) por tipo de presa
 - `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
-- `POST /api/v1/shifts/open` — abrir caja/turno. Body: `{ openingAmount, cashRegisterId, periodId }` — el **período se declara** (la pantalla de apertura lo trae preseleccionado como sugerencia **editable**; quién lo confirma → PDR §13.3). El backend valida que el `periodId` exista y esté activo; **nunca lo infiere del reloj**
-- `POST /api/v1/shifts/close` — cerrar caja/turno (arqueo con anulaciones, vales, métodos)
+- `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — PDR §13.3). Request en [§6.10](#610-cashopenresponse-éxito)
+- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo))
 - `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
 - `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
 - `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
-- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009). Body: `{ description, amount, paidBy }`; `createdBy`/`shiftId` derivados (§5.0), error claro sin turno abierto. Aparece en arqueo y reportes; no se audita (§2.9). Sin GET de listado en V1 (se agrega con un caso real). Payload en [§6.13](#613-expensecreateresponse-gasto-desde-caja--fr-009)
-- `POST /api/v1/vouchers` — crear vale
+- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009); error claro sin turno abierto. Aparece en arqueo y reportes; no se audita (§2.9). Sin GET de listado en V1 (se agrega con un caso real). Request en [§6.13](#613-expensecreateresponse-gasto-desde-caja--fr-009)
+- `POST /api/v1/vouchers` — crear vale ([§6.7](#67-vouchercreateresponse))
 - `GET /api/v1/vouchers` — listar vales con filtros
 - `PATCH /api/v1/inventory/{id}/sale-price` — configurar el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10)
-- `POST /api/v1/discounts` — crear descuento (admin): `name`, `fixedAmount`, `availability`, `requiresAuthorization`, `active`
+- `POST /api/v1/discounts` — crear descuento (admin) ([§6.6b](#66b-discountcreateresponse-catálogo--admin))
 - `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
 - `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
 - `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6), liviana (solo datos activos, pocos KB): `products`+`variants`, `discounts` **ya filtrados por el backend** para la sesión (activos + ventana vigente + autorización si corresponde — el POS no filtra nada), `piecePrices` (para el precio sugerido custom **en el cliente**), `shiftPeriods` y `shift` activo (o `null`). Detalle y payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
-- `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera (body mínimo: `cashierId`; el `shiftId` se deriva del turno activo de esa cajera y `authorizedBy` del JWT, §5.0). Crea `DiscountAuthorization` y deja `AuditLog` del acto de autorizar
+- `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera; deja `AuditLog` del acto de autorizar ([§6.6c](#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno))
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
 - `GET /api/v1/reports/sales` — reporte ventas
 - `GET /api/v1/reports/inventory-presas` — reporte inventario presas
-- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; §4.3). Body: `{ date, periodId, cashRegisterId? }` (caja opcional = todas las cajas del período). **Sin paginación** (~50-80 filas/turno); resolución por **FK directa** vía `AuditLog.shiftId` — sin ventanas horarias (§4.3). Payload y comportamiento completo en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
-- `POST /api/v1/audit-logs/month` — logs de un **mes calendario** (admin). Body: `{ month }`. Sin paginación (~3-4 mil filas/mes); incluye los logs con `shiftId = null` que no aparecen en `/shift`. Un **año** es export CSV de reportes (V2), no consulta de pantalla. Solo lectura en ambos; la consulta no se audita
+- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; caja opcional = todas las del período). Sin paginación, resolución por FK directa (§4.3). Request/response en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
+- `POST /api/v1/audit-logs/month` — logs de un **mes calendario** (admin), sin paginación; incluye los `shiftId = null` que no aparecen en `/shift`. Un **año** es export CSV de reportes (V2). Solo lectura en ambos; la consulta no se audita ([§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin))
 - `POST /api/v1/print/invoice` — imprimir factura térmica (a demanda)
 - `GET /api/v1/print/invoice/{orderId}/pdf` — descargar PDF factura (fallback)
 
@@ -590,7 +609,30 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 
 ---
 
-# 6. JSON payloads de ejemplo
+# 6. JSON payloads de ejemplo (request/response por endpoint)
+
+> Los requests son **ejemplos representativos**; los DTOs definitivos se validan con `class-validator`. Las notas por endpoint dicen solo el dato **propio** de ese endpoint — los principios transversales (actor/turno derivados, precios calculados por el backend, referencias no copias) viven en [§5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
+
+## 6.0 AuthLoginResponse
+
+**`POST /api/v1/auth/login`** — **público**. Devuelve el JWT que el resto de llamadas envía como `Bearer`.
+
+Request:
+```json
+{ "username": "roxana", "password": "••••••••" }
+```
+Response (200):
+```json
+{
+  "isSuccess": true,
+  "message": "Autenticación exitosa",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": { "id": "uuid-user-roxana", "username": "roxana", "role": "CASHIER" }
+  }
+}
+```
+> Sin token o token expirado/inválido en el resto de endpoints → **401**. Rol no autorizado → **403** (`FORBIDDEN`).
 
 ## 6.1 ProductCreateResponse (éxito)
 ```json
@@ -627,7 +669,14 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 ```
 
 ## 6.2a CustomerCreateResponse / CustomerSearchResponse
-> Alta de cliente para factura nominada. La búsqueda (`GET /customers?search=`) devuelve un array con la misma forma en `data`.
+> Alta de cliente para factura nominada (el cliente puede dictar CI o NIT). La búsqueda (`GET /customers?search=<ci|nit|nombre>`) devuelve un array con la misma forma en `data`.
+
+Request (`POST /customers` — `nit`, `birthDate`, `phone` y `email` opcionales):
+```json
+{ "ci": "8351427", "nit": "120558027", "firstName": "MARCO", "lastName": "ORTEGA GUTIERREZ",
+  "sex": "HOMBRE", "birthDate": "1990-03-14", "phone": "71234567", "email": "marco.ortega@example.com" }
+```
+Response (201):
 ```json
 {
   "isSuccess": true,
@@ -648,6 +697,28 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 ```
 
 ## 6.3 OrderCreateResponse (mesa, pagado, con sustitución)
+
+Request (`POST /orders` — datos mínimos según §5.0; `customerId` opcional = venta anónima "S/N"; el ítem que lleva descuento manda su `discountId`):
+```json
+{
+  "type": "MESA",
+  "tableNumber": "70",
+  "customerId": "uuid-customer-001",
+  "paymentStatus": "paid",
+  "paymentMethod": "cash",
+  "items": [
+    {
+      "productId": "uuid-product-wonder",
+      "variantId": "uuid-variant-wonder",
+      "quantity": 2,
+      "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ],
+      "substitutions": [ {"from":"mixto","to":"arroz"} ]
+    },
+    { "productId": "uuid-product-fanta", "quantity": 1 }
+  ]
+}
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -720,7 +791,50 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 }
 ```
 
+## 6.4b PayOrderResponse (confirmar pago de un pendiente)
+
+**`POST /api/v1/orders/{id}/pay`** — transita `pendingPayment` → `paid`; **acá** se descuenta inventario y se contabiliza el ingreso (§4.1).
+
+Request:
+```json
+{ "paymentMethod": "cash" }
+```
+Response:
+```json
+{
+  "isSuccess": true,
+  "message": "Pago confirmado; inventario descontado",
+  "data": {
+    "id": "uuid-order-002",
+    "status": "preparing",
+    "paymentStatus": "paid",
+    "paymentMethod": "cash",
+    "total": 90.00,
+    "paidAt": "2026-05-01T20:50:00"
+  }
+}
+```
+
 ## 6.5 CustomOrderCreateResponse (orden LLEVAR custom — presas surtidas, vía `POST /api/v1/orders/custom`)
+
+Request (la **única** excepción de precio de §5.0: el `unitPrice` es el **confirmado por la cajera**; el sugerido lo calculó el POS con los `piecePrices` de §6.12):
+```json
+{
+  "type": "LLEVAR",
+  "paymentStatus": "paid",
+  "paymentMethod": "cash",
+  "items": [
+    {
+      "customPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":1} ],
+      "extras": [ {"name":"papa","qty":1} ],
+      "drinks": [ {"productId":"uuid-coca-500","qty":1} ],
+      "quantity": 1,
+      "unitPrice": 35.00
+    }
+  ]
+}
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -826,6 +940,13 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.6b DiscountCreateResponse (catálogo — admin)
+
+Request (`POST /discounts`):
+```json
+{ "name": "Compensación al cliente", "fixedAmount": 7.00, "availability": "always",
+  "requiresAuthorization": true, "active": true }
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -842,6 +963,12 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.6c DiscountAuthorizationResponse (admin autoriza a la sesión de cajera por turno)
+
+Request (`POST /discounts/{id}/authorize` — solo `cashierId`; `shiftId` se deriva del turno activo de esa cajera, §5.0):
+```json
+{ "cashierId": "uuid-user-roxana" }
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -858,6 +985,12 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.7 VoucherCreateResponse
+
+Request (`POST /vouchers` — el `amount` **NO se envía**: el backend lo deriva de `productId` menos el snapshot del `discountId` si viene; `discountId` opcional):
+```json
+{ "workerName": "MARIA LOPEZ", "productId": "uuid-product-porcion-media", "discountId": "uuid-discount-personal" }
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -912,7 +1045,12 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.10 CashOpenResponse (éxito)
-> Request: `{ openingAmount, cashRegisterId, periodId }` — el período viene preseleccionado en la pantalla (sugerencia **editable**, PDR §13.3), nunca inferido del reloj.
+
+Request (`POST /shifts/open` — el `periodId` viene preseleccionado en la pantalla como sugerencia **editable**, PDR §13.3; nunca inferido del reloj):
+```json
+{ "openingAmount": 200.00, "cashRegisterId": "uuid-caja-1", "periodId": "uuid-period-manana" }
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -928,7 +1066,43 @@ Response (todo calculado por el backend, listo para pintar):
 }
 ```
 
+## 6.10b CashCloseResponse (arqueo)
+
+**`POST /api/v1/shifts/close`** — cierra el turno y genera el arqueo con el desglose de §2.6 (PDR).
+
+Request:
+```json
+{ "countedAmount": 1450.00 }
+```
+Response:
+```json
+{
+  "isSuccess": true,
+  "message": "Caja cerrada; arqueo generado",
+  "data": {
+    "id": "uuid-shift-001",
+    "openingAmount": 200.00,
+    "closingAmount": 1450.00,
+    "expectedAmount": 1455.00,
+    "discrepancy": -5.00,
+    "totals": {
+      "sales": 1255.00,
+      "byMethod": { "cash": 1100.00, "card": 155.00, "vale": 0.00 },
+      "expenses": 30.00,
+      "vouchers": 60.00,
+      "cancellations": { "count": 1, "amount": 36.00 }
+    }
+  }
+}
+```
+
 ## 6.11 CancelOrderResponse (anulación de pedido pagado)
+
+Request (`POST /orders/{id}/cancel` — `reason` y `details` obligatorios, FR-011b):
+```json
+{ "reason": "Cliente cambió de opinión", "details": "Se devolvió el dinero en efectivo. Sin factura emitida." }
+```
+Response:
 ```json
 {
   "isSuccess": true,
@@ -942,6 +1116,20 @@ Response (todo calculado por el backend, listo para pintar):
     "inventoryReverted": true
   }
 }
+```
+
+## 6.11b OrderStatusUpdateResponse (despacho)
+
+**`PATCH /api/v1/orders/{id}/status`** — la despachadora marca `ready` / `delivered`.
+
+Request:
+```json
+{ "status": "ready" }
+```
+Response:
+```json
+{ "isSuccess": true, "message": "Estado actualizado",
+  "data": { "id": "uuid-order-001", "status": "ready", "readyAt": "2026-05-01T22:15:00" } }
 ```
 
 ## 6.12 PosContextResponse (carga del POS en una llamada)
@@ -985,7 +1173,13 @@ Response (todo calculado por el backend, listo para pintar):
 ```
 
 ## 6.13 ExpenseCreateResponse (gasto desde caja — FR-009)
-> `POST /api/v1/expenses` — body mínimo `{ description, amount, paidBy }`; `createdBy` sale del JWT y `shiftId` del turno activo (§5.0). Sin turno abierto → error claro.
+> `POST /api/v1/expenses` — sin turno abierto → error claro (§5.0 para los derivados).
+
+Request:
+```json
+{ "description": "Compra de arroz", "amount": 35.50, "paidBy": "cash" }
+```
+Response:
 ```json
 {
   "isSuccess": true,
