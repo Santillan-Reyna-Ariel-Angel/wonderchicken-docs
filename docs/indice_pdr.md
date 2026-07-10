@@ -35,6 +35,7 @@ El orden va de lo abstracto a lo concreto: cada documento **depende del anterior
 | 4 | [requirements.md](requirements.md) | **El QUÉ verificable.** FR-001…FR-019 + NFR de negocio, con criterios de aceptación. |
 | 5 | [technical_guide.md](technical_guide.md) | **El CÓMO.** Modelo de datos, contrato de la API, payloads, NFR técnicos, casos E2E, despliegue. |
 | 6 | [architecture_overview.md](architecture_overview.md) | **El código.** Mapa del backend NestJS: módulos, lifecycle de un request, dónde vive cada cosa. |
+| 7 | [implementation_guide.md](implementation_guide.md) | **El ORDEN de construcción (V1).** Qué archivo crear en cada paso, sprint por sprint, con definición de terminado por sprint. |
 
 ---
 
@@ -124,6 +125,7 @@ flowchart TB
 | [`requirements.md`](requirements.md) | *"¿Qué debe hacer y cómo lo pruebo?"* | FR-001..FR-019 + criterios de aceptación, NFR de negocio | Reglas (referencia al PDR), detalle técnico |
 | [`technical_guide.md`](technical_guide.md) | *"¿Cómo lo construyo?"* | Stack, modelo Prisma, endpoints, payloads, E2E, despliegue | Reglas de negocio (referencia al PDR) |
 | [`architecture_overview.md`](architecture_overview.md) | *"¿Dónde vive esto en el repo?"* | Módulos NestJS, lifecycle de un request, endpoints reales, vista del Prisma | Reglas, FR, contrato detallado (referencia al PDR y a la guía técnica) |
+| [`implementation_guide.md`](implementation_guide.md) | *"¿En qué orden lo construyo?"* | Archivos a crear paso a paso por sprint, ajustes de dependencia técnica, DoD por sprint, mapa FR→sprint | Reglas ni contratos (los referencia) |
 
 ### 2. La regla de oro: PRECEDENCIA
 
@@ -218,6 +220,7 @@ flowchart TB
     BE2 --> BE3["3· tech §4 Estados transaccionales"]
     BE3 --> BE4["4· tech §5 Endpoints + §6 Payloads"]
     BE4 --> BE5["5· architecture-overview<br/>(dónde vive en el repo: módulos + lifecycle)"]
+    BE5 --> BE6["6· implementation-guide<br/>(qué archivo crear a continuación, sprint a sprint)"]
 
     FE --> FE1["1· PDR §7 UX / pantallas"]
     FE1 --> FE2["2· requirements FR (qué hace cada pantalla)"]
@@ -277,6 +280,7 @@ flowchart LR
 | Casos E2E | [`technical_guide.md` §8](technical_guide.md#8-test-cases-e2e-casos-prioritarios) |
 | Qué entra en V1 vs V2 | [`pdr.md` §13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro) |
 | Dónde vive algo en el repo (módulos, lifecycle) | [`architecture_overview.md`](architecture_overview.md) |
+| En qué orden construir el backend (archivos por sprint) | [`implementation_guide.md`](implementation_guide.md) |
 
 ---
 

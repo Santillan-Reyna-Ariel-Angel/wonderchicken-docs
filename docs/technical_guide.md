@@ -3,7 +3,7 @@
 **Complementa:** [docs/pdr.md](pdr.md)
 **Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
-**Versión:** 1.7 (fusiona `data_model_and_endpoints.md` — eliminado: §6 pasa a **request + response por endpoint** y §3.1 gana el mapa rápido de entidades)
+**Versión:** 1.8 (cierra los huecos de contrato detectados al preparar la guía de implementación: listado de órdenes, pantalla pública, dashboard de stock, reporte de arqueo + CSV, CRUD de usuarios, logout, cierre administrativo de órdenes y estados reservados sin uso en V1)
 **Fecha:** 2026-07-10
 
 > Este documento es la **traducción técnica** de las reglas de negocio definidas en el PDR. Contiene modelo de datos, contrato de la API, requerimientos no funcionales técnicos, máquina de estados con detalles transaccionales, payloads, OpenAPI skeleton, casos de prueba E2E y despliegue.
@@ -134,8 +134,8 @@ Mapa rápido (el detalle campo por campo, abajo):
   - `tableNumber: string?`, `customerName: string?` *(nombre para mostrar en comanda/factura; "S/N" si el cliente no se identifica. Es **snapshot** de visualización: no cambia si luego se edita el `Customer`)*
   - `customerId: UUID?` *(referencia al `Customer` registrado; null si la venta es anónima/"S/N". **Agrupa** los pedidos del cliente para la vista del día — PDR §2.12 / FR-019)*
   - `publicToken: string` *(token aleatorio no adivinable — ej. `crypto.randomBytes(16).toString('hex')`, 128 bits — generado al crear la orden, **único** e indexado. Es la **credencial** de la vista pública del cliente: NO se usa el `id` interno ni un valor secuencial. Espacio 2^128 → no enumerable, FR-015)*
-  - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)`
-  - `paymentStatus: enum(pending, paid, partial)`, `paymentMethod: enum(cash, card, vale)?`
+  - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)` *(`onHold` **reservado, SIN uso en V1** — ninguna regla de negocio lo define; el backend no lo produce ni lo acepta. Se activará con un caso real)*
+  - `paymentStatus: enum(pending, paid, partial)` *(`partial` **reservado, SIN uso en V1** — mismo criterio)*, `paymentMethod: enum(cash, card, vale)?`
   - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = `Σ(unitPrice × quantity)` de los ítems; PDR §2.11)*
   - `total: decimal` *(total cobrado = `originalAmount − Σ(descuentos de los ítems)`; es el valor **derivado** y lo que entra a caja — PDR §2.11)*
   - `isCustom: boolean` *(PDR §2.10 — true si la orden se creó vía endpoint custom; default false)*
@@ -193,7 +193,7 @@ Mapa rápido (el detalle campo por campo, abajo):
   - `discountAmount: decimal?` *(**snapshot** del monto fijo del descuento al aplicarlo, ej. 7.00)*
   - `amount: decimal` *(monto final que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`; **derivado** por el backend, no lo manda el front)*
   - `issuedBy: userId`, `issuedAt: datetime`, `shiftId: UUID`
-  - `status: enum(issued, redeemed, cancelled)`, `note: string?`
+  - `status: enum(issued, redeemed, cancelled)` *(`redeemed` y `cancelled` **reservados, SIN uso en V1** — el vale solo se emite; PDR §2.4 no define redención ni anulación)*, `note: string?`
   - *El vale no es un descuento (no suma a caja, descuenta nómina — [PDR §2.4](pdr.md#24-vales-ventas-internas--descuento-por-nómina)); puede llevar el "Descuento personal" con el mismo patrón snapshot de los ítems.*
 
 - **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
@@ -264,7 +264,7 @@ Mapa rápido (el detalle campo por campo, abajo):
 
 **Estados:**
 `created → confirmed → preparing → ready → delivered → closed`
-Estados adicionales: `pendingPayment`, `cancelled`, `onHold`.
+Estados adicionales: `pendingPayment`, `cancelled`, `onHold` *(reservado — SIN transiciones en V1, ver §3.1)*.
 
 El flujo de vida de una orden. Negocio en [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos), efectos transaccionales en [§4.1](#41-transiciones-y-efectos).
 
@@ -332,7 +332,7 @@ stateDiagram-v2
   - Efecto: `Order.deliveredAt = now`, `Order.deliveredBy = userId` registrados.
 
 - **delivered → closed**
-  - Acción: cierre administrativo (típicamente al cierre de turno).
+  - Acción: cierre administrativo — lo ejecuta **`POST /shifts/close`**: al cerrar el turno, todas las órdenes `delivered` del turno transicionan a `closed` en la misma operación (no hay endpoint dedicado; es exactamente el "típicamente al cierre de turno" de PDR §4).
 
 - **(cualquier estado pagado) → cancelled (anulación)**
   - Acción: admin / cajera anula un pedido ya pagado.
@@ -410,6 +410,8 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 > El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
 
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, username, role }`) que el frontend envía como `Bearer` (FR-018). Request/response en [§6.0](#60-authloginresponse).
+- `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
+- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` — gestión de usuarios por el admin (PDR §2.7): alta con rol, listado y edición (rol / activar / desactivar). El password viaja solo en alta/reset y se guarda hasheado (bcryptjs, §5.2)
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
@@ -417,7 +419,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
   > **No existe endpoint separado para aplicar descuentos.** Descuento post-creación: sin soporte en V1 (sin caso real) — `pendingPayment` sin pagar → cancelar y recrear; pagada → anulación FR-011b.
 - `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR): ítems con `customPieces`, extras/bebidas opcionales, **precio unitario confirmado** por la cajera y `discountId?` opcional. El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `pos/context`; se persiste el confirmado, nunca la sugerencia (§2.10). Endpoint **separado** para DTOs y validaciones limpias por flujo. Payload en [§6.5](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
 - `GET /api/v1/orders/{id}` — obtener orden
+- `GET /api/v1/orders?status=&date=&createdBy=&table=&customer=` — listado con filtros: es el **panel de despacho** (filtro por `status`: preparing/ready/delivered, §7.2 / FR-003) y el **historial de comandas con búsqueda** por fecha, responsable, mesa o cliente (FR-012). Un solo endpoint para ambos usos
 - `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
+- `GET /api/v1/public/ready-orders` — **público**: alimenta la **pantalla "turnos de banco"** del local (FR-007). Devuelve ÚNICAMENTE los números de pedido en estado `ready` — sin nombre, mesa ni ningún otro dato (§2.8): `{ "data": [12, 15, 18] }`. Al marcarse `delivered`, el número desaparece
 - `PATCH /api/v1/orders/{id}/status` — despacho marca `ready`/`delivered` ([§6.11b](#611b-orderstatusupdateresponse-despacho))
 - `POST /api/v1/orders/{id}/pay` — confirmar pago: `pendingPayment` → `paid` ([§6.4b](#64b-payorderresponse-confirmar-pago-de-un-pendiente))
 - `POST /api/v1/orders/{id}/cancel` — anular pedido pagado, motivo y detalle obligatorios ([§6.11](#611-cancelorderresponse-anulación-de-pedido-pagado))
@@ -426,12 +430,13 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/customers/{id}` — obtener datos del cliente
 - `PATCH /api/v1/customers/{id}` — editar datos personales del cliente
 - `POST /api/v1/inventory/adjust` — ajustar inventario (admin, con motivo)
+- `GET /api/v1/inventory/dashboard` — **dashboard de stock cocido** por tipo de presa + delta del turno (vendido/ajustado desde la apertura) — FR-006
 - `POST /api/v1/inventory/manual-consumption` — registrar consumos manuales por turno
 - `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
 - `POST /api/v1/inventory/shift-chicken-log` — registrar/actualizar el ciclo crudo del turno (reproceso, procesado, sobrante crudo, sobrante cocido en expositor) por tipo de presa
 - `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
 - `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — PDR §13.3). Request en [§6.10](#610-cashopenresponse-éxito)
-- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo))
+- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo)). Además ejecuta el **cierre administrativo** de PDR §4: las órdenes `delivered` del turno transicionan a `closed` en la misma operación (extingue también las `DiscountAuthorization` y la sesión de cajera del turno)
 - `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
 - `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
 - `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
@@ -445,8 +450,10 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6), liviana (solo datos activos, pocos KB): `products`+`variants`, `discounts` **ya filtrados por el backend** para la sesión (activos + ventana vigente + autorización si corresponde — el POS no filtra nada), `piecePrices` (para el precio sugerido custom **en el cliente**), `shiftPeriods` y `shift` activo (o `null`). Detalle y payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
 - `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera; deja `AuditLog` del acto de autorizar ([§6.6c](#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno))
 - `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
-- `GET /api/v1/reports/sales` — reporte ventas
-- `GET /api/v1/reports/inventory-presas` — reporte inventario presas
+- `GET /api/v1/reports/sales` — reporte de ventas por turno/día y rango de fechas (FR-010a)
+- `GET /api/v1/reports/inventory-presas` — reporte de inventario de presas: vendidas y restantes por tipo (FR-010b); consolida el inventario diario de ambos turnos (§2.3)
+- `GET /api/v1/reports/cash-audit` — reporte de **arqueo** por turno o rango: apertura, cierre, ventas por método, gastos, vales, anulaciones y diferencia (FR-010c / §2.6)
+  > Los tres reports aceptan `?format=csv` (default `json`) — FR-010 exige exportación a CSV
 - `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; caja opcional = todas las del período). Sin paginación, resolución por FK directa (§4.3). Request/response en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
 - `POST /api/v1/audit-logs/month` — logs de un **mes calendario** (admin), sin paginación; incluye los `shiftId = null` que no aparecen en `/shift`. Un **año** es export CSV de reportes (V2). Solo lectura en ambos; la consulta no se audita ([§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin))
 - `POST /api/v1/print/invoice` — imprimir factura térmica (a demanda)
@@ -526,8 +533,8 @@ providers: [
 registrarVenta() { /* ... */ }
 
 @Roles(UserRole.ADMIN, UserRole.CASHIER)
-@Post('orders/:id/discount')    // dos roles, sin función nueva
-aplicarDescuento() { /* ... */ }
+@Get('vouchers')                // dos roles, sin función nueva
+listarVales() { /* ... */ }
 ```
 
 ### Matriz de autorización endpoint → roles
@@ -537,14 +544,16 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | Endpoint | Roles permitidos |
 |----------|------------------|
 | `POST /auth/login` | **público** (`@Public()`) |
+| `POST /auth/logout` | cualquier rol autenticado |
+| `POST /users`, `GET /users`, `PATCH /users/{id}` | `ADMIN` |
 | `POST /products`, `POST /variants` | `ADMIN` |
 | `GET /products` | `ADMIN`, `CASHIER` *(el POS lo consume)* |
 | `POST /orders`, `POST /orders/custom` *(incluye descuentos por ítem vía `discountId`)* | `CASHIER` |
 | `POST /orders/{id}/pay`, `POST /orders/{id}/cancel` | `CASHIER` |
 | `GET /pos/context` | `CASHIER` |
-| `GET /orders/{id}` | `CASHIER`, `DISPATCHER`, `ADMIN` |
+| `GET /orders/{id}`, `GET /orders` *(panel despacho + historial)* | `CASHIER`, `DISPATCHER`, `ADMIN` |
 | `PATCH /orders/{id}/status` (ready / delivered) | `DISPATCHER` |
-| `GET /public/orders/{token}` | **público** (vista del cliente por token no adivinable, sin datos sensibles) |
+| `GET /public/orders/{token}`, `GET /public/ready-orders` | **público** (token no adivinable / solo números de pedido) |
 | `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
 | `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
 | `GET /shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
@@ -560,9 +569,9 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /discounts`, `PATCH /discounts/{id}` | `ADMIN` |
 | `GET /discounts` | `ADMIN` *(el POS recibe los aplicables en `GET /pos/context`)* |
 | `POST /discounts/{id}/authorize`, `GET /discounts/authorizations` | `ADMIN` |
-| `GET /reports/sales`, `GET /reports/inventory-presas` | `ADMIN` |
+| `GET /inventory/dashboard` | `ADMIN`, `COOK` *(FR-008: el cocinero ve el dashboard)* |
+| `GET /reports/sales`, `GET /reports/inventory-presas`, `GET /reports/cash-audit` | `ADMIN` |
 | `POST /audit-logs/shift`, `POST /audit-logs/month` | `ADMIN` |
-| Crear usuarios | `ADMIN` |
 
 > El **payload del JWT** lleva `{ sub: userId, username, role }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
 
