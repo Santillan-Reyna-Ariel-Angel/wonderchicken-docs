@@ -128,6 +128,8 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 - **Sobrante cocido en expositor:** se anota al cierre de turno (plano crudo) y habilita la venta interna con descuento al personal (§2.11).
 - **Reconciliación al cierre:** el sistema compara el `Sobrante cocido en expositor` contra `(cantidad cocinada en el turno − vendido cocido por el sistema)` y reporta discrepancias para auditoría.
 
+Nota técnica importante: en la implementación técnica el consumo operativo de piezas y bebidas se registra en filas normalizadas de `OrderItemComponent` vinculadas a cada `OrderItem`. Además, cada `OrderItem` persiste un `snapshot` JSON con la información que debe imprimirse y auditarse (nombre, precio confirmado, descuentos aplicados, composición). El decremento de stock cocido se ejecuta al confirmar el pago y usa las filas `OrderItemComponent` como fuente de verdad para crear `InventoryTransaction`.
+
 ### Acompañamientos e insumos
 - **Acompañamientos NO se descuentan a nivel granular:** porciones de mixto, arroz, papa, smiles, plátano NO se llevan en inventario en V1.
 - **Conteo manual residual:** en cada turno, el personal anota cantidad de bolsas de papa, bolsas de smile, envases de arroz, vasos, bombillas, etc. (referencia: tabla "INVENTARIO DIARIO" en [`business_context.md`](business_context.md#ejemplo-de-inventario-diario)). El sistema debe ofrecer una pantalla simple para registrar estos consumos por turno.
@@ -189,6 +191,8 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
   - bebidas opcionales (descuentan por unidad),
   - **precio unitario:** el sistema muestra un **precio sugerido** (suma del precio de venta de cada presa seleccionada + extras + bebidas); la cajera puede **aceptarlo o pisarlo** — el precio final lo confirma ella según política del negocio (ver "Precio sugerido en venta custom" abajo).
 - **Inventario:** descuenta **exactamente** lo que la cajera indicó en las presas, al confirmar el pago.
+
+En la implementación técnica estas presas vendidas en una venta custom quedan reflejadas como `OrderItemComponent` (una fila por componente de presa/bebida con referencia a `InventoryItem` cuando aplica) y el `OrderItem` guarda un `snapshot` JSON que se imprime en el ticket y se usa para auditoría.
 - **Comanda y reportes:** la comanda se lista igual que cualquier otra, mostrando la composición real del ítem (ej. "2 - PECHO; 1 - ALA; 1 - PIERNA") y cabecera MESA o LLEVAR; los reportes filtran por la marca custom.
 
 ### Precio sugerido en venta custom (V1)

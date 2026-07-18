@@ -179,11 +179,14 @@ model Product {
   category    String // "Plato principal" | "Bebida" | "Extra" — string libre p/ no romper si cambia el menú
   description String?
   active      Boolean  @default(true)
+  isSellable  Boolean  @default(true)
+  isInventoryItem Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   variants   Variant[]
   orderItems OrderItem[]
+  orderItemComponents OrderItemComponent[]
   vouchers   Voucher[]
 
   @@index([category, active])
@@ -277,6 +280,9 @@ model OrderItem {
   quantity  Int
   unitPrice Decimal @db.Decimal(10, 2)
 
+  // Snapshot JSON de la línea al momento de la creación — útil para impresión/auditoría.
+  snapshot Json?
+
   // §2.11 — descuento POR PLATO (nivel ítem). El discountId llega como referencia en el
   // payload de CREACIÓN de la orden (una sola llamada, sin endpoint aparte — tech guide §5.0);
   // el backend valida (disponibilidad + autorización del turno) y congela acá el snapshot.
@@ -312,10 +318,36 @@ model OrderItem {
   variant  Variant?  @relation(fields: [variantId], references: [id], onDelete: Restrict)
   discount Discount? @relation(fields: [discountId], references: [id], onDelete: Restrict)
 
+  components OrderItemComponent[]
+
   @@index([orderId])
   @@index([productId])
   @@index([discountId]) // reportes/arqueo agrupan descuentos aplicados por plato (§2.11)
   @@map("order_items")
+}
+
+// ============================================================================
+// ORDER ITEM COMPONENTS (operational source of truth for inventory changes)
+// ============================================================================
+
+model OrderItemComponent {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  orderItemId     String   @db.Uuid
+  inventoryItemId String?  @db.Uuid
+  productId       String?  @db.Uuid
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  label           String?
+  createdAt       DateTime @default(now())
+
+  orderItem      OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  inventoryItem  InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  product        Product?       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+  @@index([inventoryItemId])
+  @@index([productId])
+  @@map("order_item_components")
 }
 
 // ============================================================================
@@ -340,6 +372,7 @@ model InventoryItem {
   batches            InventoryBatch[]
   transactions       InventoryTransaction[]
   manualConsumptions DailyManualConsumption[]
+  orderItemComponents OrderItemComponent[]
 
   @@index([type, active])
   @@map("inventory_items")

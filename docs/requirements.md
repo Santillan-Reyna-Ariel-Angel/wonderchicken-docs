@@ -80,6 +80,8 @@
 - **Funcionalidad:** El sistema lleva los **dos planos** de inventario de pollo de [PDR §2.3](pdr.md#23-inventario-por-presas): **cocido** (transaccional, descuenta al confirmar pago, dashboard por tipo) y **crudo** (anotado por turno con la regla de continuidad T → T+1). Consumos manuales del turno → FR-017.
 - **Criterio de aceptación:** Una venta pagada descuenta el stock cocido; un pedido pendiente de pago NO descuenta hasta confirmar; el dashboard muestra el stock cocido actual por tipo y el delta del turno; al abrir un nuevo turno, el reproceso crudo se autopobla con el sobrante crudo del turno anterior; la reconciliación diaria es posible (vendido cocido + sobrante cocido en expositor vs cocinado en turno).
 
+Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fila por componente consumido: presa, bebida o extra cuando aplica) y cada `OrderItem` persiste un `snapshot` JSON con la información que debe imprimirse y auditarse (nombre, precio confirmado, descuentos aplicados, composición). El servicio de pago crea `InventoryTransaction` a partir de las `OrderItemComponent` en la misma transacción.
+
 ### FR-007 — Notificación de pedido listo (Alta)
 - **Funcionalidad:** Una **pantalla pública** dentro del local muestra los pedidos listos, estilo "turnos de banco". Solo aparece **el número de pedido** (sin nombre, sin mesa). Aplica indistintamente a **MESA y LLEVAR**. Suena una alerta breve cuando aparece un pedido. Cuando la despachadora marca el pedido como entregado, este desaparece de la pantalla.
 - **Criterio de aceptación:** Un pedido listo (MESA o LLEVAR) aparece en la pantalla pública con su número y suena la alerta; al marcarse como entregado, desaparece y queda registrado quién lo entregó y cuándo.

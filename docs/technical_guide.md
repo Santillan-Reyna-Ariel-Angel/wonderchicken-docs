@@ -110,6 +110,8 @@ Mapa rápido (el detalle campo por campo, abajo):
 
 - **Product**
   - `id: UUID`, `name: string`, `basePrice: decimal`, `category: string`, `active: boolean`, `description: string`
+  - `isSellable: boolean` *(nuevo flag — si el producto debe aparecer en el POS para venta)*
+  - `isInventoryItem: boolean` *(nuevo flag — si las ventas del producto generan movimientos en inventario / `InventoryTransaction`)*
 
 - **Variant**
   - `id: UUID`, `productId: UUID`, `name: string`, `components: JSON`, `isDefault: boolean`
@@ -149,6 +151,8 @@ Mapa rápido (el detalle campo por campo, abajo):
 - **OrderItem**
   - `id: UUID`, `orderId: UUID`, `productId: UUID?` *(null si custom)*, `variantId: UUID?`
   - `quantity: int`, `unitPrice: decimal`
+  - `snapshot: Json?` *(nuevo campo — snapshot inmutable del ítem usado para impresión, auditoría y trazabilidad; contiene nombre, price snapshot, discount snapshot y composición que se imprimirá en el ticket)*
+  - `components: OrderItemComponent[]` *(relación inversa: los componentes operacionales del ítem — presas/bebidas/extras — se modelan como filas separadas en `OrderItemComponent` y son la fuente de verdad para el decremento de inventario al pagar)*
   - `discountId: UUID?` *(el `Discount` aplicado **a este plato**; null sin descuento. Máximo **uno por ítem** — sin apilamiento; la mecánica de negocio vive en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
   - `discountAmount: decimal?` *(**snapshot por unidad** del `fixedAmount` vigente — NO una resta: se congela para que editar el catálogo no altere ventas pasadas. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas)*
   - `totalPrice: decimal` *(**derivado**: `(unitPrice − (discountAmount ?? 0)) × quantity`)*
@@ -161,6 +165,24 @@ Mapa rápido (el detalle campo por campo, abajo):
   - `currentStock: int`, `unitMeasure: string`
   - `salePrice: decimal?` *(precio de venta unitario configurado por el admin. Para `type ∈ {pecho, ala, pierna, entrepierna}` es el precio de venta por presa que alimenta el **precio sugerido** de la venta custom — **ahora V1**, PDR §2.10. Es solo precio de VENTA: el sistema NO registra costo del pollo ni calcula margen.)*
   - *Nota: el ciclo CRUDO de presas (reproceso, procesado, sobrante crudo) se modela aparte en `ShiftChickenLog`. `InventoryItem` con `type ∈ {pecho, ala, pierna, entrepierna}` representa siempre el inventario cocido vendible.*
+    - `orderItemComponents: OrderItemComponent[]` *(relación inversa: componentes de ítems que remiten a este `InventoryItem` cuando aplica)*
+### OrderItemComponent (componentes operacionales de un ítem)
+
+Para modelar de forma normalizada los consumos (presas, bebidas, extras) y facilitar las transacciones de inventario, existe la entidad `OrderItemComponent`. Cada fila representa una porción operativa consumida por un `OrderItem` (puede referir a un `InventoryItem` cuando es una presa vendida a granel, o a un `Product` cuando es una bebida/extra del catálogo).
+
+Campos típicos (resumen): `id`, `orderItemId`, `inventoryItemId?`, `productId?`, `quantity`, `unitPrice`, `label`, `createdAt`, `updatedAt`. La regla de integridad aplicable es: cada componente debe referir exactamente a una de `inventoryItemId` o `productId` (pero no a ambas). Se recomienda aplicar un CHECK a nivel de base de datos para garantizar esto, por ejemplo:
+
+```sql
+ALTER TABLE order_item_components
+ADD CONSTRAINT order_item_component_one_ref CHECK (
+  (inventory_item_id IS NULL AND product_id IS NOT NULL)
+  OR
+  (inventory_item_id IS NOT NULL AND product_id IS NULL)
+);
+```
+
+Esta estructura permite que el servicio de órdenes y el servicio de inventario consuman una lista clara de componentes por ítem para crear `InventoryTransaction` en la transacción que confirma el pago.
+
 
 - **InventoryBatch** *(opcional)*
   - `id: UUID`, `inventoryItemId: UUID`, `batchCode: string`, `processedAt: datetime`, `quantityReceived: int`, `quantityRemaining: int`, `origin: string`

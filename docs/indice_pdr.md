@@ -187,8 +187,8 @@ flowchart TB
 
 | Concepto | Regla (PDR) | Requerimiento | Técnica |
 | --- | --- | --- | --- |
-| Venta custom | [§2.10](pdr.md#210-ventas-custom-presas-surtidas) | [FR-002b](requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta) | `POST /orders/custom`, `Order.isCustom`, `customPieces` |
-| Inventario por presas | [§2.3](pdr.md#23-inventario-por-presas) | [FR-006](requirements.md#fr-006--inventario-por-presas-alta), [FR-017](requirements.md#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media) | `InventoryItem`, `ShiftChickenLog`, `InventoryTransaction` |
+| Venta custom | [§2.10](pdr.md#210-ventas-custom-presas-surtidas) | [FR-002b](requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta) | `POST /orders/custom`, `Order.isCustom`, `customPieces`, `OrderItemComponent` (una fila por presa/bebida vendida), `OrderItem.snapshot` (Json) |
+| Inventario por presas | [§2.3](pdr.md#23-inventario-por-presas) | [FR-006](requirements.md#fr-006--inventario-por-presas-alta), [FR-017](requirements.md#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media) | `InventoryItem`, `ShiftChickenLog`, `InventoryTransaction`, `OrderItemComponent` (fuente de verdad de consumo por ítem), `OrderItem.snapshot` (Json para impresión/auditoría) |
 | Pago pendiente | [§2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente) | [FR-011](requirements.md#fr-011--pedidos-con-pago-pendiente-alta) | `Order.status=pendingPayment`, sin auto-cancel |
 | Descuentos | [§2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) | [FR-016/016b](requirements.md#fr-016--gestión-de-descuentos-y-aplicación-en-pos-media) | `Discount`, `DiscountAuthorization` |
 | Clientes y vista del cliente | [§2.12](pdr.md#212-clientes-y-facturación-nominada) | [FR-015](requirements.md#fr-015--vista-pública-del-cliente-alta) / [FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) | `Customer`, `Order.customerId`, `Order.publicToken`, `GET /public/orders/{token}`, `GET/POST /customers` |
