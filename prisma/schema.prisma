@@ -6,7 +6,8 @@
 //   §2.3  Inventario COCIDO decrementa al pagar (paymentStatus = PAID), no en preparing.
 //         Ciclo CRUDO de presas por turno se modela aparte en ShiftChickenLog.
 //   §2.5  pendingPayment se prepara igual; cancelación SIEMPRE manual (sin timeout)
-//   §2.7  Permisos enforced en backend (JWT + guard por rol). La UI no es la frontera.
+//   §2.7  Permisos enforced en backend (JWT + guard por rol + branch). La UI no es la frontera.
+//         Multi-sucursal: SUPER_ADMIN tiene acceso global, otros roles restringidos a su branchId.
 //   §2.8  Order.type ∈ {MESA, LLEVAR}. CUSTOM NO es un type — es Order.isCustom = true.
 //         Order.orderNumber = número humano pantalla pública "turnos de banco" (FR-007),
 //         distinto de Order.publicToken = credencial vista privada del cliente (FR-015).
@@ -17,9 +18,30 @@
 //         OrderItem.discountAmount es SNAPSHOT del monto fijo por unidad; los totales son derivados.
 //         Máximo UN descuento por ítem (sin apilamiento). NO existe internalDiscount.
 //   §2.12 Customer = facturación nominada OPCIONAL (Order.customerId nullable → "S/N" si anónimo).
+//         Customer.passwordHash añadido para habilitar login de clientes en futuras fases.
 //   §13.3 Shift.periodId se DECLARA al abrir el turno (catálogo ShiftPeriod), NUNCA se infiere
 //         del reloj ni de una API de hora. AuditLog.shiftId hace que el log nazca sabiendo su
 //         turno (null = acción de admin fuera de caja) — consulta por turno sin ventanas horarias.
+
+// ============================================================================
+// BRANCH (Multi-sucursal V1)
+// ============================================================================
+
+model Branch {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String
+  address   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  shifts         Shift[]
+  cashRegisters  CashRegister[]
+  inventoryItems InventoryItem[]
+
+  @@map("branches")
+}
 
 generator client {
   provider = "prisma-client"
@@ -36,6 +58,7 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   CASHIER
   DISPATCHER
@@ -147,6 +170,9 @@ model User {
   passwordHash String
   role         UserRole
   active       Boolean  @default(true)
+  // Multi-sucursal: branchId nullable para SUPER_ADMIN (acceso global)
+  branchId     String?  @db.Uuid
+  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -165,6 +191,7 @@ model User {
 
   @@index([role])
   @@index([active])
+  @@index([branchId])
   @@map("users")
 }
 
@@ -356,7 +383,7 @@ model OrderItemComponent {
 
 model InventoryItem {
   id           String            @id @default(uuid(7)) @db.Uuid
-  sku          String            @unique // "B1", "P3", "PRESA-PECHO", etc.
+  sku          String
   name         String
   unit         InventoryUnit
   type         InventoryItemType
@@ -366,6 +393,9 @@ model InventoryItem {
   // precio por presa que alimenta el precio sugerido custom. Solo VENTA (no costo ni margen).
   salePrice    Decimal?          @db.Decimal(10, 2)
   active       Boolean           @default(true)
+  // Multi-sucursal: cada ítem de inventario pertenece a una sucursal
+  branchId     String            @db.Uuid
+  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -374,7 +404,9 @@ model InventoryItem {
   manualConsumptions DailyManualConsumption[]
   orderItemComponents OrderItemComponent[]
 
+  @@unique([branchId, sku])
   @@index([type, active])
+  @@index([branchId])
   @@map("inventory_items")
 }
 
@@ -474,12 +506,15 @@ model Voucher {
 
 model CashRegister {
   id        String   @id @default(uuid(7)) @db.Uuid
-  name      String   @unique // "Caja 1", "Caja 2"
+  name      String
   active    Boolean  @default(true)
+  branchId  String   @db.Uuid
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
 
   shifts Shift[]
 
+  @@unique([branchId, name])
   @@map("cash_registers")
 }
 
@@ -522,6 +557,9 @@ model Shift {
   cashier        User          @relation("ShiftCashier", fields: [cashierId], references: [id], onDelete: Restrict)
   cashRegisterId String?       @db.Uuid
   cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: Restrict)
+  // Multi-sucursal: cada turno pertenece a una sucursal
+  branchId       String        @db.Uuid
+  branch         Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   // Período del turno ("Mañana"/"Noche"/...). Se asigna al ABRIR el turno (preselección
   // sugerida editable) y NUNCA se deriva del reloj. NO es atributo del User: el personal
   // rota días/turnos/roles (§2.7). Política fina de quién confirma → pdr §13.3;
@@ -540,6 +578,7 @@ model Shift {
   @@index([status])
   @@index([cashierId])
   @@index([startAt])
+  @@index([branchId])
   @@index([periodId, startAt]) // consulta de auditoría/arqueo: turnos de una fecha+período
   @@map("shifts")
 }
@@ -602,18 +641,19 @@ model AuditLog {
 // ============================================================================
 
 model Customer {
-  id        String      @id @default(uuid(7)) @db.Uuid
-  ci        String      @unique // cédula — clave de búsqueda
-  nit       String? // factura a nombre de empresa; también buscable (el cliente dicta CI o NIT)
-  firstName String
-  lastName  String
-  sex       CustomerSex
-  birthDate DateTime?   @db.Date // sin hora — una fecha de nacimiento no lleva hora
-  phone     String?
-  email     String? // la factura electrónica se envía por correo
-  active    Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id           String      @id @default(uuid(7)) @db.Uuid
+  ci           String      @unique // cédula — clave de búsqueda
+  nit          String? // factura a nombre de empresa; también buscable (el cliente dicta CI o NIT)
+  firstName    String
+  lastName     String
+  sex          CustomerSex
+  birthDate    DateTime?   @db.Date // sin hora — una fecha de nacimiento no lleva hora
+  phone        String?
+  email        String? // la factura electrónica se envía por correo
+  passwordHash String? // para habilitar login de clientes en futuras fases
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   orders Order[]
 

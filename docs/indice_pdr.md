@@ -80,11 +80,11 @@ flowchart TB
     end
 
     subgraph requis["✅ Requisitos (el QUÉ verificable)"]
-        REQ["📗 requirements.md<br/><i>FR-001..FR-019 + NFR de negocio</i><br/>Cada FR con criterio de aceptación"]
+        REQ["📗 requirements.md<br/><i>FR-000..FR-019 + NFR de negocio</i><br/>Cada FR con criterio de aceptación"]
     end
 
     subgraph tecnica["⚙️ Técnica (el CÓMO)"]
-        TECH["📙 technical_guide.md<br/><i>Modelo de datos · API · payloads</i><br/>NFR técnicos · estados transaccionales · E2E"]
+        TECH["📙 technical_guide.md<br/><i>Modelo de datos + Branch · API · payloads</i><br/>NFR técnicos · estados transaccionales · E2E"]
     end
 
     subgraph codigo["🏗️ Código (el DÓNDE en el repo)"]

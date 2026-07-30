@@ -19,6 +19,7 @@
 
 | FR | Título | Prioridad |
 | --- | --- | --- |
+| [FR-000](#fr-000--gestión-de-sucursales-alta) | Gestión de sucursales | Alta |
 | [FR-001](#fr-001--gestión-de-productos-y-variantes-alta) | Gestión de productos y variantes | Alta |
 | [FR-002](#fr-002--registro-de-pedidos-pos-alta) | Registro de pedidos POS | Alta |
 | [FR-002b](#fr-002b--venta-custom-de-presas-surtidas-alta) | Venta custom de presas surtidas | Alta |
@@ -51,6 +52,10 @@
 
 # 1. Requerimientos funcionales (completos) y criterios de aceptación
 > Cada FR incluye criterio de aceptación mínimo, pensado para pruebas automáticas y E2E.
+
+### FR-000 — Gestión de sucursales (Alta)
+- **Funcionalidad:** El SUPER_ADMIN puede crear, editar y dar de baja sucursales. Cada sucursal tiene nombre, dirección y estado (activa/inactiva). Las operaciones de los usuarios (ventas, inventario, turnos) se restringen a su sucursal asignada, excepto SUPER_ADMIN que tiene acceso global.
+- **Criterio de aceptación:** El SUPER_ADMIN crea una sucursal; los usuarios asignados a esa sucursal solo ven datos de su sucursal; el SUPER_ADMIN ve un resumen consolidado de todas las sucursales en el endpoint `/reports/branches-summary`.
 
 ### FR-001 — Gestión de productos y variantes (Alta)
 - **Funcionalidad:** El administrador puede crear, editar y dar de baja productos; definir variantes con sus componentes obligatorios (presas) y por defecto (acompañamiento); fijar el precio base del plato. Las sustituciones permitidas no afectan el precio ([PDR §2.1](pdr.md)).

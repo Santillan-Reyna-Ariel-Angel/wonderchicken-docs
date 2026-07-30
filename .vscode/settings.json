@@ -1,3 +1,9 @@
 {
-  "material-icon-theme.activeIconPack": "nest"
+  "material-icon-theme.activeIconPack": "nest",
+  "chat.tools.terminal.autoApprove": {
+    "/^pnpm prisma studio$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
 }

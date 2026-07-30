@@ -158,13 +158,17 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
 - **Discrepancias:** se registran para auditoría. El umbral de tolerancia y la política de cierre con discrepancia son **POSPONIBLE** (definir con administrador antes de Sprint 3 — ver §13.3).
 
 ## 2.7 Roles e interfaces (V1 con autenticación JWT y control de permisos por rol en backend)
-- **Roles funcionales:** administrador, cajera, despachadora, cocinero.
-- **Decisión V1:** **el control de permisos SÍ se aplica en backend** en V1, vía autenticación JWT + un guard que valida el rol en cada endpoint. La UI además oculta las pantallas no relevantes a cada rol, pero **la UI no es la frontera de seguridad: el backend valida el rol en cada petición** (devuelve 401 sin token válido, 403 si el rol no corresponde).
-- **Matriz de autorización por rol** (la UI la usa para mostrar pantallas; el backend la usa para autorizar endpoints vía guard — es la spec que el guard implementa):
-  - **Administrador:** registrar productos, registrar platos / variantes, crear usuarios, modificar inventario (con motivo), ver reportes globales, crear descuentos y autorizar descuentos por turno.
-  - **Cajera:** registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos, gestionar clientes (registrar / buscar por CI o NIT para factura nominada).
-  - **Despachadora:** ver la cola de comandas, marcar pedidos como "listo" y "entregado".
-  - **Cocinero:** registrar ingreso de presas procesadas, anotar consumos manuales por turno (bolsas de papa, smile, etc.).
+- **Roles funcionales:** `SUPER_ADMIN`, `ADMINISTRADOR`, `CAJERA`, `DESPACHADORA`, `COCINERO`.
+- **Estructura Multi-sucursal:** La sucursal (`branch`) es el alcance natural de los reportes y operaciones.
+  - `SUPER_ADMIN`: Acceso global a todas las sucursales y reportes consolidados.
+  - Otros roles: Acceso restringido exclusivamente a su sucursal (`branchId`).
+- **Decisión V1:** **el control de permisos SÍ se aplica en backend** en V1, vía autenticación JWT + un guard que valida el rol en cada endpoint. La UI además oculta las pantallas no relevantes a cada rol, pero **la UI no es la frontera de seguridad: el backend valida el rol y la sucursal en cada petición** (devuelve 401 sin token válido, 403 si el rol o acceso a sucursal no corresponde).
+- **Matriz de autorización por rol:**
+  - **SUPER_ADMIN:** Gestión de sucursales, reportes consolidados globales, configuración global.
+  - **ADMINISTRADOR:** Registrar productos, registrar platos / variantes, crear usuarios (en su sucursal), modificar inventario (con motivo), ver reportes de su sucursal, crear descuentos y autorizar descuentos por turno.
+  - **CAJERA:** Registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos, gestionar clientes (registrar / buscar por CI o NIT para factura nominada).
+  - **DESPACHADORA:** Ver la cola de comandas, marcar pedidos como "listo" y "entregado".
+  - **COCINERO:** Registrar ingreso de presas procesadas, anotar consumos manuales por turno (bolsas de papa, smile, etc.).
 - **Sesiones por turno:** un mismo trabajador puede trabajar como cajera un día y como despachadora otro. Pero **dentro del mismo turno**, un usuario solo puede tener **1 sesión activa con 1 rol**. No puede estar simultáneamente activo como cajera y despachadora en el mismo turno.
 - **Cajas por turno:** el sistema permite 1 o más cajas, pero **cada caja es atendida por 1 sola cajera por turno**.
 

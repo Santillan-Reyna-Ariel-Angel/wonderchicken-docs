@@ -94,19 +94,25 @@ Mapa rápido (el detalle campo por campo, abajo):
 
 | Entidad | Para qué sirve |
 |---|---|
-| `User` | Personal del sistema con su rol (ADMIN, CASHIER, DISPATCHER, COOK). |
-| `CashRegister` / `Shift` | Caja física y turno de trabajo (apertura/cierre, arqueo). |
+| `Branch` | Sucursal del restaurante (entidad central para multi-sucursal). |
+| `User` | Personal del sistema con su rol (SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK) y sucursal asignada. |
+| `CashRegister` / `Shift` | Caja física y turno de trabajo (apertura/cierre, arqueo). Cada caja y turno pertenece a una sucursal. |
 | `ShiftPeriod` | Catálogo de períodos del día ("Mañana", "Noche"; ampliable sin migración). |
 | `Product` / `Variant` | Catálogo de platos y sus variantes (composición). |
 | `Order` / `OrderItem` | Pedido y sus ítems (estándar o custom; MESA/LLEVAR). |
 | `Customer` | Cliente registrado (CI/NIT) para factura nominada y "pedidos del día"; opcional por venta. |
-| `InventoryItem` / `InventoryTransaction` / `InventoryBatch` | Inventario **cocido** transaccional, sus movimientos y lotes (opcional). |
+| `InventoryItem` / `InventoryTransaction` / `InventoryBatch` | Inventario **cocido** transaccional, sus movimientos y lotes (opcional). Cada ítem de inventario pertenece a una sucursal. |
 | `ShiftChickenLog` | Ciclo **crudo** de presas por turno (PDR §2.3). |
 | `DailyManualConsumption` | Consumos manuales por turno (bolsas, vasos, etc.). |
 | `Voucher` | Vale del personal (descuenta nómina, no caja). |
 | `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno (PDR §2.11). |
 | `Expense` | Gasto pagado desde caja. |
 | `AuditLog` | Rastro inmutable de acciones críticas (PDR §2.9). |
+
+- **Branch** *(NUEVO - Multi-sucursal V1)*
+  - `id: UUID`, `name: string`, `address: string`, `active: boolean` *(sucursal activa/inactiva)*
+  - `createdAt: datetime`, `updatedAt: datetime`
+  - *Relaciones: `User.branchId` (nullable para SUPER_ADMIN), `Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` (required para entidades locales).*
 
 - **Product**
   - `id: UUID`, `name: string`, `basePrice: decimal`, `category: string`, `active: boolean`, `description: string`
@@ -259,6 +265,11 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
 
 ## 3.2 Relaciones clave
 
+- **Multi-sucursal:**
+  - `Branch` 1..* `User` (vía `User.branchId`, nullable para SUPER_ADMIN)
+  - `Branch` 1..* `Shift` (vía `Shift.branchId`, required)
+  - `Branch` 1..* `CashRegister` (vía `CashRegister.branchId`, required)
+  - `Branch` 1..* `InventoryItem` (vía `InventoryItem.branchId`, required)
 - `Product` 1..* `Variant`
 - `Customer` 1..* `Order` (vía `Order.customerId`, opcional — null si venta anónima "S/N")
 - `Order` 1..* `OrderItem`
@@ -467,6 +478,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/vouchers` — listar vales con filtros
 - `PATCH /api/v1/inventory/{id}/sale-price` — configurar el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10)
 - `POST /api/v1/discounts` — crear descuento (admin) ([§6.6b](#66b-discountcreateresponse-catálogo--admin))
+- `GET /api/v1/reports/branches-summary` — **solo SUPER_ADMIN**: resumen consolidado de todas las sucursales (ventas, inventario, turnos activos).
 - `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
 - `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
 - `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6), liviana (solo datos activos, pocos KB): `products`+`variants`, `discounts` **ya filtrados por el backend** para la sesión (activos + ventana vigente + autorización si corresponde — el POS no filtra nada), `piecePrices` (para el precio sugerido custom **en el cliente**), `shiftPeriods` y `shift` activo (o `null`). Detalle y payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
