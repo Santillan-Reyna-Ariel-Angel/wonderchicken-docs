@@ -355,7 +355,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 12. Criterios de aceptación del MVP (resumen)
-> **Trasladado.** Los criterios de aceptación **verificables** viven junto a cada FR en [`docs/requirements.md`](requirements.md) (FR-001…FR-019); el **alcance consolidado** ítem por ítem está en [§13.1](#131-versión-1-mvp--incluido). El MVP se acepta cuando todos los FR de prioridad Alta cumplen su criterio.
+> **Trasladado.** Los criterios de aceptación **verificables** viven junto a cada FR en [`docs/requirements.md`](requirements.md#1-requerimientos-funcionales-completos-y-criterios-de-aceptación) ([FR-001](requirements.md#fr-001--gestión-de-productos-y-variantes-alta)…[FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta)); el **alcance consolidado** está en [§13](#13-alcance-v1-mvp-vs-v2-futuro). El MVP se acepta cuando todos los FR de prioridad Alta cumplen su criterio.
 
 > **Stack tecnológico:** especificado en [`docs/technical_guide.md` §1](technical_guide.md).
 
@@ -364,77 +364,27 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 # 13. Alcance V1 (MVP) vs V2 (Futuro)
 > Esta sección consolida en una sola tabla qué funcionalidades entran en la **Versión 1 (MVP)** y cuáles se difieren explícitamente a la **Versión 2**. Sirve como referencia única para el LLM, el equipo de desarrollo y el cliente. Todo lo que no aparezca en V2 debe asumirse como V1.
 
-## 13.1 Versión 1 (MVP) — Incluido
+| Área | V1 (MVP) — Incluido | Referencias |
+|------|----------------------|-------------|
+| Productos, variantes y POS | CRUD de productos/variantes; composición visible en POS/ticket; sustitución sin cambiar precio (máx. 1); POS MESA/LLEVAR; venta custom con precio sugerido editable; descuentos por plato (personal y compensación) con autorización por turno cuando aplica. | [FR-001](requirements.md#fr-001--gestión-de-productos-y-variantes-alta), [FR-002](requirements.md#fr-002--registro-de-pedidos-pos-alta), [FR-002b](requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta), [FR-016](requirements.md#fr-016--gestión-de-descuentos-y-aplicación-en-pos-media), [FR-016b](requirements.md#fr-016b--autorización-de-descuentos-por-turno-media); [§2.1](#21-precios-y-sustituciones), [§2.2](#22-variantes-y-componentes), [§2.10](#210-ventas-custom-presas-surtidas), [§2.11](#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) |
+| Estados, pago y cancelación | Máquina de estados completa; pago pendiente; anulación de pagados con motivo/detalle y reversión de inventario; pago + descuento de inventario como operación inseparable. | [FR-011](requirements.md#fr-011--pedidos-con-pago-pendiente-alta), [FR-011b](requirements.md#fr-011b--anulación-de-pedido-pagado-alta); [§2.3](#23-inventario-por-presas), [§2.5](#25-pedidos-delivery-y-pago-pendiente), [§4](#4-máquina-de-estados-de-pedidos) |
+| Inventario | Plano cocido transaccional al pagar; plano crudo por turno con autopoblado de reproceso; descuento automático de bebidas; consumos manuales por turno; ajustes manuales por admin con motivo; dashboard de stock cocido con delta del turno. | [FR-006](requirements.md#fr-006--inventario-por-presas-alta), [FR-017](requirements.md#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media); [§2.3](#23-inventario-por-presas) |
+| Vales | Registro de vales sin umbral/límite, listado filtrable; descuentan inventario y no suman a caja. | [FR-005](requirements.md#fr-005--vales-de-trabajadores-media); [§2.4](#24-vales-ventas-internas--descuento-por-nómina) |
+| Caja y arqueo | Apertura/cierre por turno; arqueo con desglose y exportación CSV; gastos registrados desde caja. | [FR-004](requirements.md#fr-004--control-de-caja-por-turno-alta), [FR-009](requirements.md#fr-009--registro-de-gastos-media); [§2.6](#26-caja-y-arqueo), [§2.7](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) |
+| Comandas, tickets, factura y vista pública | Comandas digitales por default; historial con búsqueda; vista pública por token + pedidos del día para clientes registrados; clientes para factura nominada (anónimo = S/N); factura solo a demanda (térmica con fallback PDF); tipos de ticket solo MESA y LLEVAR. | [FR-003](requirements.md#fr-003--comanda-digital-y-factura-opcional-alta), [FR-012](requirements.md#fr-012--historial-de-comandas-media), [FR-014](requirements.md#fr-014--impresión-de-factura-y-descarga-pdf-media), [FR-015](requirements.md#fr-015--vista-pública-del-cliente-alta), [FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta); [§2.8](#28-comandas-tickets-factura-y-notificaciones), [§2.10](#210-ventas-custom-presas-surtidas), [§2.12](#212-clientes-y-facturación-nominada), [§7.4](#74-vista-del-cliente-su-comanda) |
+| Notificaciones | Pantalla pública de tickets de banco solo con número de pedido (MESA y LLEVAR), con persistencia de momentos de listo/entrega. | [FR-007](requirements.md#fr-007--notificación-de-pedido-listo-alta); [§2.8](#28-comandas-tickets-factura-y-notificaciones) |
+| Usuarios, roles y sesiones | Roles funcionales con permisos por rol enforced en backend vía JWT; sesión única por turno. | [FR-008](requirements.md#fr-008--interfaces-diferenciadas-por-rol-alta), [FR-008b](requirements.md#fr-008b--sesión-única-por-turno-alta), [FR-018](requirements.md#fr-018--autenticación-jwt-y-autorización-por-rol-alta); [§2.7](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) |
+| Reportes y auditoría | Reportes MVP (ventas por turno/día, inventario de presas, arqueo) exportables CSV; auditoría de acciones críticas. | [FR-010](requirements.md#fr-010--reportes-alta); [§2.9](#29-auditoría) |
+| Despliegue | Web local on-premise. | [§11](#11-despliegue); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
 
-### Productos, variantes y POS
-- Gestión completa (alta, edición, baja) de productos y variantes (FR-001).
-- Composición visible en POS y ticket: presas, bebidas, extras, sustituciones (§2.2).
-- Sustitución de acompañamiento **sin alterar el precio**; máximo 1 sustitución por ítem (§2.1, FR-001).
-- POS estándar para pedidos **MESA** y **LLEVAR** (FR-002).
-- **Flujo dedicado de venta custom** con precio sugerido que la cajera puede aceptar o pisar (§2.10, FR-002b), alimentado por el **precio de venta por tipo de presa** que configura el admin.
-- **Feature de descuentos por plato** con sus dos instancias principales — descuento al personal y compensación al cliente — y la **autorización por turno** para los que la requieren (§2.11, FR-016 / FR-016b).
-
-### Estados, pago y cancelación
-- Máquina de estados completa (§4); pago pendiente según §2.5 (FR-011); anulación de pagados con motivo y detalle + reversión de inventario (FR-011b); pago + descuento de inventario como operación inseparable (§2.3, §4).
-
-### Inventario
-- **Plano cocido (transaccional)** con descuento al confirmar pago, y **plano crudo** anotado por turno con autopoblado del reproceso (§2.3, FR-006 / FR-017).
-- Descuento automático de bebidas por unidad al pagar; consumos manuales por turno (FR-017); ajuste manual por admin con motivo; dashboard de stock cocido con delta del turno.
-
-### Vales (descuento por nómina)
-- Registro sin umbral ni límite, con listado filtrable; descuentan inventario y NO suman a caja (§2.4, FR-005).
-
-### Caja y arqueo
-- Apertura y cierre por turno (1 caja = 1 cajera, §2.7, FR-004); arqueo con el desglose de §2.6, exportable a CSV; registro de gastos desde caja (FR-009).
-
-### Comandas, tickets, factura, vista pública
-- **Comandas digitales** por default en el panel de despachadoras (§2.8, FR-003); historial con búsqueda (FR-012).
-- **Vista pública del cliente** por token no adivinable, con "pedidos del día" para clientes registrados (§2.8/§7.4, FR-015 / FR-019).
-- **Registro y búsqueda de clientes** para factura nominada; vínculo opcional a la orden — anónimo = "S/N" (§2.12, FR-019).
-- **Factura solo a demanda**: térmica con fallback a PDF (§2.8, FR-014). Tipos de ticket: solo MESA y LLEVAR (§2.10).
-
-### Notificaciones
-- **Pantalla pública** "tickets de banco" con únicamente el número de pedido, MESA y LLEVAR por igual; momentos de listo/entrega persistidos (§2.8, FR-007).
-
-### Usuarios, roles, sesiones
-- Roles funcionales + **permisos por rol enforced en backend** vía JWT (§2.7, FR-008 / FR-018); **sesión única por turno** (FR-008b).
-
-### Reportes (MVP)
-- Ventas por turno/día, inventario de presas, arqueo con desglose — exportables a CSV (FR-010).
-
-### Auditoría
-- Registro de auditoría solo para **acciones críticas**: ventas, anulaciones, ajustes de inventario, emisión de vales, apertura/cierre de caja, generación de reportes (§2.9).
-
-### Despliegue
-- Aplicación web local (on-premise). Detalles técnicos en [`docs/technical_guide.md` §9](technical_guide.md).
-
----
-
-## 13.2 Versión 2 (Roadmap futuro) — Diferido explícitamente
-
-### Modalidad auto-servicio
-- POS para cliente final: el cliente arma su propio pedido custom sin intervención de la cajera, con el total **calculado automáticamente** a partir del precio de venta por presa (definido en V1) (§2.10 visión v2).
-- **Cuenta de cliente con auto-registro y login:** el cliente se registra y accede con su sesión a **sus pedidos del día/histórico** (`GET /me/orders`), seguro por autenticación — sin depender del token por pedido. Es la evolución natural de la vista del cliente de V1 (§7.4 / §2.12, FR-019).
-
-### Reportes adicionales
-- Reporte de **productos más vendidos** (deseable, no obligatorio MVP — FR-010).
-- Reporte de **discrepancias automáticas** entre caja esperada y contada.
-
-### Agenda semanal de personal (rostering)
-- Asignación **persona → día → turno → rol**: qué días trabaja cada quien, en qué período (Mañana/Noche) y con qué rol. Caso real que la motiva: el personal rota (Valeria trabaja unos días de mañana y otros de noche, y no siempre con el mismo rol — §2.7). En V1 el período del turno se confirma en la apertura de caja (§13.3); la agenda automatiza esa preselección y habilita validaciones ("hoy no te toca") en V2.
-
-### Backups y persistencia
-- **Backup diario automático** de la base de datos.
-- **Backup manual on-demand** para el administrador desde la UI.
-- **Política contable formal de vales**: confirmar con contabilidad local cómo se reflejan en libros (§13.3 residual).
-
-### Sincronización a nube
-- Despliegue **híbrido local + nube** con sincronización diferencial.
-- **Estrategia de resolución de conflictos**: priorizar cambios locales recientes y registrar conflictos para resolución manual.
-- Operación offline tolerable.
-
-### Distribución
-- **Empaquetado estandarizado** para portabilidad cross-host y onboarding rápido (V1 lo deja opcional).
+| Área | V2 (Futuro) — Diferido explícitamente | Referencias |
+|------|---------------------------------------|-------------|
+| Modalidad auto-servicio | POS para cliente final sin cajera, total calculado automático por precio de venta por presa; cuenta cliente con auto-registro/login y acceso autenticado a pedidos propios (`GET /me/orders`). | [§2.10](#210-ventas-custom-presas-surtidas) (visión V2), [§2.12](#212-clientes-y-facturación-nominada), [§7.4](#74-vista-del-cliente-su-comanda); [FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) |
+| Reportes adicionales | Productos más vendidos; discrepancias automáticas entre caja esperada y contada. | [FR-010](requirements.md#fr-010--reportes-alta); [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1) |
+| Agenda semanal de personal | Rostering persona→día→turno→rol, con preselección/validaciones automáticas sobre quién trabaja cada turno. | [§2.7](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend), [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1) |
+| Backups y persistencia | Backup diario automático; backup manual on-demand desde UI; cierre de política contable formal de vales. | [§11](#11-despliegue), [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Sincronización a nube | Esquema híbrido local+nube con sincronización diferencial, resolución de conflictos y operación offline tolerable. | [§11](#11-despliegue); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Distribución | Empaquetado estandarizado para portabilidad cross-host y onboarding rápido. | [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
 
 ---
 

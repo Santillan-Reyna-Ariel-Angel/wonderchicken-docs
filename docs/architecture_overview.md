@@ -97,10 +97,10 @@ graph TB
 
 **Decisiones que el grafico hace explicitas:**
 
-- `OrdersModule` es el **modulo mas pesado** porque concentra: orden estandar, orden custom (PDR §2.10), confirmacion de pago, anulacion, descuento al personal (§2.11) y comanda digital. Ahi vive la transaccion atomica `pago + decremento de inventario` (technical guide §4.2).
+- `OrdersModule` es el **modulo mas pesado** porque concentra: orden estandar, orden custom ([PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas)), confirmacion de pago, anulacion, descuento al personal ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)) y comanda digital. Ahi vive la transaccion atomica `pago + decremento de inventario` ([technical guide §4.2](technical_guide.md#42-reglas-transaccionales)).
 - `InventoryModule` es **compartido**: lo usan ordenes, vales y los cocineros. Maneja los **dos planos** del pollo (cocido transaccional + crudo anotado por turno via `ShiftChickenLog`).
 - `AuditModule` en V1 expone un `AuditService.log(tx, ...)` que cada service crítico llama **explícitamente dentro de su misma transacción** (ver diagrama §2). Así el audit es **atómico** con la acción y tiene el estado *antes/después* para `details`. El patrón de **interceptor genérico** (que correría fuera de la transacción y sin estado previo) se **difiere a V2** con un caso real. Detalle en [`technical_guide.md` §4.3](technical_guide.md#43-auditoría--implementación-v1).
-- **Control de permisos por rol enforced en el backend (V1)**. Dos guards globales (`APP_GUARD`): `AuthGuard` valida el JWT (401 si falta/expira) y `RolesGuard` valida el rol declarado con `@Roles()` (403 si no corresponde). La UI oculta pantallas, pero **no es la frontera de seguridad** (PDR §2.7 / FR-018; detalle en [`technical_guide.md` §5.2](technical_guide.md#52-autenticación-y-autorización)).
+- **Control de permisos por rol enforced en el backend (V1)**. Dos guards globales (`APP_GUARD`): `AuthGuard` valida el JWT (401 si falta/expira) y `RolesGuard` valida el rol declarado con `@Roles()` (403 si no corresponde). La UI oculta pantallas, pero **no es la frontera de seguridad** ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) / [FR-018](requirements.md#fr-018--autenticación-jwt-y-autorización-por-rol-alta); detalle en [technical_guide.md §5.2](technical_guide.md#52-autenticación-y-autorización)).
 
 ---
 
@@ -132,7 +132,7 @@ sequenceDiagram
     PIPE->>CTRL: body validado contra DTO
     CTRL->>SVC: createOrder(dto, userId)
 
-    Note over SVC,TX: Operacion atomica<br/>(technical guide §4.2)
+    Note over SVC,TX: Operacion atomica<br/>([technical guide §4.2](technical_guide.md#42-reglas-transaccionales))
 
     SVC->>TX: prisma.$transaction(async tx => ...)
     TX->>DB: lock filas de InventoryItem por presa
@@ -179,7 +179,7 @@ sequenceDiagram
 | Regla del negocio | Como queda en el schema |
 |---|---|
 | CUSTOM no es un tipo de pedido (§2.10) | `Order.type` solo tiene `MESA` y `LLEVAR`. El flag es `Order.isCustom: boolean`. |
-| Cliente es entidad, no solo string (§2.12) | `Customer` (CI/NIT, datos personales) habilita factura nominada y vista del dia. `Order.customerId: UUID?` es **opcional** (anónimo = "S/N", legal < Bs 1.000). Detalle en technical_guide §3.1. |
+| Cliente es entidad, no solo string ([§2.12](pdr.md#212-clientes-y-facturación-nominada)) | `Customer` (CI/NIT, datos personales) habilita factura nominada y vista del dia. `Order.customerId: UUID?` es **opcional** (anónimo = "S/N", legal < Bs 1.000). Detalle en [technical_guide §3.1](technical_guide.md#31-entidades-principales). |
 | Vista pública por token, no por id (FR-015) | `Order.publicToken` aleatorio no adivinable es la credencial de `GET /public/orders/:token`. El `customerId` **agrupa** los pedidos del día; el token **da acceso**. El NIT no es llave. |
 | Sustitucion no cambia precio (§2.1) | `OrderItem.substitutions: Json` existe, pero **NO hay** campo `priceAdjustment`. |
 | Inventario decrementa al pagar (§2.3) | El decremento se hace en el service de `POST /orders/:id/pay`, NO al pasar a `preparing`. La fuente de verdad operacional son las filas `OrderItemComponent` de cada ítem (una por presa/bebida/extra consumido), que el service usa para crear `InventoryTransaction` en la misma `$transaction`. |
@@ -187,7 +187,7 @@ sequenceDiagram
 | Numeracion por turno (FR-007) | `Order.orderNumber` con `@@unique([shiftId, orderNumber])` + `Shift.lastOrderNumber` como contador atomico. |
 | Cocido vs crudo (§2.3) | `InventoryItem.type IN (PECHO,...)` = COCIDO transaccional. El plano CRUDO vive aparte en `ShiftChickenLog`, con `@@unique([shiftId, pieceType])`. |
 | Vale no suma caja (§2.4) | `Voucher` no genera fila en ningun campo de monto de `Shift`. Aparece como linea separada en el arqueo via query. |
-| Descuento al personal ya no es un flag, y aplica POR PLATO (§2.11) | Se eliminó `Order.internalDiscount`. El descuento vive a **nivel ítem**: `OrderItem.discountId` apunta al catálogo `Discount` y `OrderItem.discountAmount` congela el snapshot por unidad; la cajera marca qué platos lo llevan. El `discountId` viaja en cada ítem al **crear** la orden — no hay endpoint aparte para aplicarlo (technical guide §5.0). La autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). |
+| Descuento al personal ya no es un flag, y aplica POR PLATO ([§2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)) | Se eliminó `Order.internalDiscount`. El descuento vive a **nivel ítem**: `OrderItem.discountId` apunta al catálogo `Discount` y `OrderItem.discountAmount` congela el snapshot por unidad; la cajera marca qué platos lo llevan. El `discountId` viaja en cada ítem al **crear** la orden — no hay endpoint aparte para aplicarlo ([technical guide §5.0](technical_guide.md#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza)). La autorización por turno va en `DiscountAuthorization`. El descuento es puramente monetario (no hay `reason` de descuento en `InventoryTransaction`). |
 | Producto: flags de venta e inventario | `Product.isSellable` controla si el producto aparece en el POS; `Product.isInventoryItem` controla si sus ventas generan `InventoryTransaction` (vía `OrderItemComponent`). Ambos `Boolean @default(true)`. |
 | El período del turno se declara, no se infiere (§13.3) | `ShiftPeriod` es **catálogo** (no enum): un tercer turno no requiere migración. `Shift.periodId` se asigna al abrir la caja; el sistema **nunca** lo deriva del reloj ni de una API de hora. NO es atributo del `User`: el personal rota días, turnos y roles (§2.7). |
 | Auditoría por turno sin ventanas horarias (§2.9) | `AuditLog.shiftId` (nullable) — el log **nace sabiendo su turno**; `null` = acción de admin fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`). La consulta por caja+período es una FK directa. |
@@ -213,3 +213,5 @@ sequenceDiagram
 | Lista oficial de endpoints | [`docs/technical_guide.md` §5.1](technical_guide.md) |
 | Mapeo negocio to tecnica | [`docs/technical_guide.md` §10](technical_guide.md) |
 | Roadmap V1 vs V2 | [`docs/pdr.md` §13](pdr.md) |
+
+

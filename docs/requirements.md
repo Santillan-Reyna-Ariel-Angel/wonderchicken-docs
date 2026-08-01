@@ -58,7 +58,7 @@
 - **Criterio de aceptación:** El SUPER_ADMIN crea una sucursal; los usuarios asignados a esa sucursal solo ven datos de su sucursal; el SUPER_ADMIN ve un resumen consolidado de todas las sucursales en el endpoint `/reports/branches-summary`.
 
 ### FR-001 — Gestión de productos y variantes (Alta)
-- **Funcionalidad:** El administrador puede crear, editar y dar de baja productos; definir variantes con sus componentes obligatorios (presas) y por defecto (acompañamiento); fijar el precio base del plato. Las sustituciones permitidas no afectan el precio ([PDR §2.1](pdr.md)).
+- **Funcionalidad:** El administrador puede crear, editar y dar de baja productos; definir variantes con sus componentes obligatorios (presas) y por defecto (acompañamiento); fijar el precio base del plato. Las sustituciones permitidas no afectan el precio ([PDR §2.1](pdr.md#21-precios-y-sustituciones)).
 - **Criterio de aceptación:** El administrador crea un producto y su variante; la variante queda disponible en el POS de inmediato; el POS muestra la descomposición de la variante y el precio calculado.
 
 ### FR-002 — Registro de pedidos POS (Alta)
@@ -74,7 +74,7 @@
 - **Criterio de aceptación:** Al confirmar el pedido, la comanda aparece en el panel de despacho de inmediato. El botón de imprimir factura está disponible solo bajo demanda. Si la impresora térmica falla, el sistema descarga el PDF de la factura automáticamente.
 
 ### FR-004 — Control de caja por turno (Alta)
-- **Funcionalidad:** La cajera abre y cierra su turno. Al abrir se indican el monto inicial, la caja y el **período del turno** (Mañana / Noche, de un catálogo ampliable): el período se **declara**, el sistema nunca lo infiere del reloj ([PDR §13.3](pdr.md)). El arqueo muestra el desglose por método de pago, vales, gastos y anulaciones. Solo 1 caja por cajera por turno.
+- **Funcionalidad:** La cajera abre y cierra su turno. Al abrir se indican el monto inicial, la caja y el **período del turno** (Mañana / Noche, de un catálogo ampliable): el período se **declara**, el sistema nunca lo infiere del reloj ([PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). El arqueo muestra el desglose por método de pago, vales, gastos y anulaciones. Solo 1 caja por cajera por turno.
 - **Criterio de aceptación:** Al abrir el turno se crea un registro con el monto inicial y el período elegido (la pantalla lo trae preseleccionado, pero es editable y la elección es la que persiste); abrir sin período falla con error de validación; al cerrar, no se pueden registrar más ventas en esa caja; el arqueo se exporta a CSV con totales por método, vales, anulaciones y diferencia.
 
 ### FR-005 — Vales de trabajadores (Media)
@@ -92,7 +92,7 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 - **Criterio de aceptación:** Un pedido listo (MESA o LLEVAR) aparece en la pantalla pública con su número y suena la alerta; al marcarse como entregado, desaparece y queda registrado quién lo entregó y cuándo.
 
 ### FR-008 — Interfaces diferenciadas por rol (Alta)
-- **Funcionalidad:** Cada rol ve solo las pantallas relevantes a su trabajo: POS para la cajera, panel de comandas para la despachadora, dashboard de inventario para el cocinero, admin completo para el administrador. **El control de permisos se aplica en dos capas:** la UI oculta lo no relevante y **el backend valida el rol en cada endpoint vía JWT**, devolviendo 403 si el rol no corresponde ([PDR §2.7](pdr.md), FR-018).
+- **Funcionalidad:** Cada rol ve solo las pantallas relevantes a su trabajo: POS para la cajera, panel de comandas para la despachadora, dashboard de inventario para el cocinero, admin completo para el administrador. **El control de permisos se aplica en dos capas:** la UI oculta lo no relevante y **el backend valida el rol en cada endpoint vía JWT**, devolviendo 403 si el rol no corresponde ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend), [FR-018](#fr-018--autenticación-jwt-y-autorización-por-rol-alta)).
 - **Criterio de aceptación:** Al ingresar como cajera, se muestran POS y caja; como despachadora, el panel de comandas; como administrador, todo. Un endpoint de admin invocado con token de cajera responde **403 Forbidden**; sin token responde **401 Unauthorized**.
 
 ### FR-008b — Sesión única por turno (Alta)
@@ -148,7 +148,7 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 - **Criterio de aceptación:** El registro queda vinculado al turno y aparece en el reporte de inventario diario; el reproceso crudo del nuevo turno coincide por default con el sobrante crudo del turno anterior; el sistema reconcilia `(reproceso + procesado − sobrante crudo) − vendido cocido` contra el sobrante cocido en expositor anotado y reporta discrepancias.
 
 ### FR-018 — Autenticación JWT y autorización por rol (Alta)
-- **Funcionalidad:** El usuario inicia sesión con usuario y contraseña y recibe un **JWT (Bearer token)**. Toda petición a endpoints protegidos exige el token en el header `Authorization: Bearer <token>`. El backend lo verifica (**autenticación / AuthN**) y luego valida el **rol** del usuario contra el rol requerido por el endpoint (**autorización / AuthZ**, vía guard tipo middleware). El login es el único endpoint público. La matriz rol → acción autorizada vive en [PDR §2.7](pdr.md).
+- **Funcionalidad:** El usuario inicia sesión con usuario y contraseña y recibe un **JWT (Bearer token)**. Toda petición a endpoints protegidos exige el token en el header `Authorization: Bearer <token>`. El backend lo verifica (**autenticación / AuthN**) y luego valida el **rol** del usuario contra el rol requerido por el endpoint (**autorización / AuthZ**, vía guard tipo middleware). El login es el único endpoint público. La matriz rol → acción autorizada vive en [PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend).
 - **Criterio de aceptación:**
   - Login con credenciales válidas → **200** + token JWT que incluye `userId`, `username` y `role`.
   - Petición sin token, o con token inválido / expirado → **401 Unauthorized**.
@@ -174,12 +174,14 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 - **Idioma y moneda:** Español por defecto; montos en bolivianos (Bs).
 - **Accesibilidad:** Contraste y tamaño de fuente adecuados para uso en ambientes con iluminación variable.
 - **Tema:** Soporte para tema claro y oscuro.
-- **Modo de operación:** Aplicación web local on-premise. La sincronización a la nube y los backups automáticos son parte de la **V2** (ver [PDR §13](pdr.md)).
+- **Modo de operación:** Aplicación web local on-premise. La sincronización a la nube y los backups automáticos son parte de la **V2** (ver [PDR §13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro)).
 
 ---
 
 ## Trazabilidad
 
-- **Reglas de negocio que originan cada FR/NFR:** [docs/pdr.md §2](pdr.md) (reglas definitivas) y [§13](pdr.md) (alcance V1 vs V2).
+- **Reglas de negocio que originan cada FR/NFR:** [docs/pdr.md §2](pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables) (reglas definitivas) y [§13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro) (alcance V1 vs V2).
 - **Traducción técnica (modelo de datos, endpoints, payloads, casos E2E):** [docs/technical_guide.md](technical_guide.md).
-- **Máquina de estados de pedidos:** [PDR §4](pdr.md) (negocio) y [technical guide §4](technical_guide.md) (transaccional).
+- **Máquina de estados de pedidos:** [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos) (negocio) y [technical guide §4](technical_guide.md#4-reglas-transaccionales-y-auditoría-v1) (transaccional).
+
+

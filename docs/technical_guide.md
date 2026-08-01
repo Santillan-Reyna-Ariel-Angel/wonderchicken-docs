@@ -72,7 +72,7 @@
 - **Usabilidad:** POS en 3 pasos máximo; interfaces limpias y reactivas; español por defecto. Soporte para tema claro y oscuro usando `paper` y colores de MUI (evitar fondos sólidos no reactivos).
 - **Rendimiento:** Respuesta objetivo en LAN: **≤300 ms** para operaciones de venta; tolerancia a picos.
 - **Disponibilidad:** Modo local (on-premise) con opción de sincronización a nube en v2; objetivo **99.5% uptime** en horario operativo.
-- **Seguridad:** Autenticación JWT; contraseñas hasheadas con **bcryptjs**; auditoría de acciones críticas. **El control de permisos por rol SÍ se aplica en el backend en V1** (PDR §2.7): cada endpoint valida el rol vía `RolesGuard`. **La UI no es la frontera de seguridad** — oculta pantallas, pero el backend devuelve **401** sin token válido o expirado y **403** si el rol no corresponde. Detalle de arquitectura en [§5.2](#52-autenticación-y-autorización).
+- **Seguridad:** Autenticación JWT; contraseñas hasheadas con **bcryptjs**; auditoría de acciones críticas. **El control de permisos por rol SÍ se aplica en el backend en V1** ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): cada endpoint valida el rol vía `RolesGuard`. **La UI no es la frontera de seguridad** — oculta pantallas, pero el backend devuelve **401** sin token válido o expirado y **403** si el rol no corresponde. Detalle de arquitectura en [§5.2](#52-autenticación-y-autorización).
 - **Escalabilidad:** Backend modular (NestJS) con Prisma ORM; separación por módulos (productos, pedidos, inventario, notificaciones, reportes). Frontend modular con Next.js, Zustand, MUI.
 - **Mantenibilidad:** TypeScript en todo el stack. Reutilizable, modular (funciones, componentes, hooks, estados globales). Fácil de leer y mantener.
 - **Localización:** Español; formatos de fecha y moneda locales (Bs).
@@ -102,12 +102,12 @@ Mapa rápido (el detalle campo por campo, abajo):
 | `Order` / `OrderItem` | Pedido y sus ítems (estándar o custom; MESA/LLEVAR). |
 | `Customer` | Cliente registrado (CI/NIT) para factura nominada y "pedidos del día"; opcional por venta. |
 | `InventoryItem` / `InventoryTransaction` / `InventoryBatch` | Inventario **cocido** transaccional, sus movimientos y lotes (opcional). Cada ítem de inventario pertenece a una sucursal. |
-| `ShiftChickenLog` | Ciclo **crudo** de presas por turno (PDR §2.3). |
+| `ShiftChickenLog` | Ciclo **crudo** de presas por turno ([PDR §2.3](pdr.md#23-inventario-por-presas)). |
 | `DailyManualConsumption` | Consumos manuales por turno (bolsas, vasos, etc.). |
 | `Voucher` | Vale del personal (descuenta nómina, no caja). |
-| `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno (PDR §2.11). |
+| `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). |
 | `Expense` | Gasto pagado desde caja. |
-| `AuditLog` | Rastro inmutable de acciones críticas (PDR §2.9). |
+| `AuditLog` | Rastro inmutable de acciones críticas ([PDR §2.9](pdr.md#29-auditoría)). |
 
 - **Branch** *(NUEVO - Multi-sucursal V1)*
   - `id: UUID`, `name: string`, `address: string`, `active: boolean` *(sucursal activa/inactiva)*
@@ -121,12 +121,12 @@ Mapa rápido (el detalle campo por campo, abajo):
 
 - **Variant**
   - `id: UUID`, `productId: UUID`, `name: string`, `components: JSON`, `isDefault: boolean`
-  - *Nota: NO se incluye campo de ajuste de precio. Por regla del negocio (PDR §2.1) las variantes y sustituciones no modifican el precio del producto. Si en V2 alguna variante necesita ajustar el precio base, se introducirá el campo con el nombre `priceAdjustment`.*
+  - *Nota: NO se incluye campo de ajuste de precio. Por regla del negocio ([PDR §2.1](pdr.md#21-precios-y-sustituciones)) las variantes y sustituciones no modifican el precio del producto. Si en V2 alguna variante necesita ajustar el precio base, se introducirá el campo con el nombre `priceAdjustment`.*
 
 - **Component** *(opcional)*
   - `id: UUID`, `name: string`, `type: enum(presa, acompanamiento, bebida, extra)`, `unitPrice: decimal`
 
-- **Customer (Cliente)** *(cliente registrado para factura nominada y vista de "pedidos del día" — PDR §2.12 / FR-019)*
+- **Customer (Cliente)** *(cliente registrado para factura nominada y vista de "pedidos del día" — [PDR §2.1](pdr.md#21-precios-y-sustituciones)2 / FR-019)*
   - `id: UUID`
   - `ci: string` *(cédula de identidad — **único**, indexado; clave de búsqueda)*
   - `nit: string?` *(para factura a nombre de empresa; también buscable. El cliente puede dictar **CI o NIT** para su factura)*
@@ -138,16 +138,16 @@ Mapa rápido (el detalle campo por campo, abajo):
   - *Registrar al cliente es **opcional por venta** → `Order.customerId` nullable ("S/N" si anónimo). La regla legal completa (umbral Bs 1.000, RND del SIN, por qué NO usar NIT `99001`) vive en [PDR §2.12](pdr.md#212-clientes-y-facturación-nominada).*
 
 - **Order**
-  - `id: UUID`, `type: enum(MESA, LLEVAR)` *(CUSTOM no es un tipo — es propiedad de la orden vía `isCustom`; ver PDR §2.8 / §2.10)*
+  - `id: UUID`, `type: enum(MESA, LLEVAR)` *(CUSTOM no es un tipo — es propiedad de la orden vía `isCustom`; ver [PDR §2.8](pdr.md#28-comandas-tickets-factura-y-notificaciones) / §2.10)*
   - `tableNumber: string?`, `customerName: string?` *(nombre para mostrar en comanda/factura; "S/N" si el cliente no se identifica. Es **snapshot** de visualización: no cambia si luego se edita el `Customer`)*
-  - `customerId: UUID?` *(referencia al `Customer` registrado; null si la venta es anónima/"S/N". **Agrupa** los pedidos del cliente para la vista del día — PDR §2.12 / FR-019)*
+  - `customerId: UUID?` *(referencia al `Customer` registrado; null si la venta es anónima/"S/N". **Agrupa** los pedidos del cliente para la vista del día — [PDR §2.1](pdr.md#21-precios-y-sustituciones)2 / FR-019)*
   - `publicToken: string` *(token aleatorio no adivinable — ej. `crypto.randomBytes(16).toString('hex')`, 128 bits — generado al crear la orden, **único** e indexado. Es la **credencial** de la vista pública del cliente: NO se usa el `id` interno ni un valor secuencial. Espacio 2^128 → no enumerable, FR-015)*
   - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)` *(`onHold` **reservado, SIN uso en V1** — ninguna regla de negocio lo define; el backend no lo produce ni lo acepta. Se activará con un caso real)*
   - `paymentStatus: enum(pending, paid, partial)` *(`partial` **reservado, SIN uso en V1** — mismo criterio)*, `paymentMethod: enum(cash, card, vale)?`
-  - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = `Σ(unitPrice × quantity)` de los ítems; PDR §2.11)*
-  - `total: decimal` *(total cobrado = `originalAmount − Σ(descuentos de los ítems)`; es el valor **derivado** y lo que entra a caja — PDR §2.11)*
-  - `isCustom: boolean` *(PDR §2.10 — true si la orden se creó vía endpoint custom; default false)*
-  - *Nota de migración (v1.2): el descuento **ya NO vive en `Order`** — los antiguos `Order.discountId` / `Order.discountAmount` quedan **eliminados**. El descuento se aplica **por plato** y vive en `OrderItem.discountId` / `OrderItem.discountAmount` (ver `OrderItem` abajo). El antiguo `internalDiscount: boolean` sigue eliminado: el "descuento al personal" es una instancia del catálogo `Discount` (availability `endOfShift`, sin autorización). Ver PDR §2.11.*
+  - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = `Σ(unitPrice × quantity)` de los ítems; [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
+  - `total: decimal` *(total cobrado = `originalAmount − Σ(descuentos de los ítems)`; es el valor **derivado** y lo que entra a caja — [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
+  - `isCustom: boolean` *([PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas) — true si la orden se creó vía endpoint custom; default false)*
+  - *Nota de migración (v1.2): el descuento **ya NO vive en `Order`** — los antiguos `Order.discountId` / `Order.discountAmount` quedan **eliminados**. El descuento se aplica **por plato** y vive en `OrderItem.discountId` / `OrderItem.discountAmount` (ver `OrderItem` abajo). El antiguo `internalDiscount: boolean` sigue eliminado: el "descuento al personal" es una instancia del catálogo `Discount` (availability `endOfShift`, sin autorización). Ver [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal).*
   - `cancelReason: string?`, `cancelDetails: string?`
   - `createdBy: userId`, `createdAt: datetime`, `paidAt: datetime?`, `cancelledAt: datetime?`
   - `readyAt: datetime?` *(timestamp de transición a `ready`; reemplaza una eventual entidad `NotificationLog`)*
@@ -163,13 +163,13 @@ Mapa rápido (el detalle campo por campo, abajo):
   - `discountAmount: decimal?` *(**snapshot por unidad** del `fixedAmount` vigente — NO una resta: se congela para que editar el catálogo no altere ventas pasadas. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas)*
   - `totalPrice: decimal` *(**derivado**: `(unitPrice − (discountAmount ?? 0)) × quantity`)*
   - `notes: string?`, `substitutions: JSON?`
-  - `customPieces: JSON?` *(ej. `[{type:"pecho",qty:2},{type:"ala",qty:1}]` — composición libre de presas para ítems de órdenes custom; ver PDR §2.10)*
+  - `customPieces: JSON?` *(ej. `[{type:"pecho",qty:2},{type:"ala",qty:1}]` — composición libre de presas para ítems de órdenes custom; ver [PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas))*
 
-- **InventoryItem** *(inventario transaccional — para presas representa el plano COCIDO del expositor; ver PDR §2.3)*
+- **InventoryItem** *(inventario transaccional — para presas representa el plano COCIDO del expositor; ver [PDR §2.3](pdr.md#23-inventario-por-presas))*
   - `id: UUID`, `productCode: string`, `name: string`
   - `unit: enum(presa, bolsa, unidad)`, `type: enum(pecho, ala, pierna, entrepierna, bebida, insumo)`
   - `currentStock: int`, `unitMeasure: string`
-  - `salePrice: decimal?` *(precio de venta unitario configurado por el admin. Para `type ∈ {pecho, ala, pierna, entrepierna}` es el precio de venta por presa que alimenta el **precio sugerido** de la venta custom — **ahora V1**, PDR §2.10. Es solo precio de VENTA: el sistema NO registra costo del pollo ni calcula margen.)*
+  - `salePrice: decimal?` *(precio de venta unitario configurado por el admin. Para `type ∈ {pecho, ala, pierna, entrepierna}` es el precio de venta por presa que alimenta el **precio sugerido** de la venta custom — **ahora V1**, [PDR §2.10](pdr.md#210-ventas-custom-presas-surtidas). Es solo precio de VENTA: el sistema NO registra costo del pollo ni calcula margen.)*
   - *Nota: el ciclo CRUDO de presas (reproceso, procesado, sobrante crudo) se modela aparte en `ShiftChickenLog`. `InventoryItem` con `type ∈ {pecho, ala, pierna, entrepierna}` representa siempre el inventario cocido vendible.*
     - `orderItemComponents: OrderItemComponent[]` *(relación inversa: componentes de ítems que remiten a este `InventoryItem` cuando aplica)*
 ### OrderItemComponent (componentes operacionales de un ítem)
@@ -196,13 +196,13 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
 - **InventoryTransaction**
   - `id: UUID`, `inventoryItemId: UUID`, `delta: int`
   - `reason: enum(sale, adjustment, reception, vale, manualConsumption)`
-  - *Nota: NO hay `reason` de descuento. Un descuento es **puramente monetario** (PDR §2.11): la venta con descuento descuenta inventario con `reason = sale` igual que cualquier otra, sobre el producto real vendido.*
+  - *Nota: NO hay `reason` de descuento. Un descuento es **puramente monetario** ([PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)): la venta con descuento descuenta inventario con `reason = sale` igual que cualquier otra, sobre el producto real vendido.*
   - `referenceId: UUID?`, `userId: UUID`, `note: string?`, `timestamp: datetime`
 
 - **DailyManualConsumption** *(consumos anotados por turno — bolsas de papa, smile, vasos, etc.)*
   - `id: UUID`, `shiftId: UUID`, `inventoryItemId: UUID`, `quantity: int`, `recordedBy: userId`, `recordedAt: datetime`
 
-- **ShiftChickenLog** *(ciclo CRUDO de presas anotado por el cocinero al cierre de turno — PDR §2.3 / FR-017)*
+- **ShiftChickenLog** *(ciclo CRUDO de presas anotado por el cocinero al cierre de turno — [PDR §2.3](pdr.md#23-inventario-por-presas) / FR-017)*
   - `id: UUID`, `shiftId: UUID`, `pieceType: enum(pecho, ala, pierna, entrepierna)`
   - `reprocessRaw: int` *(pollo crudo sobrante del turno anterior — autopoblado con `rawLeftover` del último `ShiftChickenLog` cerrado para el mismo `pieceType`; editable por el cocinero antes de confirmar)*
   - `processedRaw: int` *(pollo fresco marinado en este turno)*
@@ -217,14 +217,14 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
   - `workerId: UUID?` *(o `workerName: string` si el trabajador no es usuario del sistema)*
   - `productId: UUID?`, `productName: string` *(snapshot derivado de `productId`)*
   - `originalAmount: decimal` *(precio del producto, **derivado** de `productId`; el front NO lo envía)*
-  - `discountId: UUID?` *(opcional — instancia `Discount` "Descuento personal" aplicada al vale; null si el vale no lleva descuento — PDR §2.4 / §2.11)*
+  - `discountId: UUID?` *(opcional — instancia `Discount` "Descuento personal" aplicada al vale; null si el vale no lleva descuento — [PDR §2.4](pdr.md#24-vales-ventas-internas--descuento-por-nómina) / §2.11)*
   - `discountAmount: decimal?` *(**snapshot** del monto fijo del descuento al aplicarlo, ej. 7.00)*
   - `amount: decimal` *(monto final que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`; **derivado** por el backend, no lo manda el front)*
   - `issuedBy: userId`, `issuedAt: datetime`, `shiftId: UUID`
-  - `status: enum(issued, redeemed, cancelled)` *(`redeemed` y `cancelled` **reservados, SIN uso en V1** — el vale solo se emite; PDR §2.4 no define redención ni anulación)*, `note: string?`
+  - `status: enum(issued, redeemed, cancelled)` *(`redeemed` y `cancelled` **reservados, SIN uso en V1** — el vale solo se emite; [PDR §2.4](pdr.md#24-vales-ventas-internas--descuento-por-nómina) no define redención ni anulación)*, `note: string?`
   - *El vale no es un descuento (no suma a caja, descuenta nómina — [PDR §2.4](pdr.md#24-vales-ventas-internas--descuento-por-nómina)); puede llevar el "Descuento personal" con el mismo patrón snapshot de los ítems.*
 
-- **Discount** *(catálogo de descuentos creado por el admin — PDR §2.11. Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
+- **Discount** *(catálogo de descuentos creado por el admin — [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal). Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
   - `id: UUID`, `name: string`
   - `fixedAmount: decimal` *(monto fijo en Bs **por plato** — NO porcentaje en V1)*
   - `availability: enum(always, endOfShift)` *(`always` = todo el turno; `endOfShift` = solo a fin de turno)*
@@ -232,7 +232,7 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
   - `active: boolean`
   - *Las dos instancias principales ("Descuento personal" y "Compensación al cliente") con sus configs, contextos y porqués viven en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal). Puramente monetario: ver nota de `InventoryTransaction`.*
 
-- **DiscountAuthorization** *(habilitación que el admin otorga a la sesión de cajera de un turno para aplicar un `Discount` con `requiresAuthorization = true` — PDR §2.11 / FR-016b)*
+- **DiscountAuthorization** *(habilitación que el admin otorga a la sesión de cajera de un turno para aplicar un `Discount` con `requiresAuthorization = true` — [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) / FR-016b)*
   - `id: UUID`, `discountId: UUID`
   - `shiftId: UUID`, `cashierId: UUID` *(sesión/cajera beneficiada del turno)*
   - `authorizedBy: UUID` *(admin que la otorgó)*, `authorizedAt: datetime`
@@ -247,7 +247,7 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
   - `id: UUID`, `name: string` *(único)*, `displayOrder: int` *(orden dentro del día)*
   - `referenceStart: string?`, `referenceEnd: string?` *(horarios de REFERENCIA informativos, ej. "09:00"–"16:00" — **jamás se usan para clasificar**: el reloj puede estar mal configurado y los horarios cambian)*
   - `active: boolean`
-  - *El período se **declara al abrir el turno** — nunca se infiere del reloj. Quién confirma, por qué NO es atributo del `User` y el descarte de la inferencia por hora: [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); agenda semanal → V2 (PDR §13.2).*
+  - *El período se **declara al abrir el turno** — nunca se infiere del reloj. Quién confirma, por qué NO es atributo del `User` y el descarte de la inferencia por hora: [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); agenda semanal → V2 ([PDR §13.2](pdr.md#132-versión-2-roadmap-futuro--diferido-explícitamente)).*
 
 - **Shift / CashRegister**
   - `id: UUID`, `cashierId: UUID`, `cashRegisterId: UUID?`
@@ -342,7 +342,7 @@ stateDiagram-v2
 
 - **created → pendingPayment**
   - Acción: cajera registra pedido LLEVAR/delivery sin pago aún.
-  - Efecto: `paymentStatus = pending`. **NO decrementa inventario, NO contabiliza ingreso**. Se genera comanda digital y el pedido pasa directamente a preparación. La cancelación, si ocurre, es siempre manual y la realiza la cajera (PDR §2.5).
+  - Efecto: `paymentStatus = pending`. **NO decrementa inventario, NO contabiliza ingreso**. Se genera comanda digital y el pedido pasa directamente a preparación. La cancelación, si ocurre, es siempre manual y la realiza la cajera ([PDR §2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente)).
 
 - **confirmed → preparing / pendingPayment → preparing**
   - Acción: comanda digital aparece automáticamente en panel de despacho.
@@ -353,7 +353,7 @@ stateDiagram-v2
   - Efecto: `paymentStatus = paid`, `paidAt = now`. **Decremento atómico de inventario**. Contabiliza ingreso.
 
 - **pendingPayment → cancelled (manual — única forma)**
-  - Acción: cajera cancela manualmente. **No existe auto-cancelación por timeout** (PDR §2.5).
+  - Acción: cajera cancela manualmente. **No existe auto-cancelación por timeout** ([PDR §2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente)).
   - Efecto: `cancelledAt = now`, `cancelReason = "manual"`. Sin requerir motivo detallado. Inventario no se tocó, ingreso no se contabilizó.
 
 - **preparing → ready**
@@ -365,7 +365,7 @@ stateDiagram-v2
   - Efecto: `Order.deliveredAt = now`, `Order.deliveredBy = userId` registrados.
 
 - **delivered → closed**
-  - Acción: cierre administrativo — lo ejecuta **`POST /shifts/close`**: al cerrar el turno, todas las órdenes `delivered` del turno transicionan a `closed` en la misma operación (no hay endpoint dedicado; es exactamente el "típicamente al cierre de turno" de PDR §4).
+  - Acción: cierre administrativo — lo ejecuta **`POST /shifts/close`**: al cerrar el turno, todas las órdenes `delivered` del turno transicionan a `closed` en la misma operación (no hay endpoint dedicado; es exactamente el "típicamente al cierre de turno" de [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos)).
 
 - **(cualquier estado pagado) → cancelled (anulación)**
   - Acción: admin / cajera anula un pedido ya pagado.
@@ -444,7 +444,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, username, role }`) que el frontend envía como `Bearer` (FR-018). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
-- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` — gestión de usuarios por el admin (PDR §2.7): alta con rol, listado y edición (rol / activar / desactivar). El password viaja solo en alta/reset y se guarda hasheado (bcryptjs, §5.2)
+- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` — gestión de usuarios por el admin ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (rol / activar / desactivar). El password viaja solo en alta/reset y se guarda hasheado (bcryptjs, §5.2)
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
@@ -468,8 +468,8 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
 - `POST /api/v1/inventory/shift-chicken-log` — registrar/actualizar el ciclo crudo del turno (reproceso, procesado, sobrante crudo, sobrante cocido en expositor) por tipo de presa
 - `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
-- `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — PDR §13.3). Request en [§6.10](#610-cashopenresponse-éxito)
-- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo)). Además ejecuta el **cierre administrativo** de PDR §4: las órdenes `delivered` del turno transicionan a `closed` en la misma operación (extingue también las `DiscountAuthorization` y la sesión de cajera del turno)
+- `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). Request en [§6.10](#610-cashopenresponse-éxito)
+- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo)). Además ejecuta el **cierre administrativo** de [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos): las órdenes `delivered` del turno transicionan a `closed` en la misma operación (extingue también las `DiscountAuthorization` y la sesión de cajera del turno)
 - `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
 - `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
 - `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
@@ -495,7 +495,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 ## 5.2 Autenticación y autorización
 
-> **Decisión V1 (PDR §2.7 / FR-018):** el control de permisos por rol se aplica **en el backend**, no solo en la UI. La UI oculta pantallas por comodidad, pero **la frontera de seguridad es el backend**: valida el token y el rol en **cada** petición.
+> **Decisión V1 ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) / FR-018):** el control de permisos por rol se aplica **en el backend**, no solo en la UI. La UI oculta pantallas por comodidad, pero **la frontera de seguridad es el backend**: valida el token y el rol en **cada** petición.
 
 ### Enfoque elegido — liviano, sin Passport
 
@@ -573,7 +573,7 @@ listarVales() { /* ... */ }
 
 ### Matriz de autorización endpoint → roles
 
-Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio del PDR §2.7 a roles por endpoint. `ADMIN` siempre puede operar lo administrativo; las lecturas que el POS necesita se abren a los roles que las consumen.
+Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio del [PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) a roles por endpoint. `ADMIN` siempre puede operar lo administrativo; las lecturas que el POS necesita se abren a los roles que las consumen.
 
 | Endpoint | Roles permitidos |
 |----------|------------------|
@@ -611,7 +611,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 
 ### Sesión única por turno (FR-008b)
 
-Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 rol** (PDR §2.7). El login rechaza abrir una segunda sesión con otro rol en el turno vigente con un mensaje claro. No es responsabilidad del guard sino del servicio de auth/turnos.
+Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 rol** ([PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)). El login rechaza abrir una segunda sesión con otro rol en el turno vigente con un mensaje claro. No es responsabilidad del guard sino del servicio de auth/turnos.
 
 ## 5.3 Estructura de respuesta estándar
 
@@ -1089,7 +1089,7 @@ Response:
 
 ## 6.10 CashOpenResponse (éxito)
 
-Request (`POST /shifts/open` — el `periodId` viene preseleccionado en la pantalla como sugerencia **editable**, PDR §13.3; nunca inferido del reloj):
+Request (`POST /shifts/open` — el `periodId` viene preseleccionado en la pantalla como sugerencia **editable**, [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); nunca inferido del reloj):
 ```json
 { "openingAmount": 200.00, "cashRegisterId": "uuid-caja-1", "periodId": "uuid-period-manana" }
 ```
@@ -1377,7 +1377,7 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions: JSON` con `{from, to}`; sin campo de ajuste de precio |
 | Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount`; CRUD vía `/api/v1/discounts` |
 | Aplicar descuento POR PLATO (§2.11 / FR-016) | `discountId?` por ítem en `POST /orders[/custom]` (una llamada, §5.0 princ. 6) → `OrderItem.discountAmount` (snapshot) + totales derivados |
-| Instancias: descuento al personal / compensación al cliente (§2.11) | Filas del catálogo `Discount` referenciadas vía `OrderItem.discountId` (configs en PDR §2.11). Los antiguos `Order.internalDiscount`/`discountId`/`discountAmount` quedan **eliminados** |
+| Instancias: descuento al personal / compensación al cliente (§2.11) | Filas del catálogo `Discount` referenciadas vía `OrderItem.discountId` (configs en [PDR §2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). Los antiguos `Order.internalDiscount`/`discountId`/`discountAmount` quedan **eliminados** |
 | Autorización de descuentos por turno (§2.11 / FR-016b) | `DiscountAuthorization`; `POST /discounts/{id}/authorize`; se extingue al cerrar turno; acto auditado |
 | Precio sugerido en venta custom (§2.10) — **V1** | `InventoryItem.salePrice` por presa cocida (config admin vía `PATCH /inventory/{id}/sale-price`); cálculo `sum(customPieces[].qty × salePrice) + extras + bebidas`; la cajera puede pisarlo, se persiste el confirmado |
 | Pedido con pago pendiente (§2.5) | `Order.status = pendingPayment` + `paymentStatus = pending`; cancelación solo manual |
@@ -1408,3 +1408,5 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 - Este documento se mantiene sincronizado con el PDR. Cuando una regla de negocio cambia, esta guía se actualiza en consecuencia, **nunca al revés**.
 - Las **decisiones residuales** (umbral de discrepancia de arqueo, política contable de vales, etc.) están en [PDR §13.3 / §14](pdr.md) — no se duplican aquí.
 - Las **decisiones de scope V1 vs V2** están en [PDR §13](pdr.md) — este documento solo refleja **detalles técnicos** de cada decisión.
+
+
