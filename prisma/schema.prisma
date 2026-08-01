@@ -383,7 +383,7 @@ model OrderItemComponent {
 
 model InventoryItem {
   id           String            @id @default(uuid(7)) @db.Uuid
-  sku          String
+  productCode  String
   name         String
   unit         InventoryUnit
   type         InventoryItemType
@@ -404,7 +404,7 @@ model InventoryItem {
   manualConsumptions DailyManualConsumption[]
   orderItemComponents OrderItemComponent[]
 
-  @@unique([branchId, sku])
+  @@unique([branchId, productCode])
   @@index([type, active])
   @@index([branchId])
   @@map("inventory_items")
