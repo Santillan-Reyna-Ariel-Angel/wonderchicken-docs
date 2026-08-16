@@ -9,7 +9,7 @@
 
 **Alcance:** Documento de negocio y requisitos funcionales / no funcionales para que un LLM genere backend y frontend coherentes con las reglas operativas del restaurante.
 
-**Material de origen:** las citas textuales del documento oficial, el menú 2026, el inventario diario de ejemplo y los tickets reales del sistema actual de los que deriva este PDR viven en [`docs/business_context.md`](business_context.md).
+**Material de origen:** las citas textuales del documento oficial, el menú 2026, el inventario diario de ejemplo y los tickets reales del sistema actual de los que deriva este PDR viven en [`business_context.md`](business_context.md).
 
 ---
 
@@ -91,7 +91,7 @@
 ---
 
 # 2. Reglas de negocio (definitivas y no negociables)
-> Estas reglas son la base del producto: rigen la operación del restaurante y deben respetarse al implementar. La traducción técnica de cada regla (entidades, campos, endpoints) vive en [`docs/technical_guide.md`](technical_guide.md).
+> Estas reglas son la base del producto: rigen la operación del restaurante y deben respetarse al implementar. La traducción técnica de cada regla (entidades, campos, endpoints) vive en [`../backend/technical_guide.md`](../backend/technical_guide.md).
 
 ## 2.1 Precios y sustituciones
 - **Regla principal:** El precio del plato **NO cambia** cuando se sustituye su acompañamiento. Los platos vienen con 1 porción de mixto (papa + arroz) por defecto. El cliente puede sustituir esa porción mixta por 1 porción de arroz, 1 porción de papa o 1 porción de smiles, **manteniendo el precio base**.
@@ -183,7 +183,7 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
 ## 2.9 Auditoría
 - **Nivel V1:** solo se auditan **acciones críticas**: registro de venta, anulación de venta, ajuste de inventario, emisión de vale, apertura / cierre de caja, generación de reporte.
 - **Registro:** cada acción auditada deja constancia de quién, cuándo, qué entidad afectó y qué cambió.
-> La traducción técnica (entidad `AuditLog`, patrón de implementación y atomicidad) vive en [`docs/technical_guide.md` §4.3](technical_guide.md#43-auditoría--implementación-v1).
+> La traducción técnica (entidad `AuditLog`, patrón de implementación y atomicidad) vive en [`../backend/technical_guide.md` §4.3](../backend/technical_guide.md#43-auditoría--implementación-v1).
 
 ## 2.10 Ventas custom (presas surtidas)
 - **Caso de uso:** a veces los clientes piden combinaciones que no encajan con los platos del menú (ej. "vendéme 2 pechos sueltos", "1 ala + 1 pierna + arroz"). Hoy la cajera fuerza la venta seleccionando un plato de precio similar y descuenta inventario manualmente. El nuevo sistema debe soportar esto de forma nativa.
@@ -236,7 +236,7 @@ Cada tipo de presa cocida (pecho, ala, pierna, entrepierna) lleva un **precio de
 > Decisión de arquitectura para quien implemente. El requisito es **"el admin crea descuentos y la cajera los aplica por plato"** — esa configurabilidad ES la feature, así que se justifica un **catálogo mínimo** de descuentos (entidad `Discount`: nombre, monto fijo por plato, disponibilidad, activo). NO confundir con un motor de reglas:
 - **Alcance acotado a propósito:** exactamente lo definido en el bloque Feature (monto fijo, nivel ítem, sin apilamiento, ventanas `siempre`/`fin de turno`) y nada más. Si en el futuro hace falta %, apilamiento o combinaciones de descuentos, se agrega **con un caso real**, no antes.
 - **La autorización por turno es la única excepción de control, y entra con un caso real:** el descuento de compensación al cliente exige que el admin habilite a la cajera, así que el catálogo suma **un flag `requiereAutorizacion`** en el `Discount` y una **autorización por turno** (admin → sesión de cajera). Sigue sin ser un motor de reglas: es un **flag de habilitación a nivel turno** (autorizado sí/no), NO un contador de usos ni una cuota por pedido o por plato. Una vez autorizada, la cajera aplica el descuento sin límite de cantidad hasta el cierre del turno.
-- **El monto se congela en la transacción (snapshot), NO se deriva de una resta:** al aplicar un descuento, **cada plato (ítem) marcado copia** el `discountAmount` del **monto fijo vigente** en el catálogo (ej. 7 Bs) y guarda la referencia al `Discount`. Ojo: con monto fijo el `discountAmount` **es el valor que fijó el admin**, no el resultado de una resta — al revés, los totales son los derivados (precio del ítem = `(unitPrice − discountAmount) × cantidad`; total de la orden = `precio_original − suma de descuentos de los platos`). Se congela en el ítem para que, si el admin edita el descuento después (de 7 a 10 Bs), las ventas viejas conserven los 7 Bs con que realmente se cobraron. Detalle de campos en [`docs/technical_guide.md` §3](technical_guide.md).
+- **El monto se congela en la transacción (snapshot), NO se deriva de una resta:** al aplicar un descuento, **cada plato (ítem) marcado copia** el `discountAmount` del **monto fijo vigente** en el catálogo (ej. 7 Bs) y guarda la referencia al `Discount`. Ojo: con monto fijo el `discountAmount` **es el valor que fijó el admin**, no el resultado de una resta — al revés, los totales son los derivados (precio del ítem = `(unitPrice − discountAmount) × cantidad`; total de la orden = `precio_original − suma de descuentos de los platos`). Se congela en el ítem para que, si el admin edita el descuento después (de 7 a 10 Bs), las ventas viejas conserven los 7 Bs con que realmente se cobraron. Detalle de campos en [`../backend/technical_guide.md` §3](../backend/technical_guide.md).
 - **Los vales (§2.4) NO son descuentos:** no suman a caja y descuentan nómina — concepto aparte, no se mezclan en este feature.
 
 ---
@@ -253,12 +253,12 @@ Cada tipo de presa cocida (pecho, ala, pierna, entrepierna) lleva un **precio de
 ---
 
 # 3. Modelo de datos
-> **Trasladado a la guía técnica.** El detalle de entidades, campos y relaciones del esquema lógico de base de datos vive en [`docs/technical_guide.md` §3](technical_guide.md). Este PDR mantiene únicamente las reglas de negocio que esas entidades deben respetar.
+> **Trasladado a la guía técnica.** El detalle de entidades, campos y relaciones del esquema lógico de base de datos vive en [`../backend/technical_guide.md` §3](../backend/technical_guide.md). Este PDR mantiene únicamente las reglas de negocio que esas entidades deben respetar.
 
 ---
 
 # 4. Máquina de estados de pedidos
-> Los efectos transaccionales detallados (campos, timestamps, reversiones de inventario) viven en [`docs/technical_guide.md` §4](technical_guide.md). Esta sección describe los estados y las reglas de negocio que rigen las transiciones.
+> Los efectos transaccionales detallados (campos, timestamps, reversiones de inventario) viven en [`../backend/technical_guide.md` §4](../backend/technical_guide.md). Esta sección describe los estados y las reglas de negocio que rigen las transiciones.
 
 **Estados:** registrado → confirmado → en preparación → listo → entregado → cerrado.
 Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
@@ -277,12 +277,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 5. Requerimientos funcionales (completos) y criterios de aceptación
-> **Trasladado a un documento dedicado.** El detalle de los requerimientos funcionales (FR-001 a FR-017) con sus criterios de aceptación vive en [`docs/requirements.md` §1](requirements.md). Este PDR mantiene las reglas de negocio (§2) que esos FR deben respetar y el alcance V1/V2 (§13).
+> **Trasladado a un documento dedicado.** El detalle de los requerimientos funcionales (FR-001 a FR-017) con sus criterios de aceptación vive en [`requirements.md` §1](requirements.md). Este PDR mantiene las reglas de negocio (§2) que esos FR deben respetar y el alcance V1/V2 (§13).
 
 ---
 
 # 6. Requerimientos no funcionales
-> **Trasladado a un documento dedicado.** Las calidades de uso de cara al negocio viven en [`docs/requirements.md` §2](requirements.md). El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`docs/technical_guide.md` §2](technical_guide.md).
+> **Trasladado a un documento dedicado.** Las calidades de uso de cara al negocio viven en [`requirements.md` §2](requirements.md). El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`../backend/technical_guide.md` §2](../backend/technical_guide.md).
 
 ---
 
@@ -323,12 +323,12 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 8. API y contratos
-> **Trasladado a la guía técnica.** El catálogo de endpoints, la estructura de respuesta estándar (éxito/error), los códigos de error y las reglas de seguridad viven en [`docs/technical_guide.md` §5](technical_guide.md).
+> **Trasladado a la guía técnica.** El catálogo de endpoints, la estructura de respuesta estándar (éxito/error), los códigos de error y las reglas de seguridad viven en [`../backend/technical_guide.md` §5](../backend/technical_guide.md).
 
 ---
 
 # 9. Anexos técnicos
-> **Trasladado a la guía técnica.** Los JSON payloads de ejemplo, el OpenAPI skeleton y los 15 casos de prueba E2E priorizados viven en [`docs/technical_guide.md` §6 / §7 / §8](technical_guide.md).
+> **Trasladado a la guía técnica.** Los JSON payloads de ejemplo, el OpenAPI skeleton y los 15 casos de prueba E2E priorizados viven en [`../backend/technical_guide.md` §6 / §7 / §8](../backend/technical_guide.md).
 
 ---
 
@@ -348,16 +348,16 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 # 11. Despliegue
-> **Trasladado a la guía técnica.** El detalle de modo de operación, distribución, sincronización a nube y backups vive en [`docs/technical_guide.md` §9](technical_guide.md).
+> **Trasladado a la guía técnica.** El detalle de modo de operación, distribución, sincronización a nube y backups vive en [`../backend/technical_guide.md` §9](../backend/technical_guide.md).
 >
 > Resumen para negocio: en **V1** el sistema corre localmente en el restaurante (sin nube). La **sincronización a la nube y los backups automáticos** son parte de la **V2** (ver §13).
 
 ---
 
 # 12. Criterios de aceptación del MVP (resumen)
-> **Trasladado.** Los criterios de aceptación **verificables** viven junto a cada FR en [`docs/requirements.md`](requirements.md#1-requerimientos-funcionales-completos-y-criterios-de-aceptación) ([FR-001](requirements.md#fr-001--gestión-de-productos-y-variantes-alta)…[FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta)); el **alcance consolidado** está en [§13](#13-alcance-v1-mvp-vs-v2-futuro). El MVP se acepta cuando todos los FR de prioridad Alta cumplen su criterio.
+> **Trasladado.** Los criterios de aceptación **verificables** viven junto a cada FR en [`requirements.md`](requirements.md#1-requerimientos-funcionales-completos-y-criterios-de-aceptación) ([FR-001](requirements.md#fr-001--gestión-de-productos-y-variantes-alta)…[FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta)); el **alcance consolidado** está en [§13](#13-alcance-v1-mvp-vs-v2-futuro). El MVP se acepta cuando todos los FR de prioridad Alta cumplen su criterio.
 
-> **Stack tecnológico:** especificado en [`docs/technical_guide.md` §1](technical_guide.md).
+> **Stack tecnológico:** especificado en [`../backend/technical_guide.md` §1](../backend/technical_guide.md).
 
 ---
 
@@ -375,16 +375,16 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 | Notificaciones | Pantalla pública de tickets de banco solo con número de pedido (MESA y LLEVAR), con persistencia de momentos de listo/entrega. | [FR-007](requirements.md#fr-007--notificación-de-pedido-listo-alta); [§2.8](#28-comandas-tickets-factura-y-notificaciones) |
 | Usuarios, roles y sesiones | Roles funcionales con permisos por rol enforced en backend vía JWT; sesión única por turno. | [FR-008](requirements.md#fr-008--interfaces-diferenciadas-por-rol-alta), [FR-008b](requirements.md#fr-008b--sesión-única-por-turno-alta), [FR-018](requirements.md#fr-018--autenticación-jwt-y-autorización-por-rol-alta); [§2.7](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) |
 | Reportes y auditoría | Reportes MVP (ventas por turno/día, inventario de presas, arqueo) exportables CSV; auditoría de acciones críticas. | [FR-010](requirements.md#fr-010--reportes-alta); [§2.9](#29-auditoría) |
-| Despliegue | Web local on-premise. | [§11](#11-despliegue); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Despliegue | Web local on-premise. | [§11](#11-despliegue); [../backend/technical_guide.md §9](../backend/technical_guide.md#9-despliegue-backups-y-sincronización) |
 
 | Área | V2 (Futuro) — Diferido explícitamente | Referencias |
 |------|---------------------------------------|-------------|
 | Modalidad auto-servicio | POS para cliente final sin cajera, total calculado automático por precio de venta por presa; cuenta cliente con auto-registro/login y acceso autenticado a pedidos propios (`GET /me/orders`). | [§2.10](#210-ventas-custom-presas-surtidas) (visión V2), [§2.12](#212-clientes-y-facturación-nominada), [§7.4](#74-vista-del-cliente-su-comanda); [FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) |
 | Reportes adicionales | Productos más vendidos; discrepancias automáticas entre caja esperada y contada. | [FR-010](requirements.md#fr-010--reportes-alta); [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1) |
 | Agenda semanal de personal | Rostering persona→día→turno→rol, con preselección/validaciones automáticas sobre quién trabaja cada turno. | [§2.7](#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend), [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1) |
-| Backups y persistencia | Backup diario automático; backup manual on-demand desde UI; cierre de política contable formal de vales. | [§11](#11-despliegue), [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
-| Sincronización a nube | Esquema híbrido local+nube con sincronización diferencial, resolución de conflictos y operación offline tolerable. | [§11](#11-despliegue); [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
-| Distribución | Empaquetado estandarizado para portabilidad cross-host y onboarding rápido. | [docs/technical_guide.md §9](technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Backups y persistencia | Backup diario automático; backup manual on-demand desde UI; cierre de política contable formal de vales. | [§11](#11-despliegue), [§13.3](#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); [../backend/technical_guide.md §9](../backend/technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Sincronización a nube | Esquema híbrido local+nube con sincronización diferencial, resolución de conflictos y operación offline tolerable. | [§11](#11-despliegue); [../backend/technical_guide.md §9](../backend/technical_guide.md#9-despliegue-backups-y-sincronización) |
+| Distribución | Empaquetado estandarizado para portabilidad cross-host y onboarding rápido. | [../backend/technical_guide.md §9](../backend/technical_guide.md#9-despliegue-backups-y-sincronización) |
 
 ---
 
@@ -409,7 +409,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 ---
 
 ## Observación final (para el LLM y el equipo)
-Este PRD está centrado en las **reglas de negocio** y en la **consistencia transaccional** (ventas ↔ inventario ↔ arqueo). La implementación técnica (modelo de datos, API, payloads, despliegue) vive en [`docs/technical_guide.md`](technical_guide.md).
+Este PRD está centrado en las **reglas de negocio** y en la **consistencia transaccional** (ventas ↔ inventario ↔ arqueo). La implementación técnica (modelo de datos, API, payloads, despliegue) vive en [`../backend/technical_guide.md`](../backend/technical_guide.md).
 
 **Reglas críticas de negocio que NO se pueden alterar al implementar** (detalle y porqués en cada sección):
 1. La sustitución de acompañamiento NO modifica el precio del plato (§2.1).

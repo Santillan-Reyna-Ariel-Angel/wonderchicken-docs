@@ -1,13 +1,13 @@
 # Requerimientos — Wonder Chicken
 **Sistema Informático de Ventas — Requerimientos Funcionales y No Funcionales**
-**Complementa:** [docs/pdr.md](pdr.md) (reglas de negocio) y [docs/technical_guide.md](technical_guide.md) (traducción técnica)
-**Material de origen:** [docs/business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
+**Complementa:** [pdr.md](pdr.md) (reglas de negocio) y [../backend/technical_guide.md](../backend/technical_guide.md) (traducción técnica)
+**Material de origen:** [business_context.md](business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
 **Versión:** 1.0
 **Fecha:** 2026-06-06
 
 > Este documento concentra los **requerimientos funcionales (FR)** y **no funcionales (NFR de negocio)** del sistema, extraídos del PDR para facilitar su lectura, trazabilidad y uso como base de pruebas (E2E/automáticas).
 >
-> **Referencias cruzadas:** las menciones a `§2.x`, `§4`, `§13`, etc. apuntan a las secciones del [PDR](pdr.md) (reglas de negocio). Las menciones a la **guía técnica** apuntan a [docs/technical_guide.md](technical_guide.md) (modelo de datos, API, payloads).
+> **Referencias cruzadas:** las menciones a `§2.x`, `§4`, `§13`, etc. apuntan a las secciones del [PDR](pdr.md) (reglas de negocio). Las menciones a la **guía técnica** apuntan a [../backend/technical_guide.md](../backend/technical_guide.md) (modelo de datos, API, payloads).
 >
 > **Precedencia:** si un criterio de este documento entra en conflicto con una regla de negocio del PDR, **la regla del PDR gana**.
 
@@ -168,7 +168,7 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 ---
 
 # 2. Requerimientos no funcionales
-> El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`docs/technical_guide.md` §2](technical_guide.md). Esta sección enumera únicamente las calidades de uso de cara al negocio:
+> El detalle de NFR técnicos (rendimiento, seguridad, escalabilidad, multiplataforma, impresión, despliegue, backups) vive en [`../backend/technical_guide.md` §2](../backend/technical_guide.md). Esta sección enumera únicamente las calidades de uso de cara al negocio:
 
 - **Velocidad de uso:** El POS debe permitir registrar una venta en 3 pasos como máximo. Las pantallas deben ser limpias y responder al instante en hora pico.
 - **Idioma y moneda:** Español por defecto; montos en bolivianos (Bs).
@@ -181,7 +181,7 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 ## Trazabilidad
 
 - **Reglas de negocio que originan cada FR/NFR:** [docs/pdr.md §2](pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables) (reglas definitivas) y [§13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro) (alcance V1 vs V2).
-- **Traducción técnica (modelo de datos, endpoints, payloads, casos E2E):** [docs/technical_guide.md](technical_guide.md).
-- **Máquina de estados de pedidos:** [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos) (negocio) y [technical guide §4](technical_guide.md#4-reglas-transaccionales-y-auditoría-v1) (transaccional).
+- **Traducción técnica (modelo de datos, endpoints, payloads, casos E2E):** [../backend/technical_guide.md](../backend/technical_guide.md).
+- **Máquina de estados de pedidos:** [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos) (negocio) y [technical guide §4](../backend/technical_guide.md#4-reglas-transaccionales-y-auditoría-v1) (transaccional).
 
 

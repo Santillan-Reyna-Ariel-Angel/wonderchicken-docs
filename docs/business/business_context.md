@@ -2,11 +2,8 @@
 **Sistema Informático de Ventas — Material de origen**
 
 > **Qué es este documento:** la **evidencia cruda** del trabajo de titulación — citas textuales del documento oficial, menú 2026, inventario diario de ejemplo y tickets reales del sistema a reemplazar. Es el **material de origen** del que se deriva el [`pdr.md`](pdr.md).
->
 > **No es normativo.** Acá vive el *insumo* (lo observado, lo entrevistado, lo medido); las **reglas definitivas** viven en el [`pdr.md`](pdr.md). Ante cualquier conflicto, **gana el PDR**.
->
-> **Cadena:** `business_context.md` (origen) → [`pdr.md`](pdr.md) (reglas) → resto de la documentación. Mapa completo en [`indice_pdr.md`](indice_pdr.md).
-
+> **Cadena:** `business_context.md` (origen) → [`pdr.md`](pdr.md) (reglas) → resto de la documentación. Mapa completo en [`index.md`](../index.md).
 ---
 
 ## Índice

@@ -30,12 +30,12 @@ El orden va de lo abstracto a lo concreto: cada documento **depende del anterior
 | # | Documento | Qué es y qué responde |
 | - | --------- | --------------------- |
 | 1 | [Mapa de relaciones (abajo)](#mapa-de-relaciones-entre-documentos) | **Orientación primero:** cómo se relacionan los documentos y la regla de precedencia. |
-| 2 | [business_context.md](business_context.md) | **El origen (la EVIDENCIA).** Citas del documento de titulación, menú 2026, inventario diario, tickets reales. Alimenta al PDR. *No normativo.* |
-| 3 | [pdr.md](pdr.md) | **El negocio (QUÉ y PORQUÉ) — fuente de verdad.** Reglas definitivas, estados, alcance V1/V2, UX. |
-| 4 | [requirements.md](requirements.md) | **El QUÉ verificable.** FR-001…FR-019 + NFR de negocio, con criterios de aceptación. |
-| 5 | [technical_guide.md](technical_guide.md) | **El CÓMO.** Modelo de datos, contrato de la API, payloads, NFR técnicos, casos E2E, despliegue. |
-| 6 | [architecture_overview.md](architecture_overview.md) | **El código.** Mapa del backend NestJS: módulos, lifecycle de un request, dónde vive cada cosa. |
-| 7 | [implementation_guide.md](implementation_guide.md) | **El ORDEN de construcción (V1).** Qué archivo crear en cada paso, sprint por sprint, con definición de terminado por sprint. |
+| 2 | [business_context.md](business/business_context.md) | **El origen (la EVIDENCIA).** Citas del documento de titulación, menú 2026, inventario diario, tickets reales. Alimenta al PDR. *No normativo.* |
+| 3 | [pdr.md](business/pdr.md) | **El negocio (QUÉ y PORQUÉ) — fuente de verdad.** Reglas definitivas, estados, alcance V1/V2, UX. |
+| 4 | [requirements.md](business/requirements.md) | **El QUÉ verificable.** FR-001…FR-019 + NFR de negocio, con criterios de aceptación. |
+| 5 | [technical_guide.md](backend/technical_guide.md) | **El CÓMO.** Modelo de datos, contrato de la API, payloads, NFR técnicos, casos E2E, despliegue. |
+| 6 | [architecture_overview.md](backend/architecture_overview.md) | **El código.** Mapa del backend NestJS: módulos, lifecycle de un request, dónde vive cada cosa. |
+| 7 | [implementation_guide.md](backend/implementation_guide.md) | **El ORDEN de construcción (V1).** Qué archivo crear en cada paso, sprint por sprint, con definición de terminado por sprint. |
 
 ---
 
@@ -47,19 +47,19 @@ El orden va de lo abstracto a lo concreto: cada documento **depende del anterior
 
 | Archivo | Qué es | Cómo usarlo |
 | ------- | ------ | ----------- |
-| [pdr_questions_pending.txt](pdr_questions_pending.txt) | **Backlog de preguntas abiertas del negocio**: decisiones aún `[SIN RESPUESTA]`, `[AMBIGUA]` o `[FALTANTE EN DOC]`, priorizadas (críticas / importantes / a verificar). | A medida que el negocio responde, **trasladá la decisión al [pdr.md](pdr.md)** (la fuente de verdad) y remové/marcá la pregunta acá. El PDR manda; este archivo solo lista lo que falta definir. |
+| [pdr_questions_pending.txt](business/pdr_questions_pending.txt) | **Backlog de preguntas abiertas del negocio**: decisiones aún `[SIN RESPUESTA]`, `[AMBIGUA]` o `[FALTANTE EN DOC]`, priorizadas (críticas / importantes / a verificar). | A medida que el negocio responde, **trasladá la decisión al [pdr.md](business/pdr.md)** (la fuente de verdad) y remové/marcá la pregunta acá. El PDR manda; este archivo solo lista lo que falta definir. |
 
 > **Estado actual:** las preguntas críticas de Fase 1 (máquina de estados, arqueo, vales) ya fueron
-> respondidas y están codificadas como reglas en [PDR §2](pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables).
-> Lo que sigue abierto vive en la tabla de decisiones residuales de [PDR §13.3](pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1).
+> respondidas y están codificadas como reglas en [PDR §2](business/pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables).
+> Lo que sigue abierto vive en la tabla de decisiones residuales de [PDR §13.3](business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1).
 
 ---
 
 ## Mapa de relaciones entre documentos
 
 > Diagramas para **entender los documentos** del proyecto y **cómo se relacionan**.
-> La máquina de estados transaccional vive en [`technical_guide.md` §4](technical_guide.md#4-máquina-de-estados-de-pedidos-transaccional);
-> el **diagrama ER se genera** desde [`prisma/schema.prisma`](../prisma/schema.prisma) — no se dibuja a mano (ver nota en [`technical_guide.md` §3.3](technical_guide.md#33-diagrama-de-relaciones-er)).
+> La máquina de estados transaccional vive en [`technical_guide.md` §4](backend/technical_guide.md#4-máquina-de-estados-de-pedidos-transaccional);
+> el **diagrama ER se genera** desde [`prisma/schema.prisma`](../prisma/schema.prisma) — no se dibuja a mano (ver nota en [`technical_guide.md` §3.3](backend/technical_guide.md#33-diagrama-de-relaciones-er)).
 
 ### 1. Los documentos y su rol
 
@@ -68,7 +68,7 @@ Cada archivo tiene **una responsabilidad** y **no se pisan** entre sí. El PDR d
 ```mermaid
 flowchart TB
     subgraph entrada["🚪 Entrada"]
-        IDX["📑 indice_pdr.md<br/><i>Índice navegable</i><br/>Mapa con anchors a cada sección"]
+        IDX["📑 index.md<br/><i>Índice navegable</i><br/>Mapa con anchors a cada sección"]
     end
 
     subgraph origen["📄 Origen (la EVIDENCIA)"]
@@ -119,13 +119,13 @@ flowchart TB
 
 | Documento | Responde a | Contiene | NO contiene |
 | --- | --- | --- | --- |
-| [`indice_pdr.md`](indice_pdr.md) | *"¿Dónde está X?"* | Anchors a cada sección de los otros 4 | Contenido propio |
-| [`business_context.md`](business_context.md) | *"¿De dónde sacamos esto?"* | Citas del documento oficial, menú, inventario diario, tickets reales | Reglas normativas (las deriva el PDR) |
-| [`pdr.md`](pdr.md) | *"¿Por qué el negocio funciona así?"* | Reglas (§2), estados (§4), alcance V1/V2 (§13), UX (§7) | Modelo de datos, endpoints, FR detallados (los **trasladó**) |
-| [`requirements.md`](requirements.md) | *"¿Qué debe hacer y cómo lo pruebo?"* | FR-001..FR-019 + criterios de aceptación, NFR de negocio | Reglas (referencia al PDR), detalle técnico |
-| [`technical_guide.md`](technical_guide.md) | *"¿Cómo lo construyo?"* | Stack, modelo Prisma, endpoints, payloads, E2E, despliegue | Reglas de negocio (referencia al PDR) |
-| [`architecture_overview.md`](architecture_overview.md) | *"¿Dónde vive esto en el repo?"* | Módulos NestJS, lifecycle de un request, endpoints reales, vista del Prisma | Reglas, FR, contrato detallado (referencia al PDR y a la guía técnica) |
-| [`implementation_guide.md`](implementation_guide.md) | *"¿En qué orden lo construyo?"* | Archivos a crear paso a paso por sprint, ajustes de dependencia técnica, DoD por sprint, mapa FR→sprint | Reglas ni contratos (los referencia) |
+| [`index.md`](index.md) | *"¿Dónde está X?"* | Anchors a cada sección de los otros 4 | Contenido propio |
+| [`business_context.md`](business/business_context.md) | *"¿De dónde sacamos esto?"* | Citas del documento oficial, menú, inventario diario, tickets reales | Reglas normativas (las deriva el PDR) |
+| [`pdr.md`](business/pdr.md) | *"¿Por qué el negocio funciona así?"* | Reglas (§2), estados (§4), alcance V1/V2 (§13), UX (§7) | Modelo de datos, endpoints, FR detallados (los **trasladó**) |
+| [`requirements.md`](business/requirements.md) | *"¿Qué debe hacer y cómo lo pruebo?"* | FR-001..FR-019 + criterios de aceptación, NFR de negocio | Reglas (referencia al PDR), detalle técnico |
+| [`technical_guide.md`](backend/technical_guide.md) | *"¿Cómo lo construyo?"* | Stack, modelo Prisma, endpoints, payloads, E2E, despliegue | Reglas de negocio (referencia al PDR) |
+| [`architecture_overview.md`](backend/architecture_overview.md) | *"¿Dónde vive esto en el repo?"* | Módulos NestJS, lifecycle de un request, endpoints reales, vista del Prisma | Reglas, FR, contrato detallado (referencia al PDR y a la guía técnica) |
+| [`implementation_guide.md`](backend/implementation_guide.md) | *"¿En qué orden lo construyo?"* | Archivos a crear paso a paso por sprint, ajustes de dependencia técnica, DoD por sprint, mapa FR→sprint | Reglas ni contratos (los referencia) |
 
 ### 2. La regla de oro: PRECEDENCIA
 
@@ -157,7 +157,7 @@ flowchart LR
 ```
 
 > Lo declaran los tres documentos explícitamente en sus cabeceras:
-> [`requirements.md`](requirements.md) · [`technical_guide.md`](technical_guide.md) · [`architecture_overview.md`](architecture_overview.md)
+> [`requirements.md`](business/requirements.md) · [`technical_guide.md`](backend/technical_guide.md) · [`architecture_overview.md`](backend/architecture_overview.md)
 
 ### 3. Cómo "viaja" una decisión: del negocio al código
 
@@ -187,16 +187,16 @@ flowchart TB
 
 | Concepto | Regla (PDR) | Requerimiento | Técnica |
 | --- | --- | --- | --- |
-| Venta custom | [§2.10](pdr.md#210-ventas-custom-presas-surtidas) | [FR-002b](requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta) | `POST /orders/custom`, `Order.isCustom`, `customPieces`, `OrderItemComponent` (una fila por presa/bebida vendida), `OrderItem.snapshot` (Json) |
-| Inventario por presas | [§2.3](pdr.md#23-inventario-por-presas) | [FR-006](requirements.md#fr-006--inventario-por-presas-alta), [FR-017](requirements.md#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media) | `InventoryItem`, `ShiftChickenLog`, `InventoryTransaction`, `OrderItemComponent` (fuente de verdad de consumo por ítem), `OrderItem.snapshot` (Json para impresión/auditoría) |
-| Pago pendiente | [§2.5](pdr.md#25-pedidos-delivery-y-pago-pendiente) | [FR-011](requirements.md#fr-011--pedidos-con-pago-pendiente-alta) | `Order.status=pendingPayment`, sin auto-cancel |
-| Descuentos | [§2.11](pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) | [FR-016/016b](requirements.md#fr-016--gestión-de-descuentos-y-aplicación-en-pos-media) | `Discount`, `DiscountAuthorization` |
-| Clientes y vista del cliente | [§2.12](pdr.md#212-clientes-y-facturación-nominada) | [FR-015](requirements.md#fr-015--vista-pública-del-cliente-alta) / [FR-019](requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) | `Customer`, `Order.customerId`, `Order.publicToken`, `GET /public/orders/{token}`, `GET/POST /customers` |
-| Notificación listo | [§2.8](pdr.md#28-comandas-tickets-factura-y-notificaciones) | [FR-007](requirements.md#fr-007--notificación-de-pedido-listo-alta) | `Order.readyAt`, pantalla pública |
-| Auth y roles | [§2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) | [FR-008](requirements.md#fr-008--interfaces-diferenciadas-por-rol-alta) / [FR-018](requirements.md#fr-018--autenticación-jwt-y-autorización-por-rol-alta) | `AuthGuard` (JWT) + `RolesGuard` + `@Roles` ([tech §5.2](technical_guide.md#52-autenticación-y-autorización)) |
-| Auditoría | [§2.9](pdr.md#29-auditoría) | — | `AuditLog`, audit explícito en la transacción ([tech §4.3](technical_guide.md#43-auditoría--implementación-v1)) |
+| Venta custom | [§2.10](business/pdr.md#210-ventas-custom-presas-surtidas) | [FR-002b](business/requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta) | `POST /orders/custom`, `Order.isCustom`, `customPieces`, `OrderItemComponent` (una fila por presa/bebida vendida), `OrderItem.snapshot` (Json) |
+| Inventario por presas | [§2.3](business/pdr.md#23-inventario-por-presas) | [FR-006](business/requirements.md#fr-006--inventario-por-presas-alta), [FR-017](business/requirements.md#fr-017--registro-de-consumos-manuales-y-ciclo-crudo-de-presas-por-turno-media) | `InventoryItem`, `ShiftChickenLog`, `InventoryTransaction`, `OrderItemComponent` (fuente de verdad de consumo por ítem), `OrderItem.snapshot` (Json para impresión/auditoría) |
+| Pago pendiente | [§2.5](business/pdr.md#25-pedidos-delivery-y-pago-pendiente) | [FR-011](business/requirements.md#fr-011--pedidos-con-pago-pendiente-alta) | `Order.status=pendingPayment`, sin auto-cancel |
+| Descuentos | [§2.11](business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) | [FR-016/016b](business/requirements.md#fr-016--gestión-de-descuentos-y-aplicación-en-pos-media) | `Discount`, `DiscountAuthorization` |
+| Clientes y vista del cliente | [§2.12](business/pdr.md#212-clientes-y-facturación-nominada) | [FR-015](business/requirements.md#fr-015--vista-pública-del-cliente-alta) / [FR-019](business/requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) | `Customer`, `Order.customerId`, `Order.publicToken`, `GET /public/orders/{token}`, `GET/POST /customers` |
+| Notificación listo | [§2.8](business/pdr.md#28-comandas-tickets-factura-y-notificaciones) | [FR-007](business/requirements.md#fr-007--notificación-de-pedido-listo-alta) | `Order.readyAt`, pantalla pública |
+| Auth y roles | [§2.7](business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) | [FR-008](business/requirements.md#fr-008--interfaces-diferenciadas-por-rol-alta) / [FR-018](business/requirements.md#fr-018--autenticación-jwt-y-autorización-por-rol-alta) | `AuthGuard` (JWT) + `RolesGuard` + `@Roles` ([tech §5.2](backend/technical_guide.md#52-autenticación-y-autorización)) |
+| Auditoría | [§2.9](business/pdr.md#29-auditoría) | — | `AuditLog`, audit explícito en la transacción ([tech §4.3](backend/technical_guide.md#43-auditoría--implementación-v1)) |
 
-> La tabla completa de mapeo Negocio → Técnica está en [`technical_guide.md` §10](technical_guide.md#10-mapeo-negocio--técnica).
+> La tabla completa de mapeo Negocio → Técnica está en [`technical_guide.md` §10](backend/technical_guide.md#10-mapeo-negocio--técnica).
 
 ### 4. Ruta de lectura según tu rol
 
@@ -273,15 +273,16 @@ flowchart LR
 
 | Si buscás... | Andá a |
 | --- | --- |
-| El porqué de una regla | [`pdr.md` §2](pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables) |
-| Qué hace una feature + cómo se prueba | [`requirements.md` §1](requirements.md#1-requerimientos-funcionales-completos-y-criterios-de-aceptación) |
-| Entidades y campos | [`technical_guide.md` §3](technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd) |
-| Endpoints y payloads | [`technical_guide.md` §5 / §6](technical_guide.md#5-contratos-de-la-api) |
-| Casos E2E | [`technical_guide.md` §8](technical_guide.md#8-test-cases-e2e-casos-prioritarios) |
-| Qué entra en V1 vs V2 | [`pdr.md` §13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro) |
-| Dónde vive algo en el repo (módulos, lifecycle) | [`architecture_overview.md`](architecture_overview.md) |
-| En qué orden construir el backend (archivos por sprint) | [`implementation_guide.md`](implementation_guide.md) |
+| El porqué de una regla | [`pdr.md` §2](business/pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables) |
+| Qué hace una feature + cómo se prueba | [`requirements.md` §1](business/requirements.md#1-requerimientos-funcionales-completos-y-criterios-de-aceptación) |
+| Entidades y campos | [`technical_guide.md` §3](backend/technical_guide.md#3-modelo-de-datos-esquema-lógico-para-la-bd) |
+| Endpoints y payloads | [`technical_guide.md` §5 / §6](backend/technical_guide.md#5-contratos-de-la-api) |
+| Casos E2E | [`technical_guide.md` §8](backend/technical_guide.md#8-test-cases-e2e-casos-prioritarios) |
+| Qué entra en V1 vs V2 | [`pdr.md` §13](business/pdr.md#13-alcance-v1-mvp-vs-v2-futuro) |
+| Dónde vive algo en el repo (módulos, lifecycle) | [`architecture_overview.md`](backend/architecture_overview.md) |
+| En qué orden construir el backend (archivos por sprint) | [`implementation_guide.md`](backend/implementation_guide.md) |
 
 ---
 
 > **Recordá la regla de oro:** ante cualquier contradicción, **gana el PDR**. Los diagramas de arriba son un mapa, no la fuente de verdad.
+

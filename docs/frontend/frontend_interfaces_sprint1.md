@@ -1,7 +1,7 @@
 # Propuesta de Interfaces Frontend — Sprint 1 (Catálogo + POS Básico)
 
 **Proyecto:** Wonder Chicken — Sistema Informático de Ventas  
-**Documentos de Referencia:** [`docs/pdr.md`](pdr.md), [`docs/requirements.md`](requirements.md), [`docs/technical_guide.md`](technical_guide.md), [`docs/implementation_guide.md`](implementation_guide.md)  
+**Documentos de Referencia:** [`../business/pdr.md`](../business/pdr.md), [`../business/requirements.md`](../business/requirements.md), [`../backend/technical_guide.md`](../backend/technical_guide.md), [`../backend/implementation_guide.md`](../backend/implementation_guide.md)  
 **Alcance:** Sprint 1 — Catálogo de Productos/Variantes + POS Básico (MESA/LLEVAR) + Comanda Digital + Manejo Mínimo de Turnos + Gestión de Clientes.  
 **Versión:** 1.0  
 **Fecha:** Agosto 2026  
