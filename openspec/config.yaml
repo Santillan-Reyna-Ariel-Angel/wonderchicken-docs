@@ -2,33 +2,68 @@ schema: spec-driven
 githubCopilot:
   cloudAgent: true
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context
+context: |
+  Project: Wonder Chicken (Restaurant Sales & Management System)
+  Stack: NestJS 11, TypeScript (ES2023), Prisma 7 (PostgreSQL), pnpm, Jest 30.
+  Domain: Gastronomy - POS, Inventory (chicken pieces count), Shifts/Cash Management, Multi-branch.
+  
+  Conventions:
+  - Architecture: Feature-based modules in NestJS (`src/<domain>/<domain>.module.ts|controller.ts|service.ts|dto/`).
+  - Database: Prisma as source of truth. Schema in `prisma/schema.prisma`.
+  - Documentation: Folder `/docs` contains PDR (Business Rules), Requirements (FR-xxx), Technical Guide, Architecture Overview, Implementation Guide.
+  - Precedence: PDR > Requirements > Technical Guide.
+  - Testing: Unit tests (*.spec.ts) alongside source; E2E in `test/`.
+  - Commits: Conventional Commits.
+  - Ports: Backend runs on 4000, global prefix `/api/v1`.
+  
+  Key Patterns:
+  - Repository pattern for data access.
+  - DTO validation with class-validator.
+  - JWT Auth (no Passport) + RolesGuard.
+  - Order state machine management.
+  
+  V1 Implementation Roadmap (Sprints):
+    - Sprint 0 (Fundaciones): Foco en infraestructura (PrismaService c/adapter-pg, ExceptionFilter global, Auth JWT manual, Users y Guards globales). Cierra FR-018.
+    - Sprint 1 (Catálogo + POS Básico): Foco en Products/Variants, Shifts (mínimo), AuditService y Orders (create/pay/list). Cierra FR-001, FR-002, FR-011 (parcial).
+    - Sprint 2 (Inventario + Venta Custom): Foco en Inventory (decremento por presas/bebidas), venta custom (presas surtidas), consumo manual y ShiftChickenLog. Cierra FR-006, FR-002b, FR-017.
+    - Sprint 3 (Caja + Descuentos): Foco en Arqueo (cierre de shift), Gastos, Vales, Descuentos (catálogo y autorización por turno) y Reportes CSV. Cierra FR-004, FR-005, FR-016.
+    - Sprint 4 (Cliente + Impresión): Foco en Customers, cambios de estado (ready/delivered), URLs públicas de seguimiento y facturación térmica/PDF. Cierra FR-015, FR-019, FR-014.
+    - Sprint 5 (Auditoría + Hardening): Foco en consulta de logs por admin, sesión única por turno, suite E2E completa y OpenAPI. Cierra FR-008b, FR-008.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Implementation Constraints (from implementation_guide.md):
+    - Precedencia: PDR > Guía de Implementación > Código.
+    - Auditoría: El AuditService.log debe llamarse DENTRO de la misma transacción de la acción crítica (no retrofitear en S5).
+    - Inventario: El decremento ocurre SOLO al confirmar el pago (POST /pay o POST /orders pagado).
+    - Transacciones: Usar $transaction de Prisma para asegurar consistencia en órdenes y stock.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+# Per-artifact rules
+rules:
+  proposal:
+    - Specify if it targets V1 or V2 (refer to PDR §13).
+    - Map the change to the corresponding Sprint in implementation_guide.md (Sprints 0 to 5).
+    - Mention related FR (Functional Requirements) from docs/requirements.md.
+    - Check for impact on inventory or accounting rules.
+  design:
+    - Include Prisma schema changes (model, fields, relations) if any.
+    - Define API endpoints (method, path, DTOs).
+    - Maintain consistency with technical_guide.md, architecture_overview.md, and implementation_guide.md.
+  specs:
+    - Use clickable Markdown links to /docs headings where possible.
+    - Reference specific PDR sections (§x.y) and FR IDs (FR-xxx).
+  tasks:
+    - Group tasks by Sprint and NestJS feature module (`src/<domain>/`).
+    - Always include: "Update seeders if schema changed".
+    - Always include: "Update relevant documentation in /docs".
+    - Ensure Definition of Done (DoD) checks against relevant E2E tests in technical_guide.md §8.
+
+# Per-operation guidance
+operations:
+  apply:
+    guidance:
+      - Use pnpm only.
+      - Follow naming conventions (kebab-case for files, PascalCase for classes).
+      - Ensure 'pnpm run lint' passes after changes.
+  archive:
+    guidance:
+      - Verify that all linked docs in /docs are up to date with the final implementation.
