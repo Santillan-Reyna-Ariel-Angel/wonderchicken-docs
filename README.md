@@ -1,98 +1,148 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Wonder Chicken Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Sistema Informático de Ventas — Backend del restaurante Wonder Chicken V1.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Stack: **NestJS 11** · **TypeScript** · **PostgreSQL** · **Prisma 7** · **pnpm** · **Jest**.
 
-## Description
+> 📚 Documentación completa en [`docs/`](docs/index.md): reglas de negocio (PDR), requerimientos (FR), guía técnica y de implementación.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Guía de primeros pasos — desde cero hasta loguearse como SUPER_ADMIN
+
+Estos son los pasos para levantar el proyecto **por primera vez** y llegar a autenticarte con el usuario `SUPER_ADMIN` de bootstrap.
+
+### Requisitos previos
+
+- **Node.js** (v22+ recomendado)
+- **pnpm** (`npm install -g pnpm`)
+- **PostgreSQL** corriendo localmente (o una `DATABASE_URL` remota)
+
+### 1. Instalar dependencias
 
 ```bash
-$ pnpm install
+pnpm install
 ```
 
-## Compile and run the project
+### 2. Configurar variables de entorno
+
+Copiá el contenido de `.env` (o crealo) con al menos:
 
 ```bash
-# development
-$ pnpm run start
+# Puerto del servidor
+PORT=4000
 
-# watch mode
-$ pnpm run start:dev
+# Conexión a PostgreSQL
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/wonderchicken-db"
 
-# production mode
-$ pnpm run start:prod
+# Credenciales del SUPER_ADMIN de bootstrap (creado con `pnpm bootstrap:admin`)
+SUPER_ADMIN_USERNAME=superadmin
+SUPER_ADMIN_PASSWORD=password123
 ```
 
-## Run tests
+> ⚠️ Nunca commitees `.env` con credenciales reales. En producción cambiá `SUPER_ADMIN_PASSWORD`.
+
+### 3. Crear la base de datos y aplicar el schema
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm prisma generate   # genera el cliente Prisma
+pnpm prisma db push    # crea/actualiza las tablas en la BD
 ```
 
-## Deployment
+> También podés usar migraciones: `pnpm prisma migrate dev`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 4. Crear el SUPER_ADMIN de bootstrap
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Este script crea el `SUPER_ADMIN` **directamente contra la base de datos** (no pasa por la API, por lo que no requiere token). Es **idempotente**: si el usuario ya existe, no hace nada.
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm bootstrap:admin
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+> En **desarrollo**, podés poblar toda la BD con datos de prueba en vez del paso 4:
+> ```bash
+> pnpm seed          # borra la BD y la repuebla con datos de prueba (incluye el superadmin)
+> ```
+> En **producción / datos reales**, usá `pnpm bootstrap:admin` (el seeder es solo para desarrollo).
 
-## Resources
+### 5. Levantar el servidor
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+pnpm run start:dev   # modo desarrollo (watch)
+# o
+pnpm run start       # sin watch
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Deberías ver en el log:
 
-## Support
+```
+wonderChicken backend is running in 4000
+Swagger docs available at http://localhost:4000/api/docs
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 6. Loguearse como SUPER_ADMIN
 
-## Stay in touch
+1. Abrí **Swagger**: http://localhost:4000/api/docs
+2. En el endpoint **`POST /api/v1/auth/login`**, usá las credenciales del paso 2 (por defecto `superadmin` / `password123` — ya aparecen precargadas en Swagger).
+3. Ejecutá la petición → copiá el `accessToken` del response.
+4. Click en **Authorize** (candado) y pegá el token.
+5. Ya podés operar todos los endpoints (crear usuarios, listar, etc.).
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+> El `SUPER_ADMIN` tiene acceso global a todos los endpoints. Con su token podés crear el resto de usuarios (admins, cajeras, etc.) vía `POST /api/v1/users`.
 
-## License
+---
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Comandos útiles
+
+| Comando | Descripción |
+| ------- | ----------- |
+| `pnpm run start:dev` | Servidor en modo desarrollo (watch) |
+| `pnpm run start` | Servidor sin watch |
+| `pnpm run build` | Compila TypeScript (`nest build`) |
+| `pnpm run lint` | ESLint con auto-fix |
+| `pnpm run format` | Prettier |
+| `pnpm test` | Tests unitarios |
+| `pnpm run test:e2e` | Tests E2E |
+| `pnpm seed` | Wipe + seed completo con datos de prueba (dev) |
+| `pnpm seed:reset` | Solo vacía la BD |
+| `pnpm seed -- <dominio>` | Corre un seeder puntual |
+| `pnpm bootstrap:admin` | Crea el SUPER_ADMIN si no existe (idempotente) |
+| `pnpm prisma generate` | Regenera el cliente Prisma |
+| `pnpm prisma db push` | Sincroniza el schema con la BD |
+
+---
+
+## Puertos y endpoints
+
+- **Servidor**: `http://localhost:4000`
+- **Prefijo global de API**: `/api/v1` (ej. `POST /api/v1/auth/login`)
+- **Swagger / OpenAPI**: `http://localhost:4000/api/docs`
+
+---
+
+## Estructura del proyecto
+
+```
+src/
+  main.ts                  # Bootstrap: puerto 4000, prefijo /api/v1, Swagger
+  app.module.ts            # Módulo raíz
+  prisma/                  # PrismaService global (driver adapter pg)
+  common/                  # Decorators, guards, filters, bootstrap
+  auth/                    # Módulo de autenticación (login/logout JWT)
+  users/                   # Módulo de gestión de usuarios (admin)
+seeders/                   # Datos de prueba para desarrollo
+scripts/                   # Scripts de utilidad (bootstrap-superadmin)
+prisma/
+  schema.prisma            # Fuente de verdad del modelo de datos
+generated/prisma/          # Cliente Prisma generado (gitignored)
+docs/                      # Documentación del proyecto
+```
+
+---
+
+## Autenticación
+
+- **JWT** vía `@nestjs/jwt` (sin Passport) + **bcryptjs** para hashing.
+- Guards globales: `AuthGuard` (valida JWT → 401) y `RolesGuard` (valida rol → 403).
+- El `SUPER_ADMIN` tiene **acceso global** a todos los endpoints.
+- Detalle completo en [`technical_guide.md` §5.2](docs/backend/technical_guide.md#52-autenticación-y-autorización).

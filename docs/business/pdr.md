@@ -159,6 +159,7 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
 
 ## 2.7 Roles e interfaces (V1 con autenticación JWT y control de permisos por rol en backend)
 - **Roles funcionales:** `SUPER_ADMIN`, `ADMINISTRADOR`, `CAJERA`, `DESPACHADORA`, `COCINERO`.
+  - **Mapeo a enums del schema** (`UserRole` en `prisma/schema.prisma`): `SUPER_ADMIN` → `SUPER_ADMIN`, `ADMINISTRADOR` → `ADMIN`, `CAJERA` → `CASHIER`, `DESPACHADORA` → `DISPATCHER`, `COCINERO` → `COOK`. El backend y el JWT usan los valores en inglés del enum; este documento usa los nombres funcionales en español.
 - **Estructura Multi-sucursal:** La sucursal (`branch`) es el alcance natural de los reportes y operaciones.
   - `SUPER_ADMIN`: Acceso global a todas las sucursales y reportes consolidados.
   - Otros roles: Acceso restringido exclusivamente a su sucursal (`branchId`).

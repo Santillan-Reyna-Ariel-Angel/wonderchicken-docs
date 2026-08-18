@@ -32,7 +32,7 @@ El sistema SHALL verificar que el usuario autenticado tenga los roles requeridos
 
 #### Scenario: Incorrect role results in 403
 - **WHEN** un endpoint requiere rol 'ADMIN' mediante @Roles(['ADMIN'])
-- **AND** el usuario autenticado tiene rol 'CAJERA'
+- **AND** el usuario autenticado tiene rol 'CASHIER'
 - **THEN** el RolesGuard lanza una ForbiddenException
 - **AND** la respuesta tiene código de estado HTTP 403
 

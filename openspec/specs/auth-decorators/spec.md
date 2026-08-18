@@ -2,7 +2,7 @@
 
 Proveer decoradores de referencia para controlar el acceso a endpoints: @Public() para acceso sin autenticación y @Roles() para restricción por roles específicos.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Public Access Decorator
 El sistema SHALL proporcionar un decorador @Public() que marque endpoints como accesibles sin autenticación.
@@ -27,11 +27,11 @@ El sistema SHALL proporcionar un decorador @Roles() que restrinja el acceso a en
 
 #### Scenario: Role-based access denied
 - **WHEN** un endpoint está decorado con @Roles(['ADMIN'])
-- **AND** el usuario autenticado tiene rol CAJERA
+- **AND** el usuario autenticado tiene rol CASHIER
 - **THEN** el RolesGuard rechaza la petición con código 403 Forbidden
 - **AND** la respuesta sigue el contrato estándar de error
 
 #### Scenario: Multiple roles allowed
-- **WHEN** un endpoint está decorado con @Roles(['ADMIN', 'GERENTE'])
+- **WHEN** un endpoint está decorado con @Roles(['ADMIN', 'CASHIER'])
 - **AND** el usuario autenticado tiene cualquiera de esos roles
 - **THEN** el RolesGuard permite la petición continuar

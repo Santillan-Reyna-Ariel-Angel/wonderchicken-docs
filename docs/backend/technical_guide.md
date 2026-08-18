@@ -240,8 +240,9 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
   - *Constraint: `UNIQUE(discountId, shiftId, cashierId)` — una autorización por descuento por sesión de cajera por turno.*
 
 - **User**
-  - `id: UUID`, `name: string`, `role: enum(ADMIN, CASHIER, DISPATCHER, COOK)`
-  - `username: string`, `passwordHash: string`, `active: boolean`
+  - `id: UUID`, `name: string`, `role: enum(SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK)`
+  - `username: string` *(único — credencial de login)*, `passwordHash: string`, `active: boolean`
+  - `branchId: UUID?` *(sucursal asignada; nullable para `SUPER_ADMIN` con acceso global — multi-sucursal)*
 
 - **ShiftPeriod** *(catálogo de períodos de turno — "Mañana", "Noche"; el dueño puede crear "Tarde" sin migración. Por eso es catálogo y NO enum.)*
   - `id: UUID`, `name: string` *(único)*, `displayOrder: int` *(orden dentro del día)*
@@ -508,6 +509,8 @@ Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestj
 2. **`RolesGuard` (autorización).** Corre después del `AuthGuard`. Lee los roles declarados con `@Roles(...)` usando `Reflector.getAllAndOverride([handler, class])`:
    - el endpoint **no declara** `@Roles` → pasa (autenticado alcanza).
    - declara roles y `request.user.role` **no** está en la lista → lanza `ForbiddenException` → **403**.
+
+> **Bootstrap del sistema (SUPER_ADMIN):** el seeder (`seeders/domains/users.seeder.ts`) crea **siempre** un `SUPER_ADMIN` por defecto con credenciales fijas y conocidas (`superadmin` / `password123`, `branchId = null`). Es el usuario de **bootstrap**: tiene acceso global a todos los endpoints (el `RolesGuard` lo deja pasar siempre, sin importar el `@Roles` declarado) y es el que permite crear el resto de la jerarquía de usuarios (admins, cajeras, etc.) vía `POST /users`. El `LoginDto` de Swagger muestra estas credenciales por defecto. **No se abre ningún endpoint sin token** aunque la BD esté vacía — el bootstrap se resuelve con el seeder, no debilitando la seguridad.
 
 ### Piezas (qué archivo hace qué)
 

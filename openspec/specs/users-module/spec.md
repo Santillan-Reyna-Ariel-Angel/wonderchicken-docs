@@ -2,22 +2,22 @@
 
 Proveer un módulo completo de gestión de usuarios que permita a los administradores crear, leer, actualizar y listar usuarios en el sistema, incluyendo control de roles y estado activo/inactivo.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Create User Endpoint
 El sistema SHALL proporcionar un endpoint para crear nuevos usuarios con asignación de rol y estado inicial.
 
 #### Scenario: Successful user creation by admin
-- **WHEN** se envía una petición POST a /api/v1/users con datos válidos (email, password, role) por un usuario autenticado con rol ADMIN
+- **WHEN** se envía una petición POST a /api/v1/users con datos válidos (username, password, role) por un usuario autenticado con rol ADMIN
 - **THEN** el sistema devuelve un código de estado HTTP 201
 - **AND** la respuesta sigue el contrato estándar { isSuccess: true, message: <string>, data: { user: <objeto usuario> }, error: null }
-- **AND** el usuario creado tiene el email proporcionado, el rol asignado y está activo por defecto
+- **AND** el usuario creado tiene el username proporcionado, el rol asignado y está activo por defecto
 - **AND** la contraseña se almacena hasheada usando bcryptjs
 
-#### Scenario: User creation with duplicate email
-- **WHEN** se envía una petición POST a /api/v1/users con un email que ya existe en el sistema
+#### Scenario: User creation with duplicate username
+- **WHEN** se envía una petición POST a /api/v1/users con un username que ya existe en el sistema
 - **THEN** el sistema devuelve un código de estado HTTP 400
-- **AND** la respuesta sigue el contrato estándar de error indicando que el email ya está registrado
+- **AND** la respuesta sigue el contrato estándar de error indicando que el username ya está registrado
 
 #### Scenario: User creation without admin privileges
 - **WHEN** se envía una petición POST a /api/v1/users por un usuario sin rol ADMIN
@@ -31,7 +31,7 @@ El sistema SHALL proporcionar un endpoint para listar usuarios con filtros opcio
 - **WHEN** se envía una petición GET a /api/v1/users por un usuario autenticado con rol ADMIN
 - **THEN** el sistema devuelve un código de estado HTTP 200
 - **AND** la respuesta sigue el contrato estándar { isSuccess: true, message: <string>, data: { users: [<arreglo de usuarios>], total: <number> }, error: null }
-- **AND** cada usuario en la lista incluye id, email, role y estado activo/inactivo (pero nunca la contraseña)
+- **AND** cada usuario en la lista incluye id, name, username, role y estado activo/inactivo (pero nunca la contraseña)
 
 #### Scenario: Users list with role filter
 - **WHEN** se envía una petición GET a /api/v1/users?role=ADMIN por un usuario autenticado con rol ADMIN
@@ -50,7 +50,7 @@ El sistema SHALL proporcionar un endpoint para obtener los detalles de un usuari
 - **WHEN** se envía una petición GET a /api/v1/users/{id} por un usuario autenticado con rol ADMIN
 - **THEN** el sistema devuelve un código de estado HTTP 200
 - **AND** la respuesta sigue el contrato estándar { isSuccess: true, message: <string>, data: { user: <objeto usuario> }, error: null }
-- **AND** el usuario devuelto incluye id, email, role y estado activo/inactivo (pero nunca la contraseña)
+- **AND** el usuario devuelto incluye id, name, username, role y estado activo/inactivo (pero nunca la contraseña)
 
 #### Scenario: Single user retrieval not found
 - **WHEN** se envía una petición GET a /api/v1/users/{id} con un id que no existe
@@ -69,7 +69,7 @@ El sistema SHALL proporcionar un endpoint para actualizar los datos de un usuari
 - **WHEN** se envía una petición PATCH a /api/v1/users/{id} con cambios de rol por un usuario autenticado con rol ADMIN
 - **THEN** el sistema devuelve un código de estado HTTP 200
 - **AND** la respuesta sigue el contrato estándar { isSuccess: true, message: <string>, data: { user: <objeto usuario actualizado> }, error: null }
-- **AND** el usuario actualizado tiene el nuevo rol pero mantiene su id y email
+- **AND** el usuario actualizado tiene el nuevo rol pero mantiene su id y username
 
 #### Scenario: Successful user activation/deactivation
 - **WHEN** se envía una petición PATCH a /api/v1/users/{id} para cambiar el estado activo/inactivo por un usuario autenticado con rol ADMIN
