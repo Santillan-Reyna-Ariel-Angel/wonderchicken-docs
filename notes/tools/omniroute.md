@@ -132,3 +132,18 @@ Para centralizar tus créditos gratuitos (como los de Gemini, Mistral o NVIDIA),
 5.  Haz clic en **"Validar, guardar y probar"**.
 
 **Resultado:** OmniRoute verificará la clave e incluirá sus modelos automáticamente en el enrutamiento inteligente cuando utilices el ID `"auto"` en VS Code.
+
+---
+
+### Optimización de Ahorro de Tokens (RTK + Caveman)
+
+Para que tus créditos de pago/gratuitos rindan hasta un **95% más**, debes configurar los motores de compresión en la pestaña Compression Settings **(Context > Settings)** del dashboard:
+
+1.  **Pipeline Efectivo (Stacked):** Asegúrate de que esté activo el modo **"Stacked (rtk → caveman)"**.
+    *   **RTK:** Filtra automáticamente el "ruido" de la terminal, logs de NestJS o errores de consola pesados.
+    *   **Caveman:** Comprime el lenguaje natural eliminando palabras innecesarias sin perder el significado técnico.
+2.  **Auto-Trigger Threshold:** Establécelo en **0**. Esto fuerza a OmniRoute a comprimir todos los mensajes desde el primer token.
+3.  **Cache-aligned Live Zone:** **Habilítalo**. Esto mantiene estable el prefijo de tu conversación, permitiendo que OpenRouter use **Prompt Caching** y te cobre mucho menos por procesar el contexto repetido.
+4.  **Output Styles (Estilos de salida):** Activa **"Terse prose"** (para respuestas sin saludos innecesarios) y **"Less code"** (para que solo te entregue el cambio exacto de código bajo principios YAGNI).
+
+---
