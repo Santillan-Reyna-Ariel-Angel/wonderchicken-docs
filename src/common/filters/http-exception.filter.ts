@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { translateValidationMessage } from '../validation/validation-messages.js';
 
 export interface StandardErrorResponse {
   isSuccess: false;
@@ -43,9 +44,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         // el código estable VALIDATION_ERROR del contrato (§5.4).
         if (Array.isArray(resp.message)) {
           const validationMessages = resp.message as string[];
-          message = validationMessages[0] ?? 'Error de validación';
+          // Traducimos cada mensaje de validación a español
+          const translated = validationMessages.map(translateValidationMessage);
+          message = translated[0] ?? 'Error de validación';
           errorCode = 'VALIDATION_ERROR';
-          details = { fields: validationMessages };
+          details = { fields: translated };
         } else {
           message = (resp.message as string) || exception.message;
           errorCode = (resp.error as string) || exception.name;
