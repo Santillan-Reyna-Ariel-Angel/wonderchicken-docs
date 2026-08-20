@@ -141,16 +141,14 @@ export class BranchesService {
     };
   }
 
-  async deactivate(id: string) {
+  async toggleActive(id: string) {
     const existing = await this.findOne(id);
 
-    if (!existing.data.branch.active) {
-      throw new BadRequestException('La sucursal ya se encuentra inactiva');
-    }
+    const active = !existing.data.branch.active;
 
     const branch = await this.prisma.branch.update({
       where: { id },
-      data: { active: false },
+      data: { active },
       select: {
         id: true,
         name: true,
@@ -161,11 +159,15 @@ export class BranchesService {
       },
     });
 
-    this.logger.log(`Sucursal desactivada: ${branch.name} (${branch.id})`);
+    this.logger.log(
+      `Sucursal ${branch.active ? 'activada' : 'desactivada'}: ${branch.name} (${branch.id})`,
+    );
 
     return {
       isSuccess: true,
-      message: 'Sucursal desactivada correctamente',
+      message: branch.active
+        ? 'Sucursal activada correctamente'
+        : 'Sucursal desactivada correctamente',
       data: { branch },
       error: null,
     };

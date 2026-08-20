@@ -237,8 +237,8 @@ describe('BranchesService', () => {
     });
   });
 
-  describe('deactivate', () => {
-    it('debería desactivar una sucursal correctamente', async () => {
+  describe('toggleActive', () => {
+    it('debería desactivar una sucursal activa', async () => {
       const existingBranch = {
         id: 'uuid-123',
         name: 'Sucursal Centro',
@@ -248,15 +248,15 @@ describe('BranchesService', () => {
         updatedAt: new Date(),
       };
 
-      const deactivatedBranch = {
+      const toggledBranch = {
         ...existingBranch,
         active: false,
       };
 
       prisma.branch.findUnique.mockResolvedValue(existingBranch);
-      prisma.branch.update.mockResolvedValue(deactivatedBranch);
+      prisma.branch.update.mockResolvedValue(toggledBranch);
 
-      const result = await service.deactivate('uuid-123');
+      const result = await service.toggleActive('uuid-123');
 
       expect(prisma.branch.findUnique).toHaveBeenCalledWith({
         where: { id: 'uuid-123' },
@@ -286,7 +286,60 @@ describe('BranchesService', () => {
       expect(result).toEqual({
         isSuccess: true,
         message: 'Sucursal desactivada correctamente',
-        data: { branch: deactivatedBranch },
+        data: { branch: toggledBranch },
+        error: null,
+      });
+    });
+
+    it('debería reactivar una sucursal inactiva', async () => {
+      const existingBranch = {
+        id: 'uuid-123',
+        name: 'Sucursal Centro',
+        address: 'Av. Corrientes 1234, CABA',
+        active: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const toggledBranch = {
+        ...existingBranch,
+        active: true,
+      };
+
+      prisma.branch.findUnique.mockResolvedValue(existingBranch);
+      prisma.branch.update.mockResolvedValue(toggledBranch);
+
+      const result = await service.toggleActive('uuid-123');
+
+      expect(prisma.branch.findUnique).toHaveBeenCalledWith({
+        where: { id: 'uuid-123' },
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      expect(prisma.branch.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-123' },
+        data: { active: true },
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          active: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      expect(result).toEqual({
+        isSuccess: true,
+        message: 'Sucursal activada correctamente',
+        data: { branch: toggledBranch },
         error: null,
       });
     });
@@ -294,7 +347,7 @@ describe('BranchesService', () => {
     it('debería lanzar NotFoundException si la sucursal no existe', async () => {
       prisma.branch.findUnique.mockResolvedValue(null);
 
-      await expect(service.deactivate('uuid-inexistente')).rejects.toThrow(
+      await expect(service.toggleActive('uuid-inexistente')).rejects.toThrow(
         NotFoundException,
       );
     });

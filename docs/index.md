@@ -1,5 +1,7 @@
 # Índice de Documentación — Wonder Chicken
 
+> **⚠️ IMPORTANTE: No crear código o archivos de test como ser: `*.spec.ts` o archivos de Jest. Solo enfocarse en cumplir con la implementación de las features (requerimientos funcionales y no funcionales de cada sprint). Los tests serán realizados al finalizar la versión 1 del proyecto.**
+
 > Punto de entrada a la documentación del proyecto.
 > **Cada documento tiene ahora su propio índice interno** (sección `## Índice` al inicio):
 > entrá al que necesites y navegá desde ahí.

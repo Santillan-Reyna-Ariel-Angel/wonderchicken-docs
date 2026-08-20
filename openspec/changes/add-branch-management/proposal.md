@@ -9,7 +9,7 @@ El sistema es multi-sucursal (V1) pero **no existe ningún endpoint para gestion
   - `POST /api/v1/branches` — crear sucursal (`{ name, address }`, `active` por defecto `true`).
   - `GET /api/v1/branches` — listar sucursales (alimenta el selector de sucursal del frontend).
   - `PATCH /api/v1/branches/{id}` — editar nombre/dirección.
-  - `PATCH /api/v1/branches/{id}/deactivate` — dar de baja (`active: false`), sin borrar datos.
+  - `PATCH /api/v1/branches/{id}/toggle-active` — alternar el estado activo/inactivo (`toggle` de `active`), sin borrar datos.
 - Registrar `BranchesModule` en `app.module.ts`.
 - Actualizar la documentación: `implementation_guide.md` (FR-000 en Sprint 0 + mapa de cobertura) y `technical_guide.md` (§5.1 endpoints + §5.2 matriz de autorización).
 - No hay cambios de schema: la entidad `Branch` ya existe en `prisma/schema.prisma`.

@@ -175,10 +175,10 @@ describe('App (e2e)', () => {
       });
     });
 
-    describe('PATCH /api/v1/branches/:id/deactivate', () => {
+    describe('PATCH /api/v1/branches/:id/toggle-active', () => {
       it('debería desactivar una sucursal con SUPER_ADMIN (200)', () => {
         return request(app.getHttpServer())
-          .patch(`/api/v1/branches/${createdBranchId}/deactivate`)
+          .patch(`/api/v1/branches/${createdBranchId}/toggle-active`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .expect(200)
           .then((res) => {
@@ -188,9 +188,21 @@ describe('App (e2e)', () => {
           });
       });
 
-      it('debería rechazar desactivación sin SUPER_ADMIN (403)', () => {
+      it('debería reactivar una sucursal inactiva con SUPER_ADMIN (200)', () => {
         return request(app.getHttpServer())
-          .patch(`/api/v1/branches/${createdBranchId}/deactivate`)
+          .patch(`/api/v1/branches/${createdBranchId}/toggle-active`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(200)
+          .then((res) => {
+            const body = res.body as BranchResponse;
+            expect(body.isSuccess).toBe(true);
+            expect(body.data.branch.active).toBe(true);
+          });
+      });
+
+      it('debería rechazar la operación sin SUPER_ADMIN (403)', () => {
+        return request(app.getHttpServer())
+          .patch(`/api/v1/branches/${createdBranchId}/toggle-active`)
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(403);
       });
@@ -198,7 +210,7 @@ describe('App (e2e)', () => {
       it('debería devolver 404 para sucursal inexistente (404)', () => {
         return request(app.getHttpServer())
           .patch(
-            '/api/v1/branches/00000000-0000-0000-0000-000000000000/deactivate',
+            '/api/v1/branches/00000000-0000-0000-0000-000000000000/toggle-active',
           )
           .set('Authorization', `Bearer ${superAdminToken}`)
           .expect(404);

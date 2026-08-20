@@ -1,7 +1,6 @@
 import {
   IsEnum,
   IsOptional,
-  IsBoolean,
   IsUUID,
   IsString,
   MinLength,
@@ -29,11 +28,6 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
-  @ApiPropertyOptional({ description: 'Activo/inactivo' })
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
 
   @ApiPropertyOptional({
     description: 'Sucursal asignada (null para SUPER_ADMIN)',

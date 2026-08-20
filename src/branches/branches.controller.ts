@@ -58,12 +58,14 @@ export class BranchesController {
   }
 
   @Roles(UserRole.SUPER_ADMIN)
-  @Patch(':id/deactivate')
-  @ApiOperation({ summary: 'Desactivar sucursal (SUPER_ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Sucursal desactivada' })
+  @Patch(':id/toggle-active')
+  @ApiOperation({
+    summary: 'Activar/desactivar sucursal (toggle) (SUPER_ADMIN)',
+  })
+  @ApiResponse({ status: 200, description: 'Estado activo/inactivo actualizado' })
   @ApiResponse({ status: 404, description: 'No encontrada' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
-  deactivate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.branchesService.deactivate(id);
+  toggleActive(@Param('id', ParseUUIDPipe) id: string) {
+    return this.branchesService.toggleActive(id);
   }
 }

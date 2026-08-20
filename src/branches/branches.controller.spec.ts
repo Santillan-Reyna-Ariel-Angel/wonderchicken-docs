@@ -12,7 +12,7 @@ describe('BranchesController', () => {
     findAll: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
-    deactivate: jest.Mock;
+    toggleActive: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -21,7 +21,7 @@ describe('BranchesController', () => {
       findAll: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
-      deactivate: jest.fn(),
+      toggleActive: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -125,8 +125,8 @@ describe('BranchesController', () => {
     });
   });
 
-  describe('deactivate', () => {
-    it('debería desactivar una sucursal', async () => {
+  describe('toggleActive', () => {
+    it('debería alternar el estado activo/inactivo de una sucursal', async () => {
       const expectedResult = {
         isSuccess: true,
         message: 'Sucursal desactivada correctamente',
@@ -143,11 +143,11 @@ describe('BranchesController', () => {
         error: null,
       };
 
-      service.deactivate.mockResolvedValue(expectedResult);
+      service.toggleActive.mockResolvedValue(expectedResult);
 
-      const result = await controller.deactivate('uuid-123');
+      const result = await controller.toggleActive('uuid-123');
 
-      expect(service.deactivate).toHaveBeenCalledWith('uuid-123');
+      expect(service.toggleActive).toHaveBeenCalledWith('uuid-123');
       expect(result).toEqual(expectedResult);
     });
   });

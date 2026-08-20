@@ -183,6 +183,7 @@ Key rules to always follow:
 - Do not use `any` when a proper type exists (even though ESLint allows it)
 - Do not create barrel files (`index.ts`) unless explicitly needed
 - Do not modify `generated/prisma/` — it is auto-generated
+- **IMPORTANTE: No crear código o archivos de test como ser: `*.spec.ts` o archivos de Jest. Solo enfocarse en cumplir con la implementación de las features (requerimientos funcionales y no funcionales de cada sprint). Los tests serán realizados al finalizar la versión 1 del proyecto.**
 
 
 ## AI Agent System Prompt

@@ -51,16 +51,21 @@ El sistema SHALL proporcionar un endpoint para que el SUPER_ADMIN edite el nombr
 - **THEN** el sistema devuelve un código de estado HTTP 404
 - **AND** la respuesta sigue el contrato estándar de error
 
-### Requirement: Deactivate Branch Endpoint
-El sistema SHALL proporcionar un endpoint para que el SUPER_ADMIN dé de baja una sucursal marcándola como inactiva, sin eliminar sus datos.
+### Requirement: Toggle Branch Active State Endpoint
+El sistema SHALL proporcionar un endpoint para que el SUPER_ADMIN alterne el estado de una sucursal (activar si está inactiva, desactivar si está activa), sin eliminar sus datos.
 
 #### Scenario: Successful branch deactivation by SUPER_ADMIN
-- **WHEN** se envía una petición PATCH a /api/v1/branches/{id}/deactivate por un usuario autenticado con rol SUPER_ADMIN
+- **WHEN** se envía una petición PATCH a /api/v1/branches/{id}/toggle-active (sin body) por un usuario autenticado con rol SUPER_ADMIN y la sucursal está `active: true`
 - **THEN** el sistema devuelve un código de estado HTTP 200
 - **AND** la sucursal queda con `active: false`
 - **AND** los datos históricos de la sucursal (turnos, cajas, inventario, usuarios) se conservan
 
-#### Scenario: Branch deactivation of non-existent branch
-- **WHEN** se envía una petición PATCH a /api/v1/branches/{id}/deactivate con un `id` que no existe
+#### Scenario: Successful branch reactivation by SUPER_ADMIN
+- **WHEN** se envía una petición PATCH a /api/v1/branches/{id}/toggle-active (sin body) por un usuario autenticado con rol SUPER_ADMIN y la sucursal está `active: false`
+- **THEN** el sistema devuelve un código de estado HTTP 200
+- **AND** la sucursal queda con `active: true`
+
+#### Scenario: Branch toggle-active of non-existent branch
+- **WHEN** se envía una petición PATCH a /api/v1/branches/{id}/toggle-active con un `id` que no existe
 - **THEN** el sistema devuelve un código de estado HTTP 404
 - **AND** la respuesta sigue el contrato estándar de error

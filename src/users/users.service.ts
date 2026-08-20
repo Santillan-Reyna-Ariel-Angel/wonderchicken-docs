@@ -171,7 +171,6 @@ export class UsersService {
       name?: string;
       password?: string;
       role?: UserRole;
-      active?: boolean;
       branchId?: string;
     };
 
@@ -179,7 +178,6 @@ export class UsersService {
       name?: string;
       passwordHash?: string;
       role?: UserRole;
-      active?: boolean;
       branchId?: string | null;
     } = {};
 
@@ -191,9 +189,6 @@ export class UsersService {
     }
     if (dto.role !== undefined) {
       data.role = dto.role;
-    }
-    if (dto.active !== undefined) {
-      data.active = dto.active;
     }
     if (dto.branchId !== undefined) {
       data.branchId = dto.branchId;
@@ -219,6 +214,47 @@ export class UsersService {
     return {
       isSuccess: true,
       message: 'Usuario actualizado correctamente',
+      data: { user },
+      error: null,
+    };
+  }
+
+  async toggleActive(id: string) {
+    const existing = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, active: true, username: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const active = !existing.active;
+
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { active },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        active: true,
+        branchId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    this.logger.log(
+      `Usuario ${user.active ? 'activado' : 'desactivado'}: ${user.username} (${user.id})`,
+    );
+
+    return {
+      isSuccess: true,
+      message: user.active
+        ? 'Usuario activado correctamente'
+        : 'Usuario desactivado correctamente',
       data: { user },
       error: null,
     };

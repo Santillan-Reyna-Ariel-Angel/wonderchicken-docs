@@ -69,4 +69,19 @@ export class UsersController {
   ) {
     return this.usersService.update(id, updateUserDto);
   }
+
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/toggle-active')
+  @ApiOperation({
+    summary: 'Activar/desactivar usuario (toggle) (admin)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado activo/inactivo actualizado',
+  })
+  @ApiResponse({ status: 404, description: 'No encontrado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos' })
+  toggleActive(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.toggleActive(id);
+  }
 }

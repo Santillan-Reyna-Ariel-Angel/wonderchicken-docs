@@ -19,7 +19,7 @@ Ver `proposal.md` — Why. El sistema es multi-sucursal (V1) pero no existe gest
 
 - **Módulo `src/branches/` con patrón feature module** (module/controller/service + `dto/`), consistente con el resto del proyecto y con `users/` (Sprint 0). Alternativa descartada: meterlo dentro de `users/` — mezcla responsabilidades y rompe la organización por dominio.
 - **Endpoints solo SUPER_ADMIN** vía `@Roles(UserRole.SUPER_ADMIN)`. El `RolesGuard` ya deja pasar siempre al SUPER_ADMIN (§5.2), así que el bootstrap no se rompe. Alternativa descartada: permitir ADMIN — contradice el PDR §2.7 (gestión de sucursales es exclusiva de SUPER_ADMIN).
-- **`PATCH /branches/{id}/deactivate` en vez de `DELETE`**: la sucursal tiene datos históricos (turnos, cajas, inventario, usuarios) que deben conservarse; el borrado físico rompería las FKs. `active: false` es el mecanismo de baja definido en FR-000.
+- **`PATCH /branches/{id}/toggle-active` en vez de `DELETE`**: la sucursal tiene datos históricos (turnos, cajas, inventario, usuarios) que deben conservarse; el borrado físico rompería las FKs. El toggle invierte el estado actual de `active` (activa ↔ desactiva) y es el mecanismo de baja/reactivación definido en FR-000. Alternativa descartada: dos endpoints separados (`deactivate`/`activate`) — el toggle es un solo endpoint idempótico en estado final y reversible sin body.
 - **DTOs con class-validator** (`CreateBranchDto`, `UpdateBranchDto`), validados por el `ValidationPipe` global ya configurado en Sprint 0.
 - **Sin auditoría en V1 para CRUD de sucursales**: el PDR §2.9 define 6 acciones auditadas y la gestión de sucursales no está entre ellas. Se mantiene el alcance definido.
 
