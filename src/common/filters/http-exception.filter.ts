@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { translateValidationMessage } from '../validation/validation-messages.js';
+import { mapPrismaError } from '../errors/prisma-error.mapper.js';
 
 export interface StandardErrorResponse {
   isSuccess: false;
@@ -59,12 +60,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorCode = exception.name;
       }
     } else if (exception instanceof Error) {
-      this.logger.error(
-        `Unhandled exception: ${exception.message}`,
-        exception.stack,
-      );
-      message = 'Error interno del servidor';
-      errorCode = 'INTERNAL_SERVER_ERROR';
+      // Errores de Prisma con código P2xxx son errores de DATOS del cliente
+      // (FK inexistente, duplicado, etc.) — no son fallas del servidor.
+      const prismaError = mapPrismaError(exception);
+      if (prismaError) {
+        status = prismaError.status;
+        message = prismaError.message;
+        errorCode = prismaError.code;
+      } else {
+        this.logger.error(
+          `Unhandled exception: ${exception.message}`,
+          exception.stack,
+        );
+        message = 'Error interno del servidor';
+        errorCode = 'INTERNAL_SERVER_ERROR';
+      }
     }
 
     const errorResponse: StandardErrorResponse = {

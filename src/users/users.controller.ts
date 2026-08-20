@@ -17,6 +17,7 @@ import {
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
+import { FindUsersQueryDto } from './dto/find-users-query.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../../generated/prisma/enums.js';
 
@@ -40,9 +41,10 @@ export class UsersController {
   @Get()
   @ApiOperation({ summary: 'Listar usuarios con filtro por rol (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de usuarios' })
+  @ApiResponse({ status: 400, description: 'Filtro de rol inválido' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
-  findAll(@Query('role') role?: UserRole) {
-    return this.usersService.findAll(role);
+  findAll(@Query() query: FindUsersQueryDto) {
+    return this.usersService.findAll(query.role);
   }
 
   @Roles(UserRole.ADMIN)
