@@ -29,7 +29,7 @@
 
 model Branch {
   id        String   @id @default(uuid(7)) @db.Uuid
-  name      String
+  name      String   @unique
   address   String
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

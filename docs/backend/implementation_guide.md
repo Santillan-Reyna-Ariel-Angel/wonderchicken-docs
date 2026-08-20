@@ -56,7 +56,7 @@ Comandos base: `pnpm prisma generate` (tras cambiar schema) · `pnpm prisma db p
   ```
   src/
     main.ts  app.module.ts
-    prisma/     common/      auth/       users/          ← Sprint 0
+    prisma/     common/      auth/       users/   branches/  ← Sprint 0
     products/   shifts/      orders/     audit/   pos/   ← Sprint 1
     inventory/                                           ← Sprint 2
     expenses/   vouchers/    discounts/  reports/        ← Sprint 3
@@ -72,8 +72,8 @@ Comandos base: `pnpm prisma generate` (tras cambiar schema) · `pnpm prisma db p
 ## 2. Sprint 0 — Fundaciones
 
 **Objetivo:** todo lo transversal que los demás sprints consumen ([PDR §10](../business/pdr.md#10-prioridad-de-trabajo-y-roadmap-de-entregas-mvp-en-sprints), Sprint 0 = modelado, ya hecho; acá se agrega el arranque técnico).
-**Cierra:** FR-018; base de FR-008 y FR-013 (backend como frontera de seguridad).
-**Ajuste sobre [PDR §10](../business/pdr.md#10-prioridad-de-trabajo-y-roadmap-de-entregas-mvp-en-sprints) (explicado):** el PDR no ubica la autenticación en ningún sprint, pero los guards son **globales** (`APP_GUARD`) y todos los endpoints los atraviesan → va primero o se retrofitea todo.
+**Cierra:** FR-018, FR-000; base de FR-008 y FR-013 (backend como frontera de seguridad).
+**Ajuste sobre [PDR §10](../business/pdr.md#10-prioridad-de-trabajo-y-roadmap-de-entregas-mvp-en-sprints) (explicado):** el PDR no ubica la autenticación en ningún sprint, pero los guards son **globales** (`APP_GUARD`) y todos los endpoints los atraviesan → va primero o se retrofitea todo. **FR-000 (gestión de sucursales) tampoco está ubicado en el PDR**, pero es **prerrequisito** de `POST /users` (el admin necesita una sucursal asignada) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales) → se adelanta a Sprint 0.
 
 Archivos, en orden:
 
@@ -84,9 +84,10 @@ Archivos, en orden:
 5. `src/common/guards/auth.guard.ts` y `roles.guard.ts` — 401/403 según [§5.2](technical_guide.md#52-autenticación-y-autorización) (JWT directo, **sin Passport**).
 6. `src/auth/` (module/controller/service + `dto/login.dto.ts`) — `POST /auth/login` ([§6.0](technical_guide.md#60-authloginresponse)) y `POST /auth/logout` (libera la sesión del turno, FR-008b; la validación de sesión única completa llega en Sprint 5). bcryptjs para comparar hashes.
 7. `src/users/` — `POST/GET/PATCH /users` (admin; alta con rol, activar/desactivar — [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)).
-8. `src/main.ts` — prefijo `/api/v1`, `ValidationPipe` global, filter global, CORS. `src/app.module.ts` — registra Prisma/Auth/Users + los dos guards vía `APP_GUARD` (orden: Auth primero). Eliminar `app.controller.ts`/`app.service.ts`.
+8. `src/branches/` (module/controller/service + `dto/create-branch.dto.ts`, `update-branch.dto.ts`) — **FR-000**: `POST /branches`, `GET /branches`, `PATCH /branches/{id}`, `PATCH /branches/{id}/deactivate` — **solo SUPER_ADMIN** (gestión de sucursales: nombre, dirección, estado activa/inactiva — [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)). Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue. El `RolesGuard` deja pasar siempre al SUPER_ADMIN sin importar el `@Roles` declarado (§5.2). ✅ **IMPLEMENTADO**
+9. `src/main.ts` — prefijo `/api/v1`, `ValidationPipe` global, filter global, CORS. `src/app.module.ts` — registra Prisma/Auth/Users/Branches + los dos guards vía `APP_GUARD` (orden: Auth primero). Eliminar `app.controller.ts`/`app.service.ts`.
 
-**DoD:** login con seed (`pnpm seed` crea usuarios) devuelve JWT; endpoint protegido sin token → 401; con rol incorrecto → 403 (criterios FR-018); todo error respeta el contrato §5.3.
+**DoD:** login con seed (`pnpm seed` crea usuarios) devuelve JWT; endpoint protegido sin token → 401; con rol incorrecto → 403 (criterios FR-018); el SUPER_ADMIN crea una sucursal y los usuarios asignados a ella solo ven datos de su sucursal (criterios FR-000); todo error respeta el contrato §5.3.
 
 ---
 
@@ -185,6 +186,7 @@ Ningún FR de V1 queda huérfano:
 
 | FR | Título corto | Sprint |
 |---|---|---|
+| [FR-000](../business/requirements.md#fr-000--gestión-de-sucursales-alta) | Gestión de sucursales | 0 ✅ |
 | [FR-001](../business/requirements.md#fr-001--gestión-de-productos-y-variantes-alta) | Productos y variantes | 1 |
 | [FR-002](../business/requirements.md#fr-002--registro-de-pedidos-pos-alta) / [FR-002b](../business/requirements.md#fr-002b--venta-custom-de-presas-surtidas-alta) | POS estándar / venta custom | 1 / 2 |
 | [FR-003](../business/requirements.md#fr-003--comanda-digital-y-factura-opcional-alta) | Comanda digital y factura opcional | 1 (comanda) + 4 (factura) |

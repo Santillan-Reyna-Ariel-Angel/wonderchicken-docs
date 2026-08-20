@@ -446,6 +446,10 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, username, role }`) que el frontend envía como `Bearer` (FR-018). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
 - `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (rol / activar / desactivar). El password viaja solo en alta/reset y se guarda hasheado (bcryptjs, §5.2)
+- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address }`, `active` por defecto `true`. Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
+- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `active`
+- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`)
+- `PATCH /api/v1/branches/{id}/deactivate` — dar de baja una sucursal (**solo SUPER_ADMIN**): `active: false`. No borra datos; las entidades locales conservan su `branchId`
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
 - `POST /api/v1/variants` — crear variante
@@ -583,6 +587,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /auth/login` | **público** (`@Public()`) |
 | `POST /auth/logout` | cualquier rol autenticado |
 | `POST /users`, `GET /users`, `PATCH /users/{id}` | `ADMIN` |
+| `POST /branches`, `GET /branches`, `PATCH /branches/{id}`, `PATCH /branches/{id}/deactivate` | **`SUPER_ADMIN`** *(gestión de sucursales — FR-000; el `RolesGuard` deja pasar siempre al SUPER_ADMIN)* |
 | `POST /products`, `POST /variants` | `ADMIN` |
 | `GET /products` | `ADMIN`, `CASHIER` *(el POS lo consume)* |
 | `POST /orders`, `POST /orders/custom` *(incluye descuentos por ítem vía `discountId`)* | `CASHIER` |
