@@ -445,7 +445,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 > El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
 
-- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
+- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role, branchId }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
 - `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (firstName, lastName, email, phone, ci, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El CI viaja solo en alta/edición y se guarda hasheado como `passwordHash` (bcryptjs, §5.2)
 - `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address }`, `active` por defecto `true`. Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
@@ -510,7 +510,7 @@ Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestj
 
 1. **`AuthGuard` (autenticación).** Corre primero. Extrae el token del header `Authorization: Bearer <token>`, lo verifica con `jwtService.verifyAsync(token)`:
    - sin token, o token **inválido / expirado** → lanza `UnauthorizedException` → **401**.
-   - token OK → inyecta el payload en `request.user` (`{ sub, email, role }`) y deja pasar.
+   - token OK → inyecta el payload en `request.user` (`{ sub, email, role, branchId }`) y deja pasar.
    - respeta el decorator **`@Public()`**: las rutas marcadas (ej. `POST /auth/login`) saltan la verificación.
 2. **`RolesGuard` (autorización).** Corre después del `AuthGuard`. Lee los roles declarados con `@Roles(...)` usando `Reflector.getAllAndOverride([handler, class])`:
    - el endpoint **no declara** `@Roles` → pasa (autenticado alcanza).
@@ -617,7 +617,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /reports/sales`, `GET /reports/inventory-presas`, `GET /reports/cash-audit` | `ADMIN` |
 | `POST /audit-logs/shift`, `POST /audit-logs/month` | `ADMIN` |
 
-> El **payload del JWT** lleva `{ sub: userId, email, role }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
+> El **payload del JWT** lleva `{ sub: userId, email, role, branchId }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
 
 ### Sesión única por turno (FR-008b)
 

@@ -49,13 +49,13 @@ const orderInclude = {
       createdAt: true,
     },
   },
-  createdBy: { select: { id: true, name: true } },
+  createdBy: { select: { id: true, firstName: true, lastName: true } },
   shift: {
     select: {
       id: true,
       branchId: true,
       lastOrderNumber: true,
-      cashier: { select: { id: true, name: true } },
+      cashier: { select: { id: true, firstName: true, lastName: true } },
       period: { select: { id: true, name: true } },
     },
   },

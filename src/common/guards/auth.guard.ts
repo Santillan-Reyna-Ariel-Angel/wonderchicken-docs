@@ -11,11 +11,12 @@ import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import { UserRole } from '../../../generated/prisma/enums.js';
 
-// Payload del JWT firmado en auth.service (sub, email, role).
+// Payload del JWT firmado en auth.service (sub, email, role, branchId).
 export interface JwtPayload {
   sub: string;
   email: string;
   role: UserRole;
+  branchId: string | null;
 }
 
 // Extiende Request para exponer el usuario autenticado de forma tipada.

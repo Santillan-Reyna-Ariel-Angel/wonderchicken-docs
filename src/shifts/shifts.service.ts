@@ -27,7 +27,7 @@ const shiftWithRefsSelect = {
   lastOrderNumber: true,
   startAt: true,
   branchId: true,
-  cashier: { select: { id: true, name: true } },
+  cashier: { select: { id: true, firstName: true, lastName: true } },
   cashRegister: { select: { id: true, name: true } },
   period: { select: { id: true, name: true, displayOrder: true } },
 } as const;
