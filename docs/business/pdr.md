@@ -164,6 +164,7 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
   - `SUPER_ADMIN`: Acceso global a todas las sucursales y reportes consolidados.
   - Otros roles: Acceso restringido exclusivamente a su sucursal (`branchId`).
 - **Decisión V1:** **el control de permisos SÍ se aplica en backend** en V1, vía autenticación JWT + un guard que valida el rol en cada endpoint. La UI además oculta las pantallas no relevantes a cada rol, pero **la UI no es la frontera de seguridad: el backend valida el rol y la sucursal en cada petición** (devuelve 401 sin token válido, 403 si el rol o acceso a sucursal no corresponde).
+- **Credenciales de login (decisión de implementación):** el usuario inicia sesión con **email** (único) + **contraseña**, donde la contraseña es su **CI** (cédula de identidad), almacenada hasheada con bcryptjs (`passwordHash`). El modelo `User` lleva `firstName`, `lastName`, `email` (único), `phone` (opcional) y `ci` (único). El SUPER_ADMIN de bootstrap se crea vía `pnpm bootstrap:admin` con credenciales del `.env`.
 - **Matriz de autorización por rol:**
   - **SUPER_ADMIN:** Gestión de sucursales, reportes consolidados globales, configuración global.
   - **ADMINISTRADOR:** Registrar productos, registrar platos / variantes, crear usuarios (en su sucursal), modificar inventario (con motivo), ver reportes de su sucursal, crear descuentos y autorizar descuentos por turno.

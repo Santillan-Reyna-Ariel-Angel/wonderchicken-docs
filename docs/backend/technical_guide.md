@@ -240,8 +240,10 @@ Esta estructura permite que el servicio de órdenes y el servicio de inventario 
   - *Constraint: `UNIQUE(discountId, shiftId, cashierId)` — una autorización por descuento por sesión de cajera por turno.*
 
 - **User**
-  - `id: UUID`, `name: string`, `role: enum(SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK)`
-  - `username: string` *(único — credencial de login)*, `passwordHash: string`, `active: boolean`
+  - `id: UUID`, `firstName: string`, `lastName: string`, `role: enum(SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK)`
+  - `email: string` *(único — credencial de login)*, `phone: string?` *(opcional — dato de contacto)*
+  - `ci: string` *(único — cédula de identidad; su hash se almacena en `passwordHash` y funciona como contraseña)*
+  - `passwordHash: string` *(hash bcrypt del CI — mecanismo de autenticación)*, `active: boolean`
   - `branchId: UUID?` *(sucursal asignada; nullable para `SUPER_ADMIN` con acceso global — multi-sucursal)*
 
 - **ShiftPeriod** *(catálogo de períodos de turno — "Mañana", "Noche"; el dueño puede crear "Tarde" sin migración. Por eso es catálogo y NO enum.)*
@@ -432,7 +434,7 @@ stateDiagram-v2
 
 Reglas transversales que **todos** los endpoints respetan. El frontend envía el **mínimo**; el backend resuelve el resto y devuelve respuestas **listas para pintar**.
 
-1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, username, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
+1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, email, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
 2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes, vales, gastos) NO reciben `shiftId`: el backend resuelve el **turno abierto de la sesión de cajera** autenticada (1 sesión activa por turno, FR-008b) y lo asigna. Mismo criterio para cualquier vínculo deducible de la sesión.
 3. **Precios y totales los calcula el backend desde la BD.** En la **orden estándar** el front **NO** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` / `Variant` y calcula `totalPrice` y `total`. **Única excepción:** la **venta custom**, donde la cajera confirma un `unitPrice` (input de negocio legítimo, §2.10). Snapshots (`discountAmount`, `customerName`) también los congela el backend, no el front.
 4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, manda `customerId` (lo obtuvo de `GET /customers`), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para los **descuentos**: el ítem lleva `discountId` (referencia al catálogo) y el backend valida, congela el snapshot y deriva los totales. El front jamás manda montos de descuento.
@@ -443,9 +445,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 > El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
 
-- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, username, role }`) que el frontend envía como `Bearer` (FR-018). Request/response en [§6.0](#60-authloginresponse).
+- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
-- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (nombre, password, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El password viaja solo en alta/reset y se guarda hasheado (bcryptjs, §5.2)
+- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (firstName, lastName, email, phone, ci, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El CI viaja solo en alta/edición y se guarda hasheado como `passwordHash` (bcryptjs, §5.2)
 - `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address }`, `active` por defecto `true`. Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
 - `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `active`
 - `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`)
@@ -508,13 +510,13 @@ Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestj
 
 1. **`AuthGuard` (autenticación).** Corre primero. Extrae el token del header `Authorization: Bearer <token>`, lo verifica con `jwtService.verifyAsync(token)`:
    - sin token, o token **inválido / expirado** → lanza `UnauthorizedException` → **401**.
-   - token OK → inyecta el payload en `request.user` (`{ sub, username, role }`) y deja pasar.
+   - token OK → inyecta el payload en `request.user` (`{ sub, email, role }`) y deja pasar.
    - respeta el decorator **`@Public()`**: las rutas marcadas (ej. `POST /auth/login`) saltan la verificación.
 2. **`RolesGuard` (autorización).** Corre después del `AuthGuard`. Lee los roles declarados con `@Roles(...)` usando `Reflector.getAllAndOverride([handler, class])`:
    - el endpoint **no declara** `@Roles` → pasa (autenticado alcanza).
    - declara roles y `request.user.role` **no** está en la lista → lanza `ForbiddenException` → **403**.
 
-> **Bootstrap del sistema (SUPER_ADMIN):** el seeder (`seeders/domains/users.seeder.ts`) crea **siempre** un `SUPER_ADMIN` por defecto con credenciales fijas y conocidas (`superadmin` / `password123`, `branchId = null`). Es el usuario de **bootstrap**: tiene acceso global a todos los endpoints (el `RolesGuard` lo deja pasar siempre, sin importar el `@Roles` declarado) y es el que permite crear el resto de la jerarquía de usuarios (admins, cajeras, etc.) vía `POST /users`. El `LoginDto` de Swagger muestra estas credenciales por defecto. **No se abre ningún endpoint sin token** aunque la BD esté vacía — el bootstrap se resuelve con el seeder, no debilitando la seguridad.
+> **Bootstrap del sistema (SUPER_ADMIN):** el script de bootstrap (`pnpm bootstrap:admin` → `scripts/bootstrap-superadmin.ts`, reutilizado por el seeder) crea **siempre** un `SUPER_ADMIN` por defecto si no existe (idempotente), leyendo las credenciales de variables de entorno (`SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_FIRSTNAME`, `SUPER_ADMIN_LASTNAME`, `SUPER_ADMIN_CI`; defaults: `superadmin@wonderchicken.com` / CI `0000000`, `branchId = null`). Es el usuario de **bootstrap**: tiene acceso global a todos los endpoints (el `RolesGuard` lo deja pasar siempre, sin importar el `@Roles` declarado) y es el que permite crear el resto de la jerarquía de usuarios (admins, cajeras, etc.) vía `POST /users`. El login se hace con **email + CI** (la contraseña es el CI hasheado con bcryptjs). **No se abre ningún endpoint sin token** aunque la BD esté vacía — el bootstrap se resuelve con el script/seeder, no debilitando la seguridad.
 
 ### Piezas (qué archivo hace qué)
 
@@ -615,7 +617,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /reports/sales`, `GET /reports/inventory-presas`, `GET /reports/cash-audit` | `ADMIN` |
 | `POST /audit-logs/shift`, `POST /audit-logs/month` | `ADMIN` |
 
-> El **payload del JWT** lleva `{ sub: userId, username, role }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
+> El **payload del JWT** lleva `{ sub: userId, email, role }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
 
 ### Sesión única por turno (FR-008b)
 
@@ -670,20 +672,19 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 
 Request:
 ```json
-{ "username": "roxana", "password": "••••••••" }
+{ "email": "roxana@wonderchicken.com", "password": "12345678" }
 ```
 Response (200):
 ```json
 {
   "isSuccess": true,
-  "message": "Autenticación exitosa",
+  "message": "Login exitoso",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": { "id": "uuid-user-roxana", "username": "roxana", "role": "CASHIER" }
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
-> Sin token o token expirado/inválido en el resto de endpoints → **401**. Rol no autorizado → **403** (`FORBIDDEN`).
+> La contraseña es el **CI** del usuario (se compara contra `passwordHash`, hash bcrypt del CI). Sin token o token expirado/inválido en el resto de endpoints → **401**. Rol no autorizado → **403** (`FORBIDDEN`).
 
 ## 6.1 ProductCreateResponse (éxito)
 ```json
@@ -807,7 +808,7 @@ Response:
       }
     ],
     "total": 80.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
     "paidAt": "2026-05-01T22:10:00"
   }
 }
@@ -837,7 +838,7 @@ Response:
       }
     ],
     "total": 90.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" }
+    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
   }
 }
 ```
@@ -915,7 +916,7 @@ Response:
       }
     ],
     "total": 35.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
     "paidAt": "2026-05-01T13:20:00"
   }
 }
@@ -985,7 +986,7 @@ Response (todo calculado por el backend, listo para pintar):
       }
     ],
     "total": 69.00,
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" }
+    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
   }
 }
 ```
@@ -1028,8 +1029,8 @@ Response:
     "id": "uuid-auth-001",
     "discountId": "uuid-discount-compensacion",
     "shiftId": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
-    "authorizedBy": { "id": "uuid-user-admin", "name": "Admin" },
+    "cashierId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
+    "authorizedBy": { "id": "uuid-user-admin", "firstName": "Admin", "lastName": "Sistema" },
     "authorizedAt": "2026-06-06T15:05:00"
   }
 }
@@ -1055,7 +1056,7 @@ Response:
     "discountId": "uuid-discount-personal",
     "discountAmount": 7.00,
     "amount": 23.00,
-    "issuedBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "issuedBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
     "issuedAt": "2026-05-01T14:30:00",
     "shiftId": "uuid-shift-001",
     "status": "issued"
@@ -1074,7 +1075,7 @@ Response:
     "delta": -2,
     "reason": "sale",
     "referenceId": "uuid-order-123",
-    "userId": { "id": "uuid-user-roxana", "name": "Roxana" }
+    "userId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
   }
 }
 ```
@@ -1108,7 +1109,7 @@ Response:
   "message": "Caja abierta correctamente",
   "data": {
     "id": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "cashierId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
     "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
     "period": { "id": "uuid-period-manana", "name": "Mañana" },
     "openingAmount": 200.00,
@@ -1241,7 +1242,7 @@ Response:
     "amount": 35.50,
     "paidBy": "cash",
     "shiftId": "uuid-shift-001",
-    "createdBy": { "id": "uuid-user-roxana", "name": "Roxana" },
+    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
     "createdAt": "2026-05-01T11:20:00"
   }
 }
@@ -1266,7 +1267,7 @@ Response:
     "shifts": [
       { "id": "uuid-shift-002",
         "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
-        "cashier": { "id": "uuid-user-roxana", "name": "Roxana" } }
+        "cashier": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" } }
     ],
     "count": 2,
     "rows": [
@@ -1275,7 +1276,7 @@ Response:
         "entity": "Order",
         "entityId": "uuid-order-004",
         "action": "CREATE_SALE",
-        "user": { "id": "uuid-user-roxana", "name": "Roxana" },
+        "user": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
         "timestamp": "2026-07-07T21:42:00",
         "details": {
           "total": 69.00,
@@ -1288,7 +1289,7 @@ Response:
         "entity": "Shift",
         "entityId": "uuid-shift-002",
         "action": "CLOSE_SHIFT",
-        "user": { "id": "uuid-user-roxana", "name": "Roxana" },
+        "user": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
         "timestamp": "2026-07-07T23:05:00",
         "details": { "expected": 1455.00, "counted": 1450.00, "difference": -5.00 }
       }

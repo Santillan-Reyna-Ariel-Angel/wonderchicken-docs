@@ -148,9 +148,9 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 - **Criterio de aceptación:** El registro queda vinculado al turno y aparece en el reporte de inventario diario; el reproceso crudo del nuevo turno coincide por default con el sobrante crudo del turno anterior; el sistema reconcilia `(reproceso + procesado − sobrante crudo) − vendido cocido` contra el sobrante cocido en expositor anotado y reporta discrepancias.
 
 ### FR-018 — Autenticación JWT y autorización por rol (Alta)
-- **Funcionalidad:** El usuario inicia sesión con usuario y contraseña y recibe un **JWT (Bearer token)**. Toda petición a endpoints protegidos exige el token en el header `Authorization: Bearer <token>`. El backend lo verifica (**autenticación / AuthN**) y luego valida el **rol** del usuario contra el rol requerido por el endpoint (**autorización / AuthZ**, vía guard tipo middleware). El login es el único endpoint público. La matriz rol → acción autorizada vive en [PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend).
+- **Funcionalidad:** El usuario inicia sesión con **email y contraseña (su CI)** y recibe un **JWT (Bearer token)**. Toda petición a endpoints protegidos exige el token en el header `Authorization: Bearer <token>`. El backend lo verifica (**autenticación / AuthN**) y luego valida el **rol** del usuario contra el rol requerido por el endpoint (**autorización / AuthZ**, vía guard tipo middleware). El login es el único endpoint público. La matriz rol → acción autorizada vive en [PDR §2.7](pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend).
 - **Criterio de aceptación:**
-  - Login con credenciales válidas → **200** + token JWT que incluye `userId`, `username` y `role`.
+  - Login con credenciales válidas → **200** + token JWT que incluye `userId`, `email` y `role`.
   - Petición sin token, o con token inválido / expirado → **401 Unauthorized**.
   - Petición con token válido pero rol **no autorizado** para ese endpoint → **403 Forbidden**.
   - Petición con token válido y rol **autorizado** → procede normalmente.
