@@ -34,7 +34,7 @@ export class VariantComponentDto {
 
 export class CreateVariantDto {
   @ApiProperty({ example: 'uuid-product-porcion-media', format: 'uuid' })
-  @IsUUID('4')
+  @IsUUID()
   productId!: string;
 
   @ApiProperty({ example: 'Porción Media - Mixto' })

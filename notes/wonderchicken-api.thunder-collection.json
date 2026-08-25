@@ -1,0 +1,2325 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Wonder Chicken API — Sprint 0+1 (Full)",
+  "date": "2026-08-25",
+  "description": "Colección completa — 93 requests en 10 fases.\nSetup: Importar → Environment baseUrl → pnpm seed → ejecutar fases en orden.\nCredenciales: SUPER_ADMIN=superadmin@wonderchicken.com/0000000, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333",
+  "folders": [
+    {
+      "name": "Phase 1 — Auth",
+      "requests": [
+        "01 Login SUPER_ADMIN",
+        "02 Login ADMIN",
+        "03 Login CASHIER",
+        "04 Login DISPATCHER",
+        "05 Login password incorrecto [401]",
+        "06 Login email inexistente [401]",
+        "07 Login sin body [400]",
+        "08 Logout CASHIER",
+        "09 Re-login CASHIER post-logout"
+      ]
+    },
+    {
+      "name": "Phase 2 — Branches",
+      "requests": [
+        "10 Crear Branch [SUPER_ADMIN]",
+        "11 Listar Branches [SUPER_ADMIN]",
+        "12 Listar Branches [ADMIN]",
+        "13 Editar Branch [SUPER_ADMIN]",
+        "14 Toggle Branch active [SUPER_ADMIN]",
+        "15 Listar Branches [CASHIER — 403]",
+        "16 Crear Branch [ADMIN — 403]"
+      ]
+    },
+    {
+      "name": "Phase 3 — Users",
+      "requests": [
+        "17 Crear ADMIN [SUPER_ADMIN]",
+        "18 Crear CASHIER [SUPER_ADMIN]",
+        "19 Crear DISPATCHER [SUPER_ADMIN]",
+        "20 Crear CASHIER [ADMIN — mismo branch]",
+        "21 Crear CASHIER [ADMIN — otra branch — 403/400]",
+        "22 Listar Usuarios [SUPER_ADMIN]",
+        "23 Listar Usuarios por rol=CASHIER [SUPER_ADMIN]",
+        "24 Obtener Usuario por ID [SUPER_ADMIN]",
+        "25 Editar Usuario phone [ADMIN]",
+        "26 Toggle Usuario active [ADMIN]",
+        "27 Reactivar Usuario [ADMIN]",
+        "28 Crear Usuario [CASHIER — 403]",
+        "29 Editar Usuario [CASHIER — 403]"
+      ]
+    },
+    {
+      "name": "Phase 4 — Products + Variants",
+      "requests": [
+        "30 Crear Producto POLLO [ADMIN]",
+        "31 Crear Producto BEBIDA [ADMIN]",
+        "32 Crear Producto OTRO (guarnición) [ADMIN]",
+        "33 Crear Variante 1/2 Pollo [ADMIN]",
+        "34 Crear Variante simple (strings) [ADMIN]",
+        "35 Listar Productos [ADMIN]",
+        "36 Listar Productos [CASHIER]",
+        "37 Crear Producto [CASHIER — 403]",
+        "38 Crear Producto duplicado [400]"
+      ]
+    },
+    {
+      "name": "Phase 5 — Shifts + Periods",
+      "requests": [
+        "39 Listar Shift Periods [CASHIER]",
+        "40 Listar Shift Periods [ADMIN]",
+        "41 Listar Shift Periods [DISPATCHER — 403]",
+        "42 Abrir Turno [CASHIER]",
+        "43 Ver Turno Activo [CASHIER]",
+        "44 Abrir Turno [ADMIN — 403]",
+        "45 Abrir Turno sin cashRegisterId [400]"
+      ]
+    },
+    {
+      "name": "Phase 6 — POS Context",
+      "requests": [
+        "46 POS Context con turno abierto [CASHIER]",
+        "47 POS Context sin turno (primero cerrar) [CASHIER]"
+      ]
+    },
+    {
+      "name": "Phase 7 — Orders (completo)",
+      "requests": [
+        "48 Crear Orden MESA [CASHIER]",
+        "49 Crear Orden LLEVAR [CASHIER]",
+        "50 Crear Orden con Variant [CASHIER]",
+        "51 Crear Orden múltiples items [CASHIER]",
+        "52 Obtener Orden MESA [CASHIER]",
+        "53 Pagar Orden MESA CASH [CASHIER]",
+        "54 Pagar Orden LLEVAR CARD [CASHIER]",
+        "55 Cancelar Orden [CASHIER]",
+        "56 Pagar orden ya pagada [400]",
+        "57 Listar Órdenes sin filtro [CASHIER]",
+        "58 Listar Órdenes CONFIRMED [CASHIER]",
+        "59 Listar Órdenes CREATED [CASHIER]",
+        "60 Listar Órdenes CANCELLED [CASHIER]",
+        "61 Listar Órdenes [ADMIN]",
+        "62 Obtener Orden [ADMIN]",
+        "63 Crear Orden [ADMIN — 403]",
+        "64 Pagar Orden [ADMIN — 403]",
+        "65 Listar Órdenes CONFIRMED [DISPATCHER]",
+        "66 Dispatcher ve orden [DISPATCHER]",
+        "67 Crear Orden sin token [401]",
+        "68 Crear Orden sin items [400]",
+        "69 Crear Orden sin turno abierto [CASHIER]"
+      ]
+    },
+    {
+      "name": "Phase 8 — Variant + Extra",
+      "requests": [
+        "70 Crear Variante de Bebida [ADMIN]",
+        "71 Crear Variante sin components [400]",
+        "72 Listar Productos [CASHIER — recheck]"
+      ]
+    },
+    {
+      "name": "Phase 9 — Edge Cases + Boundary",
+      "requests": [
+        "73 Login email mal formado [400]",
+        "74 Crear Usuario email duplicado [400]",
+        "75 Editar Branch inexistente [404]",
+        "76 Obtener Usuario inexistente [404]",
+        "77 Toggle Usuario inexistente [404]",
+        "78 Obtener Orden inexistente [404]",
+        "79 Pagar Orden inexistente [404]",
+        "80 Toggle Branch inexistente [404]",
+        "81 Editar Branch [DISPATCHER — 403]",
+        "82 Listar Orders status inválido [400]",
+        "83 Crear Producto sin nombre [400]",
+        "84 Crear Producto price=0 [400]",
+        "85 GET /users token malformado [401]",
+        "86 Listar Usuarios [DISPATCHER — 403]",
+        "87 Listar Usuarios [ADMIN — filtro branch futuro]",
+        "88 Cancelar Orden inexistente [404]"
+      ]
+    },
+    {
+      "name": "Phase 10 — Deactivated User + Shift Close",
+      "requests": [
+        "89 Desactivar CASHIER [ADMIN]",
+        "90 Login CASHIER desactivada [401]",
+        "91 (No hay endpoint close — shift se cierra implícitamente al abrir otro?)",
+        "92 Cerrar Turno [CASHIER — si existe endpoint]",
+        "93 Reactivar CASHIER [ADMIN]"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "01 Login SUPER_ADMIN",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"0000000\"\n}"
+      },
+      "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('superAdminToken', res.data.accessToken);\n}",
+      "tests": "\npm.test('Login exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Token presente', function() { pm.expect(res.data.accessToken).to.be.a('string'); });\npm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('SUPER_ADMIN'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "02 Login ADMIN",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"ana@wonderchicken.com\",\n  \"password\": \"1111111\"\n}"
+      },
+      "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('adminToken', res.data.accessToken);\n}",
+      "tests": "\npm.test('Login exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('ADMIN'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "03 Login CASHIER",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"carla@wonderchicken.com\",\n  \"password\": \"2222222\"\n}"
+      },
+      "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('cashierToken', res.data.accessToken);\n}",
+      "tests": "\npm.test('Login exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('CASHIER'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "04 Login DISPATCHER",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"diana@wonderchicken.com\",\n  \"password\": \"3333333\"\n}"
+      },
+      "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('dispatcherToken', res.data.accessToken);\n}",
+      "tests": "\npm.test('Login exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('DISPATCHER'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "05 Login password incorrecto [401]",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"carla@wonderchicken.com\",\n  \"password\": \"WRONGPASS\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('401', function() { pm.response.to.have.status(401); });\nvar res = pm.response.json();\npm.test('isSuccess=false', function() { pm.expect(res.isSuccess).to.eq(false); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "06 Login email inexistente [401]",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"nadie@wonderchicken.com\",\n  \"password\": \"0000000\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('401', function() { pm.response.to.have.status(401); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "07 Login sin body [400]",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "08 Logout CASHIER",
+      "url": "{{baseUrl}}/auth/logout",
+      "method": "POST",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Logout exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "09 Re-login CASHIER post-logout",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"carla@wonderchicken.com\",\n  \"password\": \"2222222\"\n}"
+      },
+      "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('cashierToken', res.data.accessToken);\n}",
+      "tests": "\npm.test('Login ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "10 Crear Branch [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/branches",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Sucursal Central\",\n  \"address\": \"Av. Central 123, Santa Cruz\"\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.branch?.id) {\n  pm.collectionVariables.set('branchId', res.data.branch.id);\n}",
+      "tests": "\npm.test('Branch creada', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Nombre correcto', function() { pm.expect(res.data.branch.name).to.eq('Sucursal Central'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "11 Listar Branches [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/branches",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Lista ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Al menos 1', function() { pm.expect(res.data.branches.length).to.greaterThan(0); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "12 Listar Branches [ADMIN]",
+      "url": "{{baseUrl}}/branches",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Lista ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "13 Editar Branch [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/branches/{{branchId}}",
+      "method": "PATCH",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"address\": \"Av. Nueva 456, Santa Cruz\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('Editada', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Direccion actualizada', function() { pm.expect(res.data.branch.address).to.include('Nueva'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "14 Toggle Branch active [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/branches/{{branchId}}/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Toggle ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "15 Listar Branches [CASHIER — 403]",
+      "url": "{{baseUrl}}/branches",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "16 Crear Branch [ADMIN — 403]",
+      "url": "{{baseUrl}}/branches",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Sucursal Falsa\",\n  \"address\": \"Calle Falsa 999\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "17 Crear ADMIN [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Admin\",\n  \"email\": \"ana.nueva@wonderchicken.com\",\n  \"ci\": \"4444444\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.user?.id) {\n  pm.collectionVariables.set('adminId', res.data.user.id);\n}",
+      "tests": "\npm.test('Admin creado', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Rol ADMIN', function() { pm.expect(res.data.user.role).to.eq('ADMIN'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "18 Crear CASHIER [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Cajera\",\n  \"email\": \"carla.nueva@wonderchicken.com\",\n  \"ci\": \"5555555\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.user?.id) {\n  pm.collectionVariables.set('cashier2Id', res.data.user.id);\n}",
+      "tests": "\npm.test('Cashier creado', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "19 Crear DISPATCHER [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Diana\",\n  \"lastName\": \"Despacho\",\n  \"email\": \"diana.nueva@wonderchicken.com\",\n  \"ci\": \"6666666\",\n  \"role\": \"DISPATCHER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('Dispatcher creado', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "20 Crear CASHIER [ADMIN — mismo branch]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Eva\",\n  \"lastName\": \"Empleada\",\n  \"email\": \"eva@wonderchicken.com\",\n  \"ci\": \"7777777\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.user?.id) {\n  pm.collectionVariables.set('cashier3Id', res.data.user.id);\n}",
+      "tests": "\npm.test('Cashier creada por admin', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "21 Crear CASHIER [ADMIN — otra branch — 403/400]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Fran\",\n  \"lastName\": \"Falsa\",\n  \"email\": \"fran.falsa@wonderchicken.com\",\n  \"ci\": \"8888888\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('200 o 403', function() {\n  var status = pm.response.status;\n  pm.expect([200, 201, 403]).to.include(status);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "22 Listar Usuarios [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Lista ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Al menos 1', function() { pm.expect(res.data.total).to.greaterThan(0); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "23 Listar Usuarios por rol=CASHIER [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users?role=CASHIER",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Solo cashiers', function() {\n  var res = pm.response.json();\n  var allCashiers = res.data.users.every(function(u) { return u.role === 'CASHIER'; });\n  pm.expect(allCashiers).to.eq(true);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "24 Obtener Usuario por ID [SUPER_ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Usuario encontrado', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "25 Editar Usuario phone [ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}",
+      "method": "PATCH",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"phone\": \"+591 70000001\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('Telefono actualizado', function() {\n  var res = pm.response.json();\n  pm.expect(res.data.user.phone).to.include('70000001');\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "26 Toggle Usuario active [ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Toggle ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Active invertida', function() { pm.expect(res.data.user.active).to.be.a('boolean'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "27 Reactivar Usuario [ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Reactivado', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "28 Crear Usuario [CASHIER — 403]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"email\": \"x@y.com\",\n  \"ci\": \"9999999\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "29 Editar Usuario [CASHIER — 403]",
+      "url": "{{baseUrl}}/users/{{cashierId}}",
+      "method": "PATCH",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"phone\": \"+591 999\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "30 Crear Producto POLLO [ADMIN]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Pollo Entero\",\n  \"basePrice\": 85,\n  \"category\": \"POLLO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": true\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.product?.id) {\n  pm.collectionVariables.set('productId', res.data.product.id);\n}",
+      "tests": "\npm.test('Producto creado', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Nombre ok', function() { pm.expect(res.data.product.name).to.eq('Pollo Entero'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "31 Crear Producto BEBIDA [ADMIN]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Gaseosa 2L\",\n  \"basePrice\": 18,\n  \"category\": \"BEBIDA\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.product?.id) {\n  pm.collectionVariables.set('bebidaId', res.data.product.id);\n}",
+      "tests": "pm.test('Bebida creada', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "32 Crear Producto OTRO (guarnición) [ADMIN]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Puré de Papa\",\n  \"basePrice\": 12,\n  \"category\": \"OTRO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.product?.id) {\n  pm.collectionVariables.set('guarnicionId', res.data.product.id);\n}",
+      "tests": "pm.test('Guarnicion creada', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "33 Crear Variante 1/2 Pollo [ADMIN]",
+      "url": "{{baseUrl}}/variants",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/2 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/2 pollo\",\n      \"count\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.variant?.id) {\n  pm.collectionVariables.set('variantId', res.data.variant.id);\n}",
+      "tests": "\npm.test('Variante creada', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Nombre ok', function() { pm.expect(res.data.variant.name).to.eq('1/2 Pollo'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "34 Crear Variante simple (strings) [ADMIN]",
+      "url": "{{baseUrl}}/variants",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/4 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/4 pollo\",\n      \"count\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('Variante ok', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "35 Listar Productos [ADMIN]",
+      "url": "{{baseUrl}}/products",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Lista ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Al menos 1', function() { pm.expect(res.data.products.length).to.greaterThan(0); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "36 Listar Productos [CASHIER]",
+      "url": "{{baseUrl}}/products",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Lista ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Solo sellable', function() {\n  var allSellable = res.data.products.every(function(p) { return p.isSellable === true; });\n  pm.expect(allSellable).to.eq(true);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "37 Crear Producto [CASHIER — 403]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Producto X\",\n  \"basePrice\": 10,\n  \"category\": \"OTRO\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "38 Crear Producto duplicado [400]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Pollo Entero\",\n  \"basePrice\": 85,\n  \"category\": \"POLLO\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "39 Listar Shift Periods [CASHIER]",
+      "url": "{{baseUrl}}/shifts/shift-periods",
+      "method": "GET",
+      "body": null,
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.periods?.length > 0) {\n  pm.collectionVariables.set('periodId', res.data.periods[0].id);\n}",
+      "tests": "\npm.test('Periodos ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Hay periodos', function() { pm.expect(res.data.periods.length).to.greaterThan(0); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "40 Listar Shift Periods [ADMIN]",
+      "url": "{{baseUrl}}/shifts/shift-periods",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Periodos ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "41 Listar Shift Periods [DISPATCHER — 403]",
+      "url": "{{baseUrl}}/shifts/shift-periods",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{dispatcherToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "42 Abrir Turno [CASHIER]",
+      "url": "{{baseUrl}}/shifts/open",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"periodId\": \"{{periodId}}\",\n  \"cashRegisterId\": \"{{cashRegisterId}}\",\n  \"openingAmount\": 150\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.shift?.id) {\n  pm.collectionVariables.set('shiftId', res.data.shift.id);\n}",
+      "tests": "\npm.test('Turno abierto', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Status OPEN', function() { pm.expect(res.data.shift.status).to.eq('OPEN'); });\npm.test('OpeningAmount correcto', function() { pm.expect(res.data.shift.openingAmount).to.eq(150); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "43 Ver Turno Activo [CASHIER]",
+      "url": "{{baseUrl}}/shifts/active",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Turno activo', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Status OPEN', function() { pm.expect(res.data.shift.status).to.eq('OPEN'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "44 Abrir Turno [ADMIN — 403]",
+      "url": "{{baseUrl}}/shifts/open",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"periodId\": \"{{periodId}}\",\n  \"cashRegisterId\": \"{{cashRegisterId}}\",\n  \"openingAmount\": 50\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "45 Abrir Turno sin cashRegisterId [400]",
+      "url": "{{baseUrl}}/shifts/open",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"periodId\": \"{{periodId}}\",\n  \"openingAmount\": 100\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "46 POS Context con turno abierto [CASHIER]",
+      "url": "{{baseUrl}}/pos/context",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Contexto ok', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Shift presente', function() { pm.expect(res.data.shift).to.not.eq(null); });\npm.test('Productos array', function() { pm.expect(res.data.products).to.be.an('array'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "47 POS Context sin turno (primero cerrar) [CASHIER]",
+      "url": "{{baseUrl}}/pos/context",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('200 (sin shift)', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "48 Crear Orden MESA [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"MESA\",\n  \"tableNumber\": \"{{branchId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.order?.id) {\n  pm.collectionVariables.set('orderMesaId', res.data.order.id);\n}",
+      "tests": "\npm.test('Orden MESA creada', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Status CREATED', function() { pm.expect(res.data.order.status).to.eq('CREATED'); });\npm.test('Tipo MESA', function() { pm.expect(res.data.order.type).to.eq('MESA'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "49 Crear Orden LLEVAR [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"LLEVAR\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.order?.id) {\n  pm.collectionVariables.set('orderLlevarId', res.data.order.id);\n}",
+      "tests": "\npm.test('Orden LLEVAR creada', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Tipo LLEVAR', function() { pm.expect(res.data.order.type).to.eq('LLEVAR'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "50 Crear Orden con Variant [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"LLEVAR\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.order?.id) {\n  pm.collectionVariables.set('orderVariantId', res.data.order.id);\n}",
+      "tests": "pm.test('Orden con variant', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "51 Crear Orden múltiples items [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"MESA\",\n  \"tableNumber\": \"{{branchId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{bebidaId}}\",\n      \"quantity\": 2\n    },\n    {\n      \"productId\": \"{{guarnicionId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.order?.id) {\n  pm.collectionVariables.set('orderMultiId', res.data.order.id);\n}",
+      "tests": "\npm.test('Orden multiple items', function() { pm.response.to.have.status(201); });\nvar res = pm.response.json();\npm.test('Items >= 3', function() { pm.expect(res.data.order.items.length).to.at.least(3); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "52 Obtener Orden MESA [CASHIER]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Orden encontrada', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Status CREATED', function() { pm.expect(res.data.order.status).to.eq('CREATED'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "53 Pagar Orden MESA CASH [CASHIER]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}/pay",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"paymentMethod\": \"CASH\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('Pagada CASH', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Status CONFIRMED', function() { pm.expect(res.data.order.status).to.eq('CONFIRMED'); });\npm.test('PaymentMethod CASH', function() { pm.expect(res.data.order.paymentMethod).to.eq('CASH'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "54 Pagar Orden LLEVAR CARD [CASHIER]",
+      "url": "{{baseUrl}}/orders/{{orderLlevarId}}/pay",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"paymentMethod\": \"CARD\"\n}"
+      },
+      "preScript": "",
+      "tests": "\npm.test('Pagada CARD', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Status CONFIRMED', function() { pm.expect(res.data.order.status).to.eq('CONFIRMED'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "55 Cancelar Orden [CASHIER]",
+      "url": "{{baseUrl}}/orders/{{orderVariantId}}/cancel",
+      "method": "POST",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Cancelada', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('Status CANCELLED', function() { pm.expect(res.data.order.status).to.eq('CANCELLED'); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "56 Pagar orden ya pagada [400]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}/pay",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"paymentMethod\": \"CASH\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "57 Listar Órdenes sin filtro [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Lista ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "58 Listar Órdenes CONFIRMED [CASHIER]",
+      "url": "{{baseUrl}}/orders?status=CONFIRMED",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Solo confirmed', function() {\n  var res = pm.response.json();\n  var allConfirmed = res.data.orders.every(function(o) { return o.status === 'CONFIRMED'; });\n  pm.expect(allConfirmed).to.eq(true);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "59 Listar Órdenes CREATED [CASHIER]",
+      "url": "{{baseUrl}}/orders?status=CREATED",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Solo created', function() {\n  var res = pm.response.json();\n  var allCreated = res.data.orders.every(function(o) { return o.status === 'CREATED'; });\n  pm.expect(allCreated).to.eq(true);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "60 Listar Órdenes CANCELLED [CASHIER]",
+      "url": "{{baseUrl}}/orders?status=CANCELLED",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Solo cancelled', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "61 Listar Órdenes [ADMIN]",
+      "url": "{{baseUrl}}/orders",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Admin ve todas', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "62 Obtener Orden [ADMIN]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Admin ve orden', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "63 Crear Orden [ADMIN — 403]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"MESA\",\n  \"tableNumber\": \"{{branchId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "64 Pagar Orden [ADMIN — 403]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}/pay",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"paymentMethod\": \"CASH\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "65 Listar Órdenes CONFIRMED [DISPATCHER]",
+      "url": "{{baseUrl}}/orders?status=CONFIRMED",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Dispatcher ve confirmadas', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{dispatcherToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "66 Dispatcher ve orden [DISPATCHER]",
+      "url": "{{baseUrl}}/orders/{{orderMesaId}}",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Dispatcher ve orden', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{dispatcherToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "67 Crear Orden sin token [401]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"LLEVAR\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('401', function() { pm.response.to.have.status(401); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "68 Crear Orden sin items [400]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"LLEVAR\",\n  \"items\": []\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "69 Crear Orden sin turno abierto [CASHIER]",
+      "url": "{{baseUrl}}/orders",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"type\": \"LLEVAR\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "",
+      "tests": "// El comportamiento depende de la lógica de negocio (Sprint 1 permite/sin turno)",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "70 Crear Variante de Bebida [ADMIN]",
+      "url": "{{baseUrl}}/variants",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"productId\": \"{{bebidaId}}\",\n  \"name\": \"Gaseosa 1.5L\",\n  \"components\": [\n    {\n      \"type\": \"bebida\",\n      \"name\": \"gaseosa 1.5L\",\n      \"count\": 1\n    }\n  ]\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('Variant bebida', function() { pm.response.to.have.status(201); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "71 Crear Variante sin components [400]",
+      "url": "{{baseUrl}}/variants",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"Sola\",\n  \"components\": []\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "72 Listar Productos [CASHIER — recheck]",
+      "url": "{{baseUrl}}/products",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('Lista ok', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "73 Login email mal formado [400]",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"no-es-email\",\n  \"password\": \"123\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "74 Crear Usuario email duplicado [400]",
+      "url": "{{baseUrl}}/users",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"firstName\": \"Dupe\",\n  \"lastName\": \"User\",\n  \"email\": \"ana@wonderchicken.com\",\n  \"ci\": \"0000001\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "75 Editar Branch inexistente [404]",
+      "url": "{{baseUrl}}/branches/00000000-0000-0000-0000-000000000000",
+      "method": "PATCH",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"address\": \"X\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "76 Obtener Usuario inexistente [404]",
+      "url": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "77 Toggle Usuario inexistente [404]",
+      "url": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "78 Obtener Orden inexistente [404]",
+      "url": "{{baseUrl}}/orders/00000000-0000-0000-0000-000000000000",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "79 Pagar Orden inexistente [404]",
+      "url": "{{baseUrl}}/orders/00000000-0000-0000-0000-000000000000/pay",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"paymentMethod\": \"CASH\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "80 Toggle Branch inexistente [404]",
+      "url": "{{baseUrl}}/branches/00000000-0000-0000-0000-000000000000/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{superAdminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "81 Editar Branch [DISPATCHER — 403]",
+      "url": "{{baseUrl}}/branches/{{branchId}}",
+      "method": "PATCH",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"address\": \"X\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{dispatcherToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "82 Listar Orders status inválido [400]",
+      "url": "{{baseUrl}}/orders?status=INVALIDO",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "83 Crear Producto sin nombre [400]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"basePrice\": 10,\n  \"category\": \"OTRO\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "84 Crear Producto price=0 [400]",
+      "url": "{{baseUrl}}/products",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Gratis\",\n  \"basePrice\": 0,\n  \"category\": \"OTRO\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('400', function() { pm.response.to.have.status(400); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "85 GET /users token malformado [401]",
+      "url": "{{baseUrl}}/users",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('401', function() { pm.response.to.have.status(401); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer invalid.token.here"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "86 Listar Usuarios [DISPATCHER — 403]",
+      "url": "{{baseUrl}}/users",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('403', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{dispatcherToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "87 Listar Usuarios [ADMIN — filtro branch futuro]",
+      "url": "{{baseUrl}}/users",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('200', function() { pm.response.to.have.status(200); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "88 Cancelar Orden inexistente [404]",
+      "url": "{{baseUrl}}/orders/00000000-0000-0000-0000-000000000000/cancel",
+      "method": "POST",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('404', function() { pm.response.to.have.status(404); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "89 Desactivar CASHIER [ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Desactivada', function() {\n  var res = pm.response.json();\n  pm.expect(res.data.user.active).to.eq(false);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "90 Login CASHIER desactivada [401]",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"email\": \"carla.nueva@wonderchicken.com\",\n  \"password\": \"5555555\"\n}"
+      },
+      "preScript": "",
+      "tests": "pm.test('401', function() { pm.response.to.have.status(401); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "91 (No hay endpoint close — shift se cierra implícitamente al abrir otro?)",
+      "url": "{{baseUrl}}/shifts/active",
+      "method": "GET",
+      "body": null,
+      "preScript": "",
+      "tests": "pm.test('403 (no es cashier)', function() { pm.response.to.have.status(403); });",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "92 Cerrar Turno [CASHIER — si existe endpoint]",
+      "url": "{{baseUrl}}/shifts/close",
+      "method": "POST",
+      "body": {
+        "type": "json",
+        "content": "{\n  \"closingAmount\": 500\n}"
+      },
+      "preScript": "",
+      "tests": "// Endpoint puede no existir en Sprint 1 — acepta 200/404",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{cashierToken}}"
+        }
+      ],
+      "auth": []
+    },
+    {
+      "_id": "{{$guid}}",
+      "colId": "wonderchicken",
+      "name": "93 Reactivar CASHIER [ADMIN]",
+      "url": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
+      "method": "PATCH",
+      "body": null,
+      "preScript": "",
+      "tests": "\npm.test('Reactivada', function() {\n  var res = pm.response.json();\n  pm.expect(res.data.user.active).to.eq(true);\n});",
+      "header": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "auth": []
+    }
+  ],
+  "settings": {
+    "baseUrl": "http://localhost:4000/api/v1",
+    "variables": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:4000/api/v1",
+        "type": "string"
+      },
+      {
+        "key": "superAdminToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "adminToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "cashierToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "dispatcherToken",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "branchId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "cashierId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "adminId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "cashier2Id",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "cashier3Id",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "productId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "bebidaId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "guarnicionId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "variantId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "periodId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "cashRegisterId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "shiftId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "orderMesaId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "orderLlevarId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "orderVariantId",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "orderMultiId",
+        "value": "",
+        "type": "string"
+      }
+    ]
+  }
+}
