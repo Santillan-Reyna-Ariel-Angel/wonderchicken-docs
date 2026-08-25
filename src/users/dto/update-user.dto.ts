@@ -5,24 +5,42 @@ import {
   IsString,
   MinLength,
   MaxLength,
+  IsEmail,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../../../generated/prisma/enums.js';
 
 export class UpdateUserDto {
-  @ApiPropertyOptional({ example: 'Roxana' })
+  @ApiPropertyOptional({ example: 'Juan' })
   @IsOptional()
   @IsString()
   @MinLength(1)
-  @MaxLength(100)
-  name?: string;
+  @MaxLength(50)
+  firstName?: string;
 
-  @ApiPropertyOptional({ minLength: 6, maxLength: 72 })
+  @ApiPropertyOptional({ example: 'Pérez' })
   @IsOptional()
   @IsString()
-  @MinLength(6)
-  @MaxLength(72)
-  password?: string;
+  @MinLength(1)
+  @MaxLength(50)
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: 'juan@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional({ example: '+591 70000000' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: '12345678' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  ci?: string;
 
   @ApiPropertyOptional({ enum: UserRole })
   @IsOptional()

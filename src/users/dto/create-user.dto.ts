@@ -2,35 +2,41 @@ import {
   IsString,
   MinLength,
   MaxLength,
-  Matches,
   IsEnum,
   IsOptional,
   IsUUID,
+  IsEmail,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../../../generated/prisma/enums.js';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'Roxana' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  name: string;
-
-  @ApiProperty({ example: 'roxana' })
+  @ApiProperty({ example: 'Juan' })
   @IsString()
   @MinLength(1)
   @MaxLength(50)
-  @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: 'El username solo puede contener letras, números y guiones bajos',
-  })
-  username: string;
+  firstName: string;
 
-  @ApiProperty({ example: 'password123', minLength: 6 })
+  @ApiProperty({ example: 'Pérez' })
   @IsString()
-  @MinLength(6)
-  @MaxLength(72)
-  password: string;
+  @MinLength(1)
+  @MaxLength(50)
+  lastName: string;
+
+  @ApiProperty({ example: 'juan@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiPropertyOptional({ example: '+591 70000000' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ example: '12345678' })
+  @IsString()
+  @IsNotEmpty()
+  ci: string;
 
   @ApiProperty({ enum: UserRole, example: UserRole.CASHIER })
   @IsEnum(UserRole)

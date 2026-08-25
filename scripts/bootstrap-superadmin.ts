@@ -5,8 +5,8 @@
 // Uso:
 //   pnpm bootstrap:admin
 //
-// Credenciales desde variables de entorno (SUPER_ADMIN_USERNAME / SUPER_ADMIN_PASSWORD),
-// con defaults de desarrollo superadmin/password123.
+// Credenciales desde variables de entorno (SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD / SUPER_ADMIN_CI),
+// con defaults de desarrollo superadmin@wonderchicken.com/0000000.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client.js';
@@ -24,11 +24,11 @@ async function main() {
   const result = await bootstrapSuperAdmin(prisma);
 
   if (result.created) {
-    console.log(`✅ SUPER_ADMIN "${result.username}" creado correctamente.`);
-    console.log('   Credenciales: las de SUPER_ADMIN_USERNAME / SUPER_ADMIN_PASSWORD del .env');
+    console.log(`✅ SUPER_ADMIN "${result.email}" creado correctamente.`);
+    console.log('   Login: email + CI (la contraseña es el CI definido en SUPER_ADMIN_CI del .env)');
   } else {
     console.log(
-      `ℹ️  El usuario "${result.username}" ya existía. No se hizo nada (idempotente).`,
+      `ℹ️  El usuario "${result.email}" ya existía. No se hizo nada (idempotente).`,
     );
   }
 

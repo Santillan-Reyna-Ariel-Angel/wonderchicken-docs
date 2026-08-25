@@ -14,24 +14,22 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { username: loginDto.username },
+    // Buscar solo por email
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: loginDto.email,
+        active: true,
+      },
     });
 
     if (!user) {
       this.logger.warn(
-        `Intento de login con username inexistente: ${loginDto.username}`,
+        `Intento de login con email inexistente: ${loginDto.email}`,
       );
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    if (!user.active) {
-      this.logger.warn(
-        `Intento de login con usuario inactivo: ${loginDto.username}`,
-      );
-      throw new UnauthorizedException('La cuenta está inactiva');
-    }
-
+    // La contraseña es el CI hasheado
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
       user.passwordHash,
@@ -39,20 +37,20 @@ export class AuthService {
 
     if (!isPasswordValid) {
       this.logger.warn(
-        `Contraseña incorrecta para usuario: ${loginDto.username}`,
+        `Contraseña incorrecta para usuario con email: ${loginDto.email}`,
       );
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
     const payload = {
       sub: user.id,
-      username: user.username,
+      email: user.email,
       role: user.role,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
-    this.logger.log(`Login exitoso para usuario: ${user.username}`);
+    this.logger.log(`Login exitoso para usuario con email: ${loginDto.email}`);
 
     return {
       isSuccess: true,

@@ -62,7 +62,10 @@ export class BranchesController {
   @ApiOperation({
     summary: 'Activar/desactivar sucursal (toggle) (SUPER_ADMIN)',
   })
-  @ApiResponse({ status: 200, description: 'Estado activo/inactivo actualizado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado activo/inactivo actualizado',
+  })
   @ApiResponse({ status: 404, description: 'No encontrada' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
   toggleActive(@Param('id', ParseUUIDPipe) id: string) {

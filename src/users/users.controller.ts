@@ -19,6 +19,8 @@ import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { FindUsersQueryDto } from './dto/find-users-query.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
+import { GetUser } from '../common/decorators/current-user.decorator.js';
+import type { JwtPayload } from '../common/guards/auth.guard.js';
 import { UserRole } from '../../generated/prisma/enums.js';
 
 @ApiTags('users')
@@ -59,8 +61,15 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar rol/estado de usuario (admin)' })
+  @ApiOperation({
+    summary:
+      'Editar usuario (admin). NO permite cambiar active; usar PATCH /users/:id/toggle-active',
+  })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o active en payload',
+  })
   @ApiResponse({ status: 404, description: 'No encontrado' })
   @ApiResponse({ status: 403, description: 'Sin permisos' })
   update(
@@ -70,18 +79,22 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Patch(':id/toggle-active')
   @ApiOperation({
-    summary: 'Activar/desactivar usuario (toggle) (admin)',
+    summary: 'Activar/desactivar usuario (toggle) (ADMIN | SUPER_ADMIN)',
   })
   @ApiResponse({
     status: 200,
     description: 'Estado activo/inactivo actualizado',
   })
+  @ApiResponse({ status: 400, description: 'Auto-toggle no permitido' })
+  @ApiResponse({ status: 403, description: 'Sin permisos sobre ese rol' })
   @ApiResponse({ status: 404, description: 'No encontrado' })
-  @ApiResponse({ status: 403, description: 'Sin permisos' })
-  toggleActive(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.toggleActive(id);
+  toggleActive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser() actor: JwtPayload,
+  ) {
+    return this.usersService.toggleActive(id, actor);
   }
 }
