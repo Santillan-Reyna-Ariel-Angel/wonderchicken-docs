@@ -21,7 +21,9 @@ interface ValidationRule {
 const VALIDATION_TRANSLATIONS: ValidationRule[] = [
   {
     // "role must be one of the following values: SUPER_ADMIN, ADMIN"
-    pattern: /^(\w+) must be one of the following values: (.+)$/,
+    // También captura variaciones con espacios extras
+    pattern:
+      /^(\w+)\s+must\s+be\s+one\s+of\s+the\s+following\s+values:\s*(.+)$/,
     build: ([, field, values]) =>
       `El campo ${field} debe ser uno de los siguientes valores: ${values}`,
   },
