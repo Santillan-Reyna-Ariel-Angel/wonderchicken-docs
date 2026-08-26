@@ -26,8 +26,6 @@ export class CreateOrderDto {
     description: 'Requerido si type=MESA',
   })
   @IsOptional()
-  @IsUUID()
-  @IsOptional()
   tableNumber?: string;
 
   @ApiProperty({
@@ -36,7 +34,7 @@ export class CreateOrderDto {
     required: false,
   })
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID()
   customerId?: string;
 
   @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.PAID })

@@ -9,10 +9,10 @@ export class OpenShiftDto {
   openingAmount!: number;
 
   @ApiProperty({ example: 'uuid-cash-register-1', format: 'uuid' })
-  @IsUUID('4')
+  @IsUUID()
   cashRegisterId!: string;
 
   @ApiProperty({ example: 'uuid-period-manana', format: 'uuid' })
-  @IsUUID('4')
+  @IsUUID()
   periodId!: string;
 }

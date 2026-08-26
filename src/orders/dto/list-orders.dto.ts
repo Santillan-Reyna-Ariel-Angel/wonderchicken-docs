@@ -25,7 +25,7 @@ export class ListOrdersDto {
     required: false,
   })
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID()
   createdBy?: string;
 
   @ApiProperty({ example: '70', required: false })
@@ -35,6 +35,6 @@ export class ListOrdersDto {
 
   @ApiProperty({ example: 'uuid-customer', format: 'uuid', required: false })
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID()
   customer?: string;
 }

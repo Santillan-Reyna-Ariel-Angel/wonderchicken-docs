@@ -49,7 +49,7 @@ export class OrderItemExtraDto {
 
 export class OrderItemDrinkDto {
   @ApiProperty({ example: 'uuid-product-fanta', format: 'uuid' })
-  @IsUUID('4')
+  @IsUUID()
   productId!: string;
 
   @ApiProperty({ example: 1, minimum: 1 })
@@ -60,7 +60,7 @@ export class OrderItemDrinkDto {
 
 export class CreateOrderItemDto {
   @ApiProperty({ example: 'uuid-product-wonder', format: 'uuid' })
-  @IsUUID('4')
+  @IsUUID()
   productId!: string;
 
   @ApiProperty({
@@ -69,7 +69,7 @@ export class CreateOrderItemDto {
     required: false,
   })
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID()
   variantId?: string;
 
   @ApiProperty({ example: 2, minimum: 1 })

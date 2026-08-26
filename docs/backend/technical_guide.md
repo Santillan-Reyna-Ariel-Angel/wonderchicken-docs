@@ -530,6 +530,8 @@ Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestj
 | `bcryptjs` | Hashea/compara contraseñas en el login (`User.passwordHash`). |
 | `ValidationPipe` (global) | Valida el body contra los DTOs (class-validator). |
 
+> **Regla para campos UUID en DTOs:** usar `@IsUUID()` (sin argumento de versión). No usar `@IsUUID('4')` — los IDs generados por la aplicación (especialmente con `uuid(7)` en Prisma) no son UUIDv4 y la validación fallaría innecesariamente.
+
 > **Por qué guards y no middleware:** el middleware corre **antes** del routing y no conoce el handler destino, así que no puede leer el `@Roles` de ese endpoint. El guard corre **después** del routing, con `ExecutionContext` completo, y por eso puede leer los metadatos del decorator. La autorización por rol **va en guard**, no en middleware.
 
 ### Snippets de referencia (patrón NestJS estándar)

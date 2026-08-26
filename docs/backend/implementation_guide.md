@@ -66,6 +66,7 @@ Comandos base: `pnpm prisma generate` (tras cambiar schema) · `pnpm prisma db p
   ```
 
 - **Transversales (leer ANTES de codear el primer endpoint):** principios de diseño [tech guide §5.0](technical_guide.md#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza) · contrato de respuesta [§5.3](technical_guide.md#53-estructura-de-respuesta-estándar) · códigos de error [§5.4](technical_guide.md#54-reglas-del-contrato) · reglas transaccionales [§4.2](technical_guide.md#42-reglas-transaccionales).
+- **Regla UUID en DTOs:** usar siempre `@IsUUID()` (sin argumento). No usar `@IsUUID('4')` — los IDs de la app (especialmente `uuid(7)` de Prisma) no son UUIDv4 y la validación fallaría.
 - **Estados reservados sin uso en V1** (`onHold`, `partial`, `redeemed`/`cancelled` de vale): el backend **no los produce ni acepta** — ver notas en [technical guide §3.1](technical_guide.md#31-entidades-principales).
 - **Prefijo global:** todos los endpoints bajo `/api/v1` (setear en `main.ts`).
 
