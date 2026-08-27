@@ -35,17 +35,11 @@ async function main() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-
-
-
-
-
-
-  
   const PORT = process.env.PORT ?? 4000;
   await app.listen(PORT);
 
   logger.log(`wonderChicken backend is running in ${PORT}`);
+
   logger.log(`Swagger docs available at http://localhost:${PORT}/api/docs`);
 }
 void main();
