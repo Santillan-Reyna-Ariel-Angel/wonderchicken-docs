@@ -16,7 +16,7 @@
 //   - Edge cases y boundary testing
 //
 // Credenciales de test:
-//   SUPER_ADMIN: superadmin@wonderchicken.com / 0000000
+//   SUPER_ADMIN: superadmin@wonderchicken.com / password123
 //   ADMIN:       ana@wonderchicken.com / 1111111
 //   CASHIER:     carla@wonderchicken.com / 2222222
 //   DISPATCHER:  diana@wonderchicken.com / 3333333
@@ -30,7 +30,7 @@ const __dirname = path.dirname(__filename);
 
 // ─── Credenciales de test ────────────────────────────────────────────────────
 const USERS = {
-  SUPER_ADMIN: { email: 'superadmin@wonderchicken.com', password: '0000000', role: 'SUPER_ADMIN' },
+  SUPER_ADMIN: { email: 'superadmin@wonderchicken.com', password: 'password123', role: 'SUPER_ADMIN' },
   ADMIN:       { email: 'ana@wonderchicken.com',        password: '1111111', role: 'ADMIN'       },
   CASHIER:     { email: 'carla@wonderchicken.com',      password: '2222222', role: 'CASHIER'     },
   DISPATCHER:  { email: 'diana@wonderchicken.com',      password: '3333333', role: 'DISPATCHER'  },
@@ -1450,7 +1450,7 @@ function buildThunderCollection() {
     date: '2026-08-25',
     description: `Colección completa — ${requests.length} requests en ${PHASES.length} fases.
 Setup: Importar → Environment baseUrl → pnpm seed → ejecutar fases en orden.
-Credenciales: SUPER_ADMIN=superadmin@wonderchicken.com/0000000, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333`,
+Credenciales: SUPER_ADMIN=superadmin@wonderchicken.com/password123, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333`,
     folders,
     requests: requests.map(buildThunderItem),
     settings: {

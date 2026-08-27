@@ -6,7 +6,7 @@
 //   pnpm bootstrap:admin
 //
 // Credenciales desde variables de entorno (SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD / SUPER_ADMIN_CI),
-// con defaults de desarrollo superadmin@wonderchicken.com/0000000.
+// con defaults de desarrollo superadmin@wonderchicken.com/password123.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client.js';

@@ -2,7 +2,7 @@
   "client": "Thunder Client",
   "collectionName": "Wonder Chicken API — Sprint 0+1 (Full)",
   "date": "2026-08-25",
-  "description": "Colección completa — 93 requests en 10 fases.\nSetup: Importar → Environment baseUrl → pnpm seed → ejecutar fases en orden.\nCredenciales: SUPER_ADMIN=superadmin@wonderchicken.com/0000000, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333",
+  "description": "Colección completa — 93 requests en 10 fases.\nSetup: Importar → Environment baseUrl → pnpm seed → ejecutar fases en orden.\nCredenciales: SUPER_ADMIN=superadmin@wonderchicken.com/password123, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333",
   "folders": [
     {
       "name": "Phase 1 — Auth",
@@ -157,7 +157,7 @@
       "method": "POST",
       "body": {
         "type": "json",
-        "content": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"0000000\"\n}"
+        "content": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"password123\"\n}"
       },
       "preScript": "// Auto-extrae accessToken al contexto de colección\nvar res = pm.response.json();\nif (res.isSuccess && res.data?.accessToken) {\n  pm.collectionVariables.set('superAdminToken', res.data.accessToken);\n}",
       "tests": "\npm.test('Login exitoso', function() { pm.response.to.have.status(200); });\nvar res = pm.response.json();\npm.test('isSuccess=true', function() { pm.expect(res.isSuccess).to.eq(true); });\npm.test('Token presente', function() { pm.expect(res.data.accessToken).to.be.a('string'); });\npm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('SUPER_ADMIN'); });",

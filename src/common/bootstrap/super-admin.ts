@@ -18,7 +18,7 @@ export const SUPER_ADMIN_DEFAULTS = {
   firstName: 'Super',
   lastName: 'Admin',
   email: 'superadmin@wonderchicken.com',
-  ci: '0000000',
+  ci: 'password123',
 };
 
 /**

@@ -10,7 +10,7 @@
 
 | # | Método | Endpoint | Auth | Body | Esperado |
 |---|--------|----------|------|------|---------|
-| 1 | `POST` | `/auth/login` | — | `{ "email": "superadmin@wonderchicken.com", "password": "0000000" }` | `200` → `{ data: { accessToken }, isSuccess: true }` — guardar `superAdminToken` |
+| 1 | `POST` | `/auth/login` | — | `{ "email": "superadmin@wonderchicken.com", "password": "password123" }` | `200` → `{ data: { accessToken }, isSuccess: true }` — guardar `superAdminToken` |
 | 2 | `POST` | `/branches` | `superAdminToken` | `{ "name": "Sucursal Central", "address": "Av. Central 123" }` | `201` → guardar `branchId` del `data.branch.id` |
 | 3 | `GET` | `/branches` | `superAdminToken` | — | `200` → la sucursal creada aparece en la lista |
 

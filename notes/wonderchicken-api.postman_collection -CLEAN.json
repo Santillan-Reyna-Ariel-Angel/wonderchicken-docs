@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Wonder Chicken API — Sprint 0+1 (Full)",
-    "description": "Colección completa de testing para Wonder Chicken Backend (Sprint 0 + Sprint 1).\nCubre: Auth, Branches, Users, Products+Variants, Shifts, POS, Orders, Edge Cases.\n\nSetup:\n1. Importar en Postman\n2. Environment: baseUrl = http://localhost:4000/api/v1\n3. Asegurarse que existe al menos un CashRegister en DB (pnpm seed)\n4. Ejecutar las fases en orden\n\nCredenciales:\n- SUPER_ADMIN: superadmin@wonderchicken.com / 0000000\n- ADMIN:       ana@wonderchicken.com / 1111111\n- CASHIER:     carla@wonderchicken.com / 2222222\n- DISPATCHER:  diana@wonderchicken.com / 3333333",
+    "description": "Colección completa de testing para Wonder Chicken Backend (Sprint 0 + Sprint 1).\nCubre: Auth, Branches, Users, Products+Variants, Shifts, POS, Orders, Edge Cases.\n\nSetup:\n1. Importar en Postman\n2. Environment: baseUrl = http://localhost:4000/api/v1\n3. Asegurarse que existe al menos un CashRegister en DB (pnpm seed)\n4. Ejecutar las fases en orden\n\nCredenciales:\n- SUPER_ADMIN: superadmin@wonderchicken.com / password123\n- ADMIN:       ana@wonderchicken.com / 1111111\n- CASHIER:     carla@wonderchicken.com / 2222222\n- DISPATCHER:  diana@wonderchicken.com / 3333333",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -117,7 +117,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"0000000\"\n}",
+              "raw": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
