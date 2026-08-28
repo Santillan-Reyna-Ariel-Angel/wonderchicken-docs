@@ -71,15 +71,36 @@ enum OrderType {
   LLEVAR
 }
 
+// Máquina de estados de la orden (tech guide §4 / PDR §4):
+//   created → confirmed → preparing → ready → delivered → closed
+//   + pendingPayment, cancelled; onHold RESERVADO (sin uso en V1, §3.1).
+// Regla clave: el inventario se descuenta al CONFIRMAR el pago, nunca antes (§2.3).
+// Nota implementación (Sprint 1): el POS funde created/confirmed en el nacimiento —
+// la orden se crea directo en PREPARING ("se prepara de inmediato", §2.5); el PATCH
+// /orders/{id}/status (despacho, §6.11b) opera preparing→ready→delivered (Sprint 4).
 enum OrderStatus {
+  // Registrada por la cajera, sin pago ni confirmación (transitorio).
   CREATED
+  // Pagada — decremento atómico de inventario + contabiliza ingreso (§4.1).
   CONFIRMED
+  // En preparación — comanda visible en el panel de despacho (FR-003).
+  // El pendingPayment se prepara IGUAL, sin tocar inventario ni caja (§2.5).
   PREPARING
+  // Despachadora marca listo → readyAt=now; pantalla pública "turnos de banco"
+  // muestra SOLO el número de pedido + alerta breve (FR-007, §2.8). MESA y LLEVAR.
   READY
+  // Cliente recoge / delivery retira → deliveredAt + deliveredBy (§4.1).
   DELIVERED
+  // Cierre administrativo: POST /shifts/close lo aplica al cerrar el turno a
+  // todas las órdenes delivered — NO hay endpoint dedicado (§4.1).
   CLOSED
+  // LLEVAR/delivery SIN pago — se prepara igual; cancelación SIEMPRE manual,
+  // sin motivo ni timeout (§2.5 / FR-011). paymentStatus = PENDING.
   PENDING_PAYMENT
+  // Cancelación manual del pendiente (sin motivo), o anulación del pagado con
+  // motivo + detalle OBLIGATORIOS y reversión de inventario (FR-011b).
   CANCELLED
+  // RESERVADO — sin transiciones ni uso en V1: el backend no lo produce ni lo acepta (§3.1).
   ON_HOLD
 }
 

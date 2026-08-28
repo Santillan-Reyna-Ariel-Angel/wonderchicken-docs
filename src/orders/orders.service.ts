@@ -122,15 +122,15 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto, actor: JwtPayload) {
-    if (dto.type === 'MESA' && !dto.tableNumber) {
-      throw new BadRequestException(
-        'El número de mesa es obligatorio para pedidos MESA',
-      );
-    }
-
     if (dto.paymentStatus === 'PAID' && !dto.paymentMethod) {
       throw new BadRequestException(
         'El método de pago es obligatorio cuando el pedido se crea pagado',
+      );
+    }
+
+    if (dto.paymentStatus === 'PENDING' && dto.paymentMethod) {
+      throw new BadRequestException(
+        'No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING)',
       );
     }
 

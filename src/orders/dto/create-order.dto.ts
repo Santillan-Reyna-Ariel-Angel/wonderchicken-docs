@@ -4,6 +4,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsUUID,
   ValidateNested,
@@ -23,9 +24,10 @@ export class CreateOrderDto {
   @ApiProperty({
     example: '70',
     required: false,
-    description: 'Requerido si type=MESA',
+    description: 'Número de mesa (opcional, solo informativo para type=MESA)',
   })
   @IsOptional()
+  @IsNotEmpty()
   tableNumber?: string;
 
   @ApiProperty({
