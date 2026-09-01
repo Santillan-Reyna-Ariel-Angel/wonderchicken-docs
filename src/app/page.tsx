@@ -1,5 +1,10 @@
+import Button from "@mui/material/Button";
+
 export default function MainPage() {
   return (
-    <div>Hello World</div>
+    <div>
+      <div>Hello World</div>
+      <Button variant="contained">Hola Ariel</Button>
+    </div>
   );
 }
