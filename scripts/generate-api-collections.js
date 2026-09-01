@@ -16,7 +16,7 @@
 //   - Edge cases y boundary testing
 //
 // Credenciales de test:
-//   SUPER_ADMIN: superadmin@wonderchicken.com / password123
+//   SUPER_ADMIN: superadmin@gmail.com / password123
 //   ADMIN:       ana@wonderchicken.com / 1111111
 //   CASHIER:     carla@wonderchicken.com / 2222222
 //   DISPATCHER:  diana@wonderchicken.com / 3333333
@@ -30,10 +30,22 @@ const __dirname = path.dirname(__filename);
 
 // ─── Credenciales de test ────────────────────────────────────────────────────
 const USERS = {
-  SUPER_ADMIN: { email: 'superadmin@wonderchicken.com', password: 'password123', role: 'SUPER_ADMIN' },
-  ADMIN:       { email: 'ana@wonderchicken.com',        password: '1111111', role: 'ADMIN'       },
-  CASHIER:     { email: 'carla@wonderchicken.com',      password: '2222222', role: 'CASHIER'     },
-  DISPATCHER:  { email: 'diana@wonderchicken.com',      password: '3333333', role: 'DISPATCHER'  },
+  SUPER_ADMIN: {
+    email: 'superadmin@gmail.com',
+    password: 'password123',
+    role: 'SUPER_ADMIN',
+  },
+  ADMIN: { email: 'ana@wonderchicken.com', password: '1111111', role: 'ADMIN' },
+  CASHIER: {
+    email: 'carla@wonderchicken.com',
+    password: '2222222',
+    role: 'CASHIER',
+  },
+  DISPATCHER: {
+    email: 'diana@wonderchicken.com',
+    password: '3333333',
+    role: 'DISPATCHER',
+  },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -70,7 +82,10 @@ requests.push(
     phase: 1,
     method: 'POST',
     url: '{{baseUrl}}/auth/login',
-    body: { email: USERS.SUPER_ADMIN.email, password: USERS.SUPER_ADMIN.password },
+    body: {
+      email: USERS.SUPER_ADMIN.email,
+      password: USERS.SUPER_ADMIN.password,
+    },
     preScript: preScriptExtractToken('superAdmin'),
     test: `
 pm.test('Login exitoso', function() { pm.response.to.have.status(200); });
@@ -113,7 +128,10 @@ pm.test('Rol correcto', function() { pm.expect(res.data.user.role).to.eq('CASHIE
     phase: 1,
     method: 'POST',
     url: '{{baseUrl}}/auth/login',
-    body: { email: USERS.DISPATCHER.email, password: USERS.DISPATCHER.password },
+    body: {
+      email: USERS.DISPATCHER.email,
+      password: USERS.DISPATCHER.password,
+    },
     preScript: preScriptExtractToken('dispatcher'),
     test: `
 pm.test('Login exitoso', function() { pm.response.to.have.status(200); });
@@ -280,9 +298,12 @@ requests.push(
     url: '{{baseUrl}}/users',
     auth: 'superAdmin',
     body: {
-      firstName: 'Ana', lastName: 'Admin',
-      email: 'ana.nueva@wonderchicken.com', ci: '4444444',
-      role: 'ADMIN', branchId: '{{branchId}}',
+      firstName: 'Ana',
+      lastName: 'Admin',
+      email: 'ana.nueva@wonderchicken.com',
+      ci: '4444444',
+      role: 'ADMIN',
+      branchId: '{{branchId}}',
     },
     preScript: `
 var res = pm.response.json();
@@ -302,9 +323,12 @@ pm.test('Rol ADMIN', function() { pm.expect(res.data.user.role).to.eq('ADMIN'); 
     url: '{{baseUrl}}/users',
     auth: 'superAdmin',
     body: {
-      firstName: 'Carla', lastName: 'Cajera',
-      email: 'carla.nueva@wonderchicken.com', ci: '5555555',
-      role: 'CASHIER', branchId: '{{branchId}}',
+      firstName: 'Carla',
+      lastName: 'Cajera',
+      email: 'carla.nueva@wonderchicken.com',
+      ci: '5555555',
+      role: 'CASHIER',
+      branchId: '{{branchId}}',
     },
     preScript: `
 var res = pm.response.json();
@@ -322,9 +346,12 @@ pm.test('Cashier creado', function() { pm.response.to.have.status(201); });`,
     url: '{{baseUrl}}/users',
     auth: 'superAdmin',
     body: {
-      firstName: 'Diana', lastName: 'Despacho',
-      email: 'diana.nueva@wonderchicken.com', ci: '6666666',
-      role: 'DISPATCHER', branchId: '{{branchId}}',
+      firstName: 'Diana',
+      lastName: 'Despacho',
+      email: 'diana.nueva@wonderchicken.com',
+      ci: '6666666',
+      role: 'DISPATCHER',
+      branchId: '{{branchId}}',
     },
     test: `
 pm.test('Dispatcher creado', function() { pm.response.to.have.status(201); });`,
@@ -337,9 +364,12 @@ pm.test('Dispatcher creado', function() { pm.response.to.have.status(201); });`,
     url: '{{baseUrl}}/users',
     auth: 'admin',
     body: {
-      firstName: 'Eva', lastName: 'Empleada',
-      email: 'eva@wonderchicken.com', ci: '7777777',
-      role: 'CASHIER', branchId: '{{branchId}}',
+      firstName: 'Eva',
+      lastName: 'Empleada',
+      email: 'eva@wonderchicken.com',
+      ci: '7777777',
+      role: 'CASHIER',
+      branchId: '{{branchId}}',
     },
     preScript: `
 var res = pm.response.json();
@@ -357,9 +387,12 @@ pm.test('Cashier creada por admin', function() { pm.response.to.have.status(201)
     url: '{{baseUrl}}/users',
     auth: 'admin',
     body: {
-      firstName: 'Fran', lastName: 'Falsa',
-      email: 'fran.falsa@wonderchicken.com', ci: '8888888',
-      role: 'CASHIER', branchId: '{{branchId}}',
+      firstName: 'Fran',
+      lastName: 'Falsa',
+      email: 'fran.falsa@wonderchicken.com',
+      ci: '8888888',
+      role: 'CASHIER',
+      branchId: '{{branchId}}',
     },
     test: `
 pm.test('200 o 403', function() {
@@ -445,7 +478,14 @@ pm.test('Active invertida', function() { pm.expect(res.data.user.active).to.be.a
     method: 'POST',
     url: '{{baseUrl}}/users',
     auth: 'cashier',
-    body: { firstName: 'X', lastName: 'Y', email: 'x@y.com', ci: '9999999', role: 'CASHIER', branchId: '{{branchId}}' },
+    body: {
+      firstName: 'X',
+      lastName: 'Y',
+      email: 'x@y.com',
+      ci: '9999999',
+      role: 'CASHIER',
+      branchId: '{{branchId}}',
+    },
     test: `pm.test('403', function() { pm.response.to.have.status(403); });`,
   },
   // 3.13 CASHIER no puede editar usuarios
@@ -472,7 +512,13 @@ requests.push(
     method: 'POST',
     url: '{{baseUrl}}/products',
     auth: 'admin',
-    body: { name: 'Pollo Entero', basePrice: 85.00, category: 'POLLO', isSellable: true, isInventoryItem: true },
+    body: {
+      name: 'Pollo Entero',
+      basePrice: 85.0,
+      category: 'POLLO',
+      isSellable: true,
+      isInventoryItem: true,
+    },
     preScript: `
 var res = pm.response.json();
 if (res.isSuccess && res.data?.product?.id) {
@@ -490,7 +536,13 @@ pm.test('Nombre ok', function() { pm.expect(res.data.product.name).to.eq('Pollo 
     method: 'POST',
     url: '{{baseUrl}}/products',
     auth: 'admin',
-    body: { name: 'Gaseosa 2L', basePrice: 18.00, category: 'BEBIDA', isSellable: true, isInventoryItem: false },
+    body: {
+      name: 'Gaseosa 2L',
+      basePrice: 18.0,
+      category: 'BEBIDA',
+      isSellable: true,
+      isInventoryItem: false,
+    },
     preScript: `
 var res = pm.response.json();
 if (res.isSuccess && res.data?.product?.id) {
@@ -505,7 +557,13 @@ if (res.isSuccess && res.data?.product?.id) {
     method: 'POST',
     url: '{{baseUrl}}/products',
     auth: 'admin',
-    body: { name: 'Puré de Papa', basePrice: 12.00, category: 'OTRO', isSellable: true, isInventoryItem: false },
+    body: {
+      name: 'Puré de Papa',
+      basePrice: 12.0,
+      category: 'OTRO',
+      isSellable: true,
+      isInventoryItem: false,
+    },
     preScript: `
 var res = pm.response.json();
 if (res.isSuccess && res.data?.product?.id) {
@@ -593,7 +651,7 @@ pm.test('Solo sellable', function() {
     method: 'POST',
     url: '{{baseUrl}}/products',
     auth: 'admin',
-    body: { name: 'Pollo Entero', basePrice: 85.00, category: 'POLLO' },
+    body: { name: 'Pollo Entero', basePrice: 85.0, category: 'POLLO' },
     test: `pm.test('400', function() { pm.response.to.have.status(400); });`,
   },
 );
@@ -645,7 +703,11 @@ pm.test('Hay periodos', function() { pm.expect(res.data.periods.length).to.great
     method: 'POST',
     url: '{{baseUrl}}/shifts/open',
     auth: 'cashier',
-    body: { periodId: '{{periodId}}', cashRegisterId: '{{cashRegisterId}}', openingAmount: 150.00 },
+    body: {
+      periodId: '{{periodId}}',
+      cashRegisterId: '{{cashRegisterId}}',
+      openingAmount: 150.0,
+    },
     preScript: `
 var res = pm.response.json();
 if (res.isSuccess && res.data?.shift?.id) {
@@ -676,7 +738,11 @@ pm.test('Status OPEN', function() { pm.expect(res.data.shift.status).to.eq('OPEN
     method: 'POST',
     url: '{{baseUrl}}/shifts/open',
     auth: 'admin',
-    body: { periodId: '{{periodId}}', cashRegisterId: '{{cashRegisterId}}', openingAmount: 50 },
+    body: {
+      periodId: '{{periodId}}',
+      cashRegisterId: '{{cashRegisterId}}',
+      openingAmount: 50,
+    },
     test: `pm.test('403', function() { pm.response.to.have.status(403); });`,
   },
   // 5.7 CASHIER sin cashRegisterId (mala práctica pero posible)
@@ -778,7 +844,9 @@ pm.test('Tipo LLEVAR', function() { pm.expect(res.data.order.type).to.eq('LLEVAR
     auth: 'cashier',
     body: {
       type: 'LLEVAR',
-      items: [{ productId: '{{productId}}', variantId: '{{variantId}}', quantity: 1 }],
+      items: [
+        { productId: '{{productId}}', variantId: '{{variantId}}', quantity: 1 },
+      ],
     },
     preScript: `
 var res = pm.response.json();
@@ -947,7 +1015,11 @@ pm.test('Admin ve todas', function() { pm.response.to.have.status(200); });`,
     method: 'POST',
     url: '{{baseUrl}}/orders',
     auth: 'admin',
-    body: { type: 'MESA', tableNumber: '{{branchId}}', items: [{ productId: '{{productId}}', quantity: 1 }] },
+    body: {
+      type: 'MESA',
+      tableNumber: '{{branchId}}',
+      items: [{ productId: '{{productId}}', quantity: 1 }],
+    },
     test: `pm.test('403', function() { pm.response.to.have.status(403); });`,
   },
   // 7.17 ADMIN no puede pagar/cancelar
@@ -985,7 +1057,10 @@ pm.test('Dispatcher ve confirmadas', function() { pm.response.to.have.status(200
     phase: 7,
     method: 'POST',
     url: '{{baseUrl}}/orders',
-    body: { type: 'LLEVAR', items: [{ productId: '{{productId}}', quantity: 1 }] },
+    body: {
+      type: 'LLEVAR',
+      items: [{ productId: '{{productId}}', quantity: 1 }],
+    },
     test: `pm.test('401', function() { pm.response.to.have.status(401); });`,
   },
   // 7.21 Crear orden sin items
@@ -1005,7 +1080,10 @@ pm.test('Dispatcher ve confirmadas', function() { pm.response.to.have.status(200
     method: 'POST',
     url: '{{baseUrl}}/orders',
     auth: 'cashier',
-    body: { type: 'LLEVAR', items: [{ productId: '{{productId}}', quantity: 1 }] },
+    body: {
+      type: 'LLEVAR',
+      items: [{ productId: '{{productId}}', quantity: 1 }],
+    },
     test: `// El comportamiento depende de la lógica de negocio (Sprint 1 permite/sin turno)`,
   },
 );
@@ -1072,9 +1150,12 @@ requests.push(
     url: '{{baseUrl}}/users',
     auth: 'superAdmin',
     body: {
-      firstName: 'Dupe', lastName: 'User',
-      email: USERS.ADMIN.email, ci: '0000001',
-      role: 'CASHIER', branchId: '{{branchId}}',
+      firstName: 'Dupe',
+      lastName: 'User',
+      email: USERS.ADMIN.email,
+      ci: '0000001',
+      role: 'CASHIER',
+      branchId: '{{branchId}}',
     },
     test: `pm.test('400', function() { pm.response.to.have.status(400); });`,
   },
@@ -1254,7 +1335,7 @@ pm.test('Desactivada', function() {
     method: 'POST',
     url: '{{baseUrl}}/shifts/close',
     auth: 'cashier',
-    body: { closingAmount: 500.00 },
+    body: { closingAmount: 500.0 },
     test: `// Endpoint puede no existir en Sprint 1 — acepta 200/404`,
   },
   // 10.5 Reactivar cajera
@@ -1277,15 +1358,15 @@ pm.test('Reactivada', function() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 const PHASES = [
-  { id: 1,  name: 'Auth' },
-  { id: 2,  name: 'Branches' },
-  { id: 3,  name: 'Users' },
-  { id: 4,  name: 'Products + Variants' },
-  { id: 5,  name: 'Shifts + Periods' },
-  { id: 6,  name: 'POS Context' },
-  { id: 7,  name: 'Orders (completo)' },
-  { id: 8,  name: 'Variant + Extra' },
-  { id: 9,  name: 'Edge Cases + Boundary' },
+  { id: 1, name: 'Auth' },
+  { id: 2, name: 'Branches' },
+  { id: 3, name: 'Users' },
+  { id: 4, name: 'Products + Variants' },
+  { id: 5, name: 'Shifts + Periods' },
+  { id: 6, name: 'POS Context' },
+  { id: 7, name: 'Orders (completo)' },
+  { id: 8, name: 'Variant + Extra' },
+  { id: 9, name: 'Edge Cases + Boundary' },
   { id: 10, name: 'Deactivated User + Shift Close' },
 ];
 
@@ -1297,14 +1378,15 @@ const AUTH_MAP = {
 };
 
 function buildPostmanItem(req) {
-  const headers = [
-    { key: 'Content-Type', value: 'application/json' },
-  ];
+  const headers = [{ key: 'Content-Type', value: 'application/json' }];
   if (req.auth) {
-    headers.push({ key: 'Authorization', value: `Bearer ${AUTH_MAP[req.auth]}` });
+    headers.push({
+      key: 'Authorization',
+      value: `Bearer ${AUTH_MAP[req.auth]}`,
+    });
   }
   if (req.headers) {
-    req.headers.forEach(h => headers.push(h));
+    req.headers.forEach((h) => headers.push(h));
   }
 
   return {
@@ -1317,37 +1399,59 @@ function buildPostmanItem(req) {
         host: ['{{baseUrl}}'],
         path: req.url.replace('{{baseUrl}}/', '').split('/'),
       },
-      ...(req.body != null ? {
-        body: {
-          mode: 'raw',
-          raw: JSON.stringify(req.body, null, 2),
-          options: { raw: { language: 'json' } },
-        },
-      } : {}),
+      ...(req.body != null
+        ? {
+            body: {
+              mode: 'raw',
+              raw: JSON.stringify(req.body, null, 2),
+              options: { raw: { language: 'json' } },
+            },
+          }
+        : {}),
     },
     response: [],
     events: [
-      ...(req.preScript ? [{
-        listen: 'test',
-        script: {
-          type: 'text/javascript',
-          exec: req.test ? req.test.trim().split('\n').map(l => l.trim()).filter(Boolean).join('\n') : [],
-        },
-      }] : []),
-      ...(req.preScript ? [{
-        listen: 'prerequest',
-        script: {
-          type: 'text/javascript',
-          exec: req.preScript.trim().split('\n').map(l => l.trim()).filter(Boolean).join('\n'),
-        },
-      }] : []),
+      ...(req.preScript
+        ? [
+            {
+              listen: 'test',
+              script: {
+                type: 'text/javascript',
+                exec: req.test
+                  ? req.test
+                      .trim()
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                      .join('\n')
+                  : [],
+              },
+            },
+          ]
+        : []),
+      ...(req.preScript
+        ? [
+            {
+              listen: 'prerequest',
+              script: {
+                type: 'text/javascript',
+                exec: req.preScript
+                  .trim()
+                  .split('\n')
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .join('\n'),
+              },
+            },
+          ]
+        : []),
     ].filter(Boolean),
   };
 }
 
 function buildPostmanCollection() {
-  const folders = PHASES.map(phase => {
-    const phaseReqs = requests.filter(r => r.phase === phase.id);
+  const folders = PHASES.map((phase) => {
+    const phaseReqs = requests.filter((r) => r.phase === phase.id);
     return {
       name: `Phase ${phase.id} — ${phase.name}`,
       item: phaseReqs.map(buildPostmanItem),
@@ -1371,7 +1475,8 @@ Credenciales:
 - ADMIN:       ${USERS.ADMIN.email} / ${USERS.ADMIN.password}
 - CASHIER:     ${USERS.CASHIER.email} / ${USERS.CASHIER.password}
 - DISPATCHER:  ${USERS.DISPATCHER.email} / ${USERS.DISPATCHER.password}`,
-      schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+      schema:
+        'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
     variable: [
       { key: 'baseUrl', value: 'http://localhost:4000/api/v1' },
@@ -1406,14 +1511,15 @@ Credenciales:
 // ══════════════════════════════════════════════════════════════════════════════
 
 function buildThunderItem(req) {
-  const headers = [
-    { key: 'Content-Type', value: 'application/json' },
-  ];
+  const headers = [{ key: 'Content-Type', value: 'application/json' }];
   if (req.auth) {
-    headers.push({ key: 'Authorization', value: `Bearer ${AUTH_MAP[req.auth]}` });
+    headers.push({
+      key: 'Authorization',
+      value: `Bearer ${AUTH_MAP[req.auth]}`,
+    });
   }
   if (req.headers) {
-    req.headers.forEach(h => headers.push(h));
+    req.headers.forEach((h) => headers.push(h));
   }
 
   return {
@@ -1422,12 +1528,14 @@ function buildThunderItem(req) {
     name: req.name,
     url: req.url,
     method: req.method,
-    ...(req.body != null ? {
-      body: {
-        type: 'json',
-        content: JSON.stringify(req.body, null, 2),
-      },
-    } : { body: null }),
+    ...(req.body != null
+      ? {
+          body: {
+            type: 'json',
+            content: JSON.stringify(req.body, null, 2),
+          },
+        }
+      : { body: null }),
     preScript: req.preScript || '',
     tests: req.test || '',
     header: headers,
@@ -1436,12 +1544,12 @@ function buildThunderItem(req) {
 }
 
 function buildThunderCollection() {
-  const folders = PHASES.map(phase => ({
+  const folders = PHASES.map((phase) => ({
     name: `Phase ${phase.id} — ${phase.name}`,
     requests: requests
-      .filter(r => r.phase === phase.id)
+      .filter((r) => r.phase === phase.id)
       .map(buildThunderItem)
-      .map(r => r.name),
+      .map((r) => r.name),
   }));
 
   return {
@@ -1450,13 +1558,17 @@ function buildThunderCollection() {
     date: '2026-08-25',
     description: `Colección completa — ${requests.length} requests en ${PHASES.length} fases.
 Setup: Importar → Environment baseUrl → pnpm seed → ejecutar fases en orden.
-Credenciales: SUPER_ADMIN=superadmin@wonderchicken.com/password123, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333`,
+Credenciales: SUPER_ADMIN=superadmin@gmail.com/password123, ADMIN=ana@wonderchicken.com/1111111, CASHIER=carla@wonderchicken.com/2222222, DISPATCHER=diana@wonderchicken.com/3333333`,
     folders,
     requests: requests.map(buildThunderItem),
     settings: {
       baseUrl: 'http://localhost:4000/api/v1',
       variables: [
-        { key: 'baseUrl', value: 'http://localhost:4000/api/v1', type: 'string' },
+        {
+          key: 'baseUrl',
+          value: 'http://localhost:4000/api/v1',
+          type: 'string',
+        },
         { key: 'superAdminToken', value: '', type: 'string' },
         { key: 'adminToken', value: '', type: 'string' },
         { key: 'cashierToken', value: '', type: 'string' },
@@ -1489,8 +1601,14 @@ Credenciales: SUPER_ADMIN=superadmin@wonderchicken.com/password123, ADMIN=ana@wo
 const notesDir = path.join(__dirname, '..', 'notes');
 if (!fs.existsSync(notesDir)) fs.mkdirSync(notesDir, { recursive: true });
 
-const postmanPath = path.join(notesDir, 'wonderchicken-api.postman_collection.json');
-const thunderPath = path.join(notesDir, 'wonderchicken-api.thunder-collection.json');
+const postmanPath = path.join(
+  notesDir,
+  'wonderchicken-api.postman_collection.json',
+);
+const thunderPath = path.join(
+  notesDir,
+  'wonderchicken-api.thunder-collection.json',
+);
 
 const postmanCol = buildPostmanCollection();
 const thunderCol = buildThunderCollection();
@@ -1504,8 +1622,8 @@ console.log(`   ⚡ Thunder: ${thunderPath}`);
 console.log(`\n📊 Resumen:`);
 console.log(`   Total requests: ${requests.length}`);
 console.log(`   Fases: ${PHASES.length}`);
-PHASES.forEach(p => {
-  const count = requests.filter(r => r.phase === p.id).length;
+PHASES.forEach((p) => {
+  const count = requests.filter((r) => r.phase === p.id).length;
   console.log(`   Phase ${p.id} (${p.name}): ${count} requests`);
 });
 console.log(`\n⚠️  Importante: antes de ejecutar, obtener cashRegisterId con:`);

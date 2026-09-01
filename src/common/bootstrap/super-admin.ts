@@ -17,7 +17,7 @@ export interface BootstrapResult {
 export const SUPER_ADMIN_DEFAULTS = {
   firstName: 'Super',
   lastName: 'Admin',
-  email: 'superadmin@wonderchicken.com',
+  email: 'superadmin@gmail.com',
   ci: 'password123',
 };
 
@@ -32,8 +32,7 @@ export const SUPER_ADMIN_DEFAULTS = {
 export async function bootstrapSuperAdmin(
   prisma: PrismaClient,
 ): Promise<BootstrapResult> {
-  const email =
-    process.env['SUPER_ADMIN_EMAIL'] ?? SUPER_ADMIN_DEFAULTS.email;
+  const email = process.env['SUPER_ADMIN_EMAIL'] ?? SUPER_ADMIN_DEFAULTS.email;
   const firstName =
     process.env['SUPER_ADMIN_FIRSTNAME'] ?? SUPER_ADMIN_DEFAULTS.firstName;
   const lastName =
