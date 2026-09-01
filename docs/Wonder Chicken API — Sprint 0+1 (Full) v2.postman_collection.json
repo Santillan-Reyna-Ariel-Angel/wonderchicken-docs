@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "980640ea-f551-4f98-a5dc-cf9729b9fceb",
-    "name": "Wonder Chicken API — Sprint 0+1 (Full)",
+    "_postman_id": "abfda82c-3641-4094-8c44-9f16b1b5de16",
+    "name": "Wonder Chicken API — Sprint 0+1 (Full) v2",
     "description": "Colección completa de testing para Wonder Chicken Backend (Sprint 0 + Sprint 1).  \nCubre: Auth, Branches, Users, Products+Variants, Shifts, POS, Orders, Edge Cases.\n\nSetup:\n\n1. Importar en Postman\n    \n2. Environment: baseUrl = [http://localhost:4000/api/v1](http://localhost:4000/api/v1)\n    \n3. Asegurarse que existe al menos un CashRegister en DB (pnpm seed)\n    \n4. Ejecutar las fases en orden\n    \n\nCredenciales:\n\n- SUPER_ADMIN: [superadmin@wonderchicken.com](https://mailto:superadmin@wonderchicken.com) / password123\n    \n- ADMIN: [ana@wonderchicken.com](https://mailto:ana@wonderchicken.com) / 1111111\n    \n- CASHIER: [carla@wonderchicken.com](https://mailto:carla@wonderchicken.com) / 2222222\n    \n- DISPATCHER: [diana@wonderchicken.com](https://mailto:diana@wonderchicken.com) / 3333333",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "12536106"
@@ -16,13 +16,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "let responseJson = pm.response.json()\r",
-                  "pm.collectionVariables.set(\"superAdminToken\",responseJson.data.accessToken)"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "let responseJson = pm.response.json()\r\npm.collectionVariables.set(\"superAdminToken\",responseJson.data.accessToken)"
+                ]
               }
             }
           ],
@@ -36,7 +33,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"superadmin@wonderchicken.com\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"email\": \"superadmin@gmail.com\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -62,13 +59,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "let responseJson = pm.response.json()\r",
-                  "pm.collectionVariables.set(\"adminToken\",responseJson.data.accessToken)"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "let responseJson = pm.response.json()\r\npm.collectionVariables.set(\"adminToken\",responseJson.data.accessToken)"
+                ]
               }
             }
           ],
@@ -82,7 +76,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"laury_wisozk216536@demo.local\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"email\": \"admin1@gmail.com\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -108,13 +102,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "let responseJson = pm.response.json()\r",
-                  "pm.collectionVariables.set(\"cashierToken\",responseJson.data.accessToken)"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "let responseJson = pm.response.json()\r\npm.collectionVariables.set(\"cashierToken\",responseJson.data.accessToken)"
+                ]
               }
             }
           ],
@@ -128,7 +119,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"hannah_dooley598009@demo.local\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"email\": \"cajera1@gmail.com\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -154,13 +145,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "let responseJson = pm.response.json()\r",
-                  "pm.collectionVariables.set(\"dispatcherToken\",responseJson.data.accessToken)"
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "let responseJson = pm.response.json()\r\npm.collectionVariables.set(\"dispatcherToken\",responseJson.data.accessToken)"
+                ]
               }
             }
           ],
@@ -174,7 +162,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"clotilde_quigley779713@demo.local\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"email\": \"despachadora1@gmail.com\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -197,58 +185,57 @@
       ]
     },
     {
-      "name": "Phase 2 — Branches",
+      "name": "Logout",
       "item": [
         {
-          "name": "05 Login password incorrecto [401]",
+          "name": "08 Logout ADMIN",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"nadie@wonderchicken.com\",\n  \"password\": \"0000000\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/logout",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "login"
+                "logout"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "07 Login sin body [400]",
+          "name": "08 Logout SUPERADMIN",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/logout",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "login"
+                "logout"
               ]
             }
           },
@@ -282,32 +269,27 @@
           "response": []
         },
         {
-          "name": "09 Re-login CASHIER post-logout",
+          "name": "08 Logout DISPATCHER",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dispatcherToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"carla@wonderchicken.com\",\n  \"password\": \"2222222\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/logout",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "login"
+                "logout"
               ]
             }
           },
@@ -395,32 +377,6 @@
           "response": []
         },
         {
-          "name": "12 Listar Branches [ADMIN]",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/branches",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "branches"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "13 Editar Branch [SUPER_ADMIN]",
           "request": {
             "method": "PATCH",
@@ -483,67 +439,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "15 Listar Branches [CASHIER — 403]",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/branches",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "branches"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "16 Crear Branch [ADMIN — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sucursal Falsa\",\n  \"address\": \"Calle Falsa 999\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/branches",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "branches"
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -551,299 +446,184 @@
       "name": "Phase 3 — Users",
       "item": [
         {
-          "name": "17 Crear ADMIN [SUPER_ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Admin\",\n  \"email\": \"ana.nueva@wonderchicken.com\",\n  \"ci\": \"4444444\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "18 Crear CASHIER [SUPER_ADMIN]",
-          "event": [
+          "name": "Create Users",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "let responseJson = pm.response.json()\r",
-                  "pm.collectionVariables.set(\"cashierId\",responseJson.data.user.id)"
+              "name": "17 Crear ADMIN [SUPER_ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  }
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Cajera\",\n  \"email\": \"carla.nueva@wonderchicken.com\",\n  \"ci\": \"5555555\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Admin\",\n  \"email\": \"ana.nueva@wonderchicken.com\",\n  \"ci\": \"4444444\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"{{branchId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Phase 3 — Users",
-      "item": [
-        {
-          "name": "17 Crear ADMIN [SUPER_ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Admin\",\n  \"email\": \"ana.nueva@wonderchicken.com\",\n  \"ci\": \"4444444\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "response": []
+            },
+            {
+              "name": "18 Crear CASHIER [SUPER_ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Cajera\",\n  \"email\": \"carla.nueva@wonderchicken.com\",\n  \"ci\": \"5555555\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "18 Crear CASHIER [SUPER_ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Carla\",\n  \"lastName\": \"Cajera\",\n  \"email\": \"carla.nueva@wonderchicken.com\",\n  \"ci\": \"5555555\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "response": []
+            },
+            {
+              "name": "19 Crear DISPATCHER [SUPER_ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Diana\",\n  \"lastName\": \"Despacho\",\n  \"email\": \"diana.nueva@wonderchicken.com\",\n  \"ci\": \"6666666\",\n  \"role\": \"DISPATCHER\",\n  \"branchId\": \"{{branchId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "19 Crear DISPATCHER [SUPER_ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Diana\",\n  \"lastName\": \"Despacho\",\n  \"email\": \"diana.nueva@wonderchicken.com\",\n  \"ci\": \"6666666\",\n  \"role\": \"DISPATCHER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "response": []
+            },
+            {
+              "name": "20 Crear CASHIER [ADMIN — mismo branch]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Eva\",\n  \"lastName\": \"Empleada\",\n  \"email\": \"eva@wonderchicken.com\",\n  \"ci\": \"7777777\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "20 Crear CASHIER [ADMIN — mismo branch]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Eva\",\n  \"lastName\": \"Empleada\",\n  \"email\": \"eva@wonderchicken.com\",\n  \"ci\": \"7777777\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "response": []
+            },
+            {
+              "name": "21 Crear CASHIER [ADMIN — otra branch — 403/400]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Fran\",\n  \"lastName\": \"Falsa\",\n  \"email\": \"fran.falsa@wonderchicken.com\",\n  \"ci\": \"8888888\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Phase 3 — Users",
-      "item": [
-        {
-          "name": "21 Crear CASHIER [ADMIN — otra branch — 403/400]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Fran\",\n  \"lastName\": \"Falsa\",\n  \"email\": \"fran.falsa@wonderchicken.com\",\n  \"ci\": \"8888888\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
+              "response": []
             }
-          },
-          "response": []
-        },
-        {
-          "name": "22 Listar Usuarios [SUPER_ADMIN]",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{superAdminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          },
-          "response": []
+          ]
         },
         {
           "name": "23 Listar Usuarios por rol=CASHIER [SUPER_ADMIN]",
@@ -969,9 +749,9 @@
           "response": []
         },
         {
-          "name": "27 Reactivar Usuario [ADMIN]",
+          "name": "22 Listar Usuarios [SUPER_ADMIN]",
           "request": {
-            "method": "PATCH",
+            "method": "GET",
             "header": [
               {
                 "key": "Content-Type",
@@ -979,46 +759,9 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{superAdminToken}}"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{cashierId}}",
-                "toggle-active"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "28 Crear Usuario [CASHIER — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"email\": \"x@y.com\",\n  \"ci\": \"9999999\",\n  \"role\": \"CASHIER\",\n  \"branchId\": \"{{branchId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
               "raw": "{{baseUrl}}/users",
               "host": [
@@ -1030,42 +773,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "29 Editar Usuario [CASHIER — 403]",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"phone\": \"+591 999\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/users/{{cashierId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{cashierId}}"
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -1073,184 +780,184 @@
       "name": "Phase 4 — Products + Variants",
       "item": [
         {
-          "name": "30 Crear Producto POLLO [ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Pollo Entero\",\n  \"basePrice\": 85,\n  \"category\": \"POLLO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+          "name": "CREATE Products + Variants",
+          "item": [
+            {
+              "name": "30 Crear Producto POLLO [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pollo Entero\",\n  \"basePrice\": 85,\n  \"category\": \"POLLO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
                 }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/products",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "products"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "31 Crear Producto BEBIDA [ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Gaseosa 2L\",\n  \"basePrice\": 18,\n  \"category\": \"BEBIDA\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "response": []
             },
-            "url": {
-              "raw": "{{baseUrl}}/products",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "products"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "32 Crear Producto OTRO (guarnición) [ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+            {
+              "name": "31 Crear Producto BEBIDA [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Gaseosa 2L\",\n  \"basePrice\": 18,\n  \"category\": \"BEBIDA\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
+                }
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Puré de Papa\",\n  \"basePrice\": 12,\n  \"category\": \"OTRO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "response": []
             },
-            "url": {
-              "raw": "{{baseUrl}}/products",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "products"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Phase 4 — Products + Variants",
-      "item": [
-        {
-          "name": "33 Crear Variante 1/2 Pollo [ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+            {
+              "name": "32 Crear Producto OTRO (guarnición) [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Puré de Papa\",\n  \"basePrice\": 12,\n  \"category\": \"OTRO\",\n  \"isSellable\": true,\n  \"isInventoryItem\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
+                }
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/2 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/2 pollo\",\n      \"count\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "response": []
             },
-            "url": {
-              "raw": "{{baseUrl}}/variants",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "variants"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "34 Crear Variante simple (strings) [ADMIN]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+            {
+              "name": "33 Crear Variante 1/2 Pollo [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/2 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/2 pollo\",\n      \"count\": 1\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/variants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "variants"
+                  ]
+                }
               },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/4 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/4 pollo\",\n      \"count\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "response": []
             },
-            "url": {
-              "raw": "{{baseUrl}}/variants",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "variants"
-              ]
+            {
+              "name": "34 Crear Variante simple (strings) [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"1/4 Pollo\",\n  \"components\": [\n    {\n      \"type\": \"presa\",\n      \"name\": \"1/4 pollo\",\n      \"count\": 1\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/variants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "variants"
+                  ]
+                }
+              },
+              "response": []
             }
-          },
-          "response": []
+          ]
         },
         {
           "name": "35 Listar Productos [ADMIN]",
@@ -1292,76 +999,6 @@
                 "value": "Bearer {{cashierToken}}"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/products",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "products"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "37 Crear Producto [CASHIER — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Producto X\",\n  \"basePrice\": 10,\n  \"category\": \"OTRO\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/products",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "products"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "38 Crear Producto duplicado [400]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Pollo Entero\",\n  \"basePrice\": 85,\n  \"category\": \"POLLO\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
               "raw": "{{baseUrl}}/products",
               "host": [
@@ -1448,33 +1085,6 @@
           "response": []
         },
         {
-          "name": "41 Listar Shift Periods [DISPATCHER — 403]",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{dispatcherToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/shifts/shift-periods",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "shifts",
-                "shift-periods"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "42 Abrir Turno [CASHIER]",
           "request": {
             "method": "POST",
@@ -1538,43 +1148,7 @@
           "response": []
         },
         {
-          "name": "44 Abrir Turno [ADMIN — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"periodId\": \"{{periodId}}\",\n  \"cashRegisterId\": \"{{cashRegisterId}}\",\n  \"openingAmount\": 50\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/shifts/open",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "shifts",
-                "open"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "45 Abrir Turno sin cashRegisterId [400]",
+          "name": "92 Cerrar Turno [CASHIER — si existe endpoint]",
           "request": {
             "method": "POST",
             "header": [
@@ -1589,7 +1163,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"periodId\": \"{{periodId}}\",\n  \"openingAmount\": 100\n}",
+              "raw": "{\n  \"closingAmount\": 500\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1597,13 +1171,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/shifts/open",
+              "raw": "{{baseUrl}}/shifts/close",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "shifts",
-                "open"
+                "close"
               ]
             }
           },
@@ -1616,33 +1190,6 @@
       "item": [
         {
           "name": "46 POS Context con turno abierto [CASHIER]",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pos/context",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pos",
-                "context"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "47 POS Context sin turno (primero cerrar) [CASHIER]",
           "request": {
             "method": "GET",
             "header": [
@@ -1971,43 +1518,6 @@
           "response": []
         },
         {
-          "name": "56 Pagar orden ya pagada [400]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentMethod\": \"CASH\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/orders/{{orderId}}/pay",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "orders",
-                "{{orderId}}",
-                "pay"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "57 Listar Órdenes sin filtro [CASHIER]",
           "request": {
             "method": "GET",
@@ -2209,78 +1719,6 @@
           "response": []
         },
         {
-          "name": "63 Crear Orden [ADMIN — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"MESA\",\n  \"tableNumber\": \"{{branchId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "orders"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "64 Pagar Orden [ADMIN — 403]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentMethod\": \"CASH\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/orders/{{orderId}}/pay",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "orders",
-                "{{orderId}}",
-                "pay"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "65 Listar Órdenes CONFIRMED [DISPATCHER]",
           "request": {
             "method": "GET",
@@ -2334,72 +1772,6 @@
               "path": [
                 "orders",
                 "{{orderId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "67 Crear Orden sin token [401]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"LLEVAR\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "orders"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "68 Crear Orden sin items [400]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"LLEVAR\",\n  \"items\": []\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "orders"
               ]
             }
           },
@@ -2481,41 +1853,6 @@
           "response": []
         },
         {
-          "name": "71 Crear Variante sin components [400]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"Sola\",\n  \"components\": []\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/variants",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "variants"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "72 Listar Productos [CASHIER — recheck]",
           "request": {
             "method": "GET",
@@ -2544,7 +1881,7 @@
       ]
     },
     {
-      "name": "Phase 9 — Edge Cases + Boundary",
+      "name": "Negative Cases",
       "item": [
         {
           "name": "73 Login email mal formado [400]",
@@ -3039,39 +2376,6 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Phase 10 — Deactivated User + Shift Close",
-      "item": [
-        {
-          "name": "89 Desactivar CASHIER [ADMIN]",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{cashierId}}",
-                "toggle-active"
-              ]
-            }
-          },
-          "response": []
         },
         {
           "name": "90 Login CASHIER desactivada [401]",
@@ -3127,70 +2431,6 @@
               "path": [
                 "shifts",
                 "active"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "92 Cerrar Turno [CASHIER — si existe endpoint]",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{cashierToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"closingAmount\": 500\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/shifts/close",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "shifts",
-                "close"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "93 Reactivar CASHIER [ADMIN]",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/{{cashierId}}/toggle-active",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{cashierId}}",
-                "toggle-active"
               ]
             }
           },
