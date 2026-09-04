@@ -220,6 +220,7 @@ El objetivo de estas herramientas es facilitar el desarrollo de un código moder
 | **grill-me**       | Formula preguntas tipo entrevista o _quiz_ para poner a prueba conocimientos o decisiones.                         |
 | **teach**       | Guiar al usuario en un proceso de aprendizaje sostenido, con lecciones cortas y prácticas que se adaptan a su misión personal.                         |
 | **improve-codebase-architecture**       | Esta skill de arquitectura de código ayuda a detectar fricciones estructurales en una base de código y proponer refactorizaciones que profundicen los módulos, con el objetivo de mejorar la testabilidad y la navegabilidad por parte de humanos y agentes de IA.                         |
+| **impeccable**                         | Skill para pulir y auditar interfaces, aplicando mejoras visuales y de usabilidad basadas en el contexto del producto y su sistema de diseño.                                                                                                                                     |
 | **pinokio**        | Automatiza scripts y flujos de trabajo, útil para ejecutar procesos repetitivos.                                   |
 | **playwright-cli** | Integra Playwright para automatización y pruebas de aplicaciones web desde la línea de comandos.                   |
 | **branch-pr**      | Crea ramas y Pull Requests en repositorios, facilitando el flujo de trabajo con Git.                               |
