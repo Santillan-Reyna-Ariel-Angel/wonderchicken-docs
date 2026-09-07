@@ -1,5 +1,0 @@
-//Ejecutar cuando se modifica schema.prisma:
-pnpm prisma migrate dev --name init
-
-// Para ver las tablas:
-pnpm prisma studio
