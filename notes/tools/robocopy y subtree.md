@@ -153,7 +153,7 @@ Para que ambos proyectos usen el mismo comando (`start:dev`), debes redefinir lo
 ```json
 "scripts": {
   "sync-docs": "git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash",
-  "start:dev": "npm run sync-docs && nest start --watch"
+  "start:dev": "pnpm run sync-docs && nest start --watch"
 }
 ```
 
@@ -162,7 +162,7 @@ Para que ambos proyectos usen el mismo comando (`start:dev`), debes redefinir lo
 ```json
 "scripts": {
   "sync-docs": "git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash",
-  "start:dev": "npm run sync-docs && next dev"
+  "start:dev": "pnpm run sync-docs && next dev"
 }
 ```
 
