@@ -16,13 +16,13 @@
 
 ```bash
 # Agregar repo externo
-git subtree add --prefix=docs https://github.com/usuario/docs main --squash
+git subtree add --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash
 
 # Traer cambios
-git subtree pull --prefix=docs https://github.com/usuario/docs main --squash
+git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash
 
 # Enviar cambios
-git subtree push --prefix=docs https://github.com/usuario/docs main
+git subtree push --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main
 ```
 
 ### Ventajas
@@ -97,7 +97,7 @@ rsync -av ../backend/docs/ ../frontend/docs/
 ### Cómo se usa
 
 ```bash
-git submodule add https://github.com/usuario/docs docs
+git submodule add https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs docs
 git submodule update --init --recursive
 ```
 
@@ -152,7 +152,7 @@ Para que ambos proyectos usen el mismo comando (`start:dev`), debes redefinir lo
 
 ```json
 "scripts": {
-  "sync-docs": "git subtree pull --prefix=docs https://github.com/usuario/docs main --squash",
+  "sync-docs": "git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash",
   "start:dev": "npm run sync-docs && nest start --watch"
 }
 ```
@@ -161,7 +161,7 @@ Para que ambos proyectos usen el mismo comando (`start:dev`), debes redefinir lo
 
 ```json
 "scripts": {
-  "sync-docs": "git subtree pull --prefix=docs https://github.com/usuario/docs main --squash",
+  "sync-docs": "git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash",
   "start:dev": "npm run sync-docs && next dev"
 }
 ```
@@ -186,7 +186,7 @@ Si además quieres que la sincronización ocurra automáticamente sin necesidad 
 Ejemplo cron (cada 5 minutos):
 
 ```bash
-*/5 * * * * cd /ruta/frontend && git subtree pull --prefix=docs https://github.com/usuario/docs main --squash
+*/5 * * * * cd /ruta/frontend && git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash
 ```
 
 👉 Esto asegura que la carpeta `docs` esté siempre sincronizada, incluso si no arrancas el proyecto.
