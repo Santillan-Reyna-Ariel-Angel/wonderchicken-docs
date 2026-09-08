@@ -18,7 +18,7 @@ El **Sprint 1** se enfoca en resolver el núcleo operativo de ventas del restaur
 - **FR-003 (Comanda Digital - Parcial):** Generación automática e instantánea de la comanda digital visualizable en la pantalla de despacho al confirmar o registrar el pedido.
 - **FR-004 / Shift Mínimo (Apertura de Caja):** Apertura obligatoria de turno declarando el **Período** (Mañana/Noche) y Monto Inicial para emitir el `orderNumber` atómico.
 - **FR-008 / FR-013 (UI Diferenciada y Limpia por Rol):** Adaptación estricta de la pantalla según el rol (Cajera, Despachadora, Administrador).
-- **FR-011 (Pedidos con Pago Pendiente - Parcial):** Registro de pedidos LLEVAR/delivery en estado `pending` para envío directo a cocina, con cobro posterior vía `POST /orders/{id}/pay`.
+- **FR-011 (Pedidos con Pago Pendiente - Parcial):** Registro de pedidos LLEVAR/delivery en estado `PENDING_PAYMENT` para envío directo a despacho, con cobro posterior vía `POST /orders/{id}/pay`.
 - **FR-018 / FR-019 (Autenticación JWT y Clientes):** Inicio de sesión seguro y búsqueda/asociación rápida de clientes por CI/NIT (o venta anónima S/N).
 
 ---
@@ -30,7 +30,7 @@ graph TD
     A[Login / Autenticación /login] -->|JWT Auth| B{Validación de Rol}
     B -->|CAJERA| C[Apertura de Turno /shift/open]
     C -->|Turno Activo| D[Interfaz Principal POS /pos]
-    D --> E[Buscador de Clientes CI/NIT]
+    D --> E[Cliente en resumen de orden]
     D --> F[Modal Configuración de Variante]
     D --> G[Modal Confirmación de Pago / Pendiente]
     D --> H[Historial de Pedidos /orders]
@@ -83,11 +83,11 @@ La pantalla estrella para la Cajera. Diseñada para operar de manera táctil o m
 
 ```text
 +---------------------------------------------------------------------------------------------------+
-| BARRA SUPERIOR: [Sucursal Central] | Turno: MAÑANA | Cajera: Roxana | [Cliente: 1234567 - LUIS I. v]  |
+  | BARRA SUPERIOR: [Sucursal Central] | Turno: MAÑANA | Cajera: Roxana                         |
 +-----------------------------------------------------------+---------------------------------------+
 | CATÁLOGO Y CATEGORÍAS                                    | RESUMEN DE LA ORDEN                   |
 | [Platos Principales] [Bebidas] [Extras]                   |                                       |
-|                                                           | Tipo: (o) MESA [ N° 67 ]   ( ) LLEVAR |
+  |                                                           | Tipo: (o) MESA   ( ) LLEVAR             |
 | +-------------------+ +-------------------+               | ------------------------------------- |
 | | Cuarto de Pollo   | | Porción Media     |               | 2x WONDER                     72.00 Bs|
 | | 2 Presas          | | 2 Presas + Mixto  |               |    • 2x PECHO-ALA                     |
@@ -105,7 +105,6 @@ La pantalla estrella para la Cajera. Diseñada para operar de manera táctil o m
 
 #### A. Barra Superior (Header de Contexto)
 - Indicador de estado del Turno activo (Sucursal, Período, Cajera).
-- Buscador rápido de Cliente (Input con autocompletado por CI/NIT o Nombre). Botón rápido `"Cliente S/N"` para ventas anónimas.
 - Acceso directo a la apertura/cierre de turno y al historial de pedidos.
 
 #### B. Panel Izquierdo / Central — Catálogo y Selección de Productos
@@ -127,19 +126,20 @@ Permite armar la composición exacta del plato evitando anotaciones manuales:
      - *Cambiar Papa por Smiles McCain*
 3. **Selección de Bebida (Si el plato es un Combo tipo Wonder / Super Wonder):**
    - Dropdown de Bebidas de 500 ml disponibles (Coca Cola, Mocochinchi, Fanta, Aquarius).
-   - Selector de Temperatura: `FRÍA` / `TIEMPO`.
+  - Selector de Temperatura: `FRIA` / `NATURAL`.
 4. Botón: `"Agregar a la Orden (Bs. 36.00)"`.
+
+La configuración se conserva como estado local del ítem hasta que la cajera lo agrega al carrito. Esto permite volver a abrir el modal y modificar presas, acompañamiento, sustitución o bebida antes de crear la orden. En V1 no se debe ofrecer edición de la variante después de enviar `POST /orders`: el backend persiste un snapshot del ítem y no existe un endpoint para editar una orden ya creada. Si la orden necesita una corrección posterior, la UI debe usar el flujo de cancelación correspondiente y crear una nueva orden según las reglas del backend.
 
 #### D. Panel Derecho — Carrito / Resumen de la Orden
 - Selector de Tipo de Pedido:
-  - **MESA:** Activa campo obligatorio *Número de Mesa* (ej. Mesa 67).
-  - **LLEVAR:** Activa campo de *Nombre de Cliente / Referencia* (ej. LLEVAR 48 - Marco Ortega).
-- Lista de Ítems agregados con su desglose en sub-puntos (*Presas, Bebidas, Sustituciones*).
-- Botones por ítem: Modificar cantidad (`+` / `-`), Editar composición, Eliminar.
+  - **MESA** o **LLEVAR**. No se solicita número de mesa en el frontend; `tableNumber` es opcional en el backend y no forma parte de esta interfaz.
+- Buscador rápido de Cliente dentro del resumen de la orden: búsqueda por CI, NIT o nombre, selección de un cliente registrado y acción `Cliente S/N` para una venta anónima. La orden envía únicamente el `customerId`; el backend genera el snapshot del nombre.
+- Tabla MUI de ítems agregados, con columnas `Producto`, `Cantidad`, `Composición`, `Precio unitario`, `Subtotal` y `Acciones`. La columna de acciones ofrece aumentar/disminuir cantidad, editar composición mientras el ítem siga en el carrito y eliminar. La composición puede mostrarse en una fila expandible o en un `Tooltip`/`Popover` para conservar una tabla compacta sin perder presas, bebidas y sustituciones.
 - Totalizador final calculado por el backend (Suma exacta de precios unitarios por cantidad).
 - **Acciones de Cierre de Venta:**
   - **Botón "Registrar Pago (Efectivo/QR)":** Abre el modal de Cobro Inmediato. Genera pedido en estado `PAGADO` (`paid`).
-  - **Botón "Pago Pendiente (Solo LLEVAR/Delivery) [FR-011]":** Registra el pedido en estado `PENDIENTE` (`pending`), enviando la comanda a cocina sin sumar monto a caja ni descontar inventario en este momento.
+  - **Botón "Pago Pendiente (Solo LLEVAR/Delivery) [FR-011]":** Registra el pedido con `paymentStatus: PENDING` y estado `PENDING_PAYMENT`, enviando la comanda a despacho sin sumar monto a caja ni descontar inventario en este momento.
 
 #### E. Modal de Cobro Inmediato
 - Muestra el Total a Cobrar (ej. `72.00 Bs`).
@@ -159,7 +159,7 @@ Permite armar la composición exacta del plato evitando anotaciones manuales:
 +---------------------------------------------------------------------------------------------------+
 | PANEL DE DESPACHO DE COMANDAS                                [Filtro: Todos | MESA | LLEVAR]     |
 +----------------------------------+----------------------------------+-----------------------------+
-| #102 | MESA 67          [PAGADO] | #103 | LLEVAR 48      [PENDIENTE]| #101 | MESA 51    [EN PREP] |
+| #102 | MESA          [PAID]      | #103 | LLEVAR [PENDING_PAYMENT] | #101 | MESA [PREPARING] |
 | Cliente: LUIS IGLESIAS           | Cliente: MARCO ORTEGA            | Cliente: FREDY AREVALO      |
 | Hora: 22:07                      | Hora: 20:37                      | Hora: 20:46                 |
 | -------------------------------- | -------------------------------- | --------------------------- |
@@ -174,51 +174,57 @@ Permite armar la composición exacta del plato evitando anotaciones manuales:
 
 #### Funcionalidades Clave de la Comanda Digital:
 - **Estados Visibles:**
-  - `PENDING` (Pendiente de preparación / Pago pendiente).
-  - `IN_PREPARATION` (En cocina / freidora).
+  - `PREPARING` (En preparación; incluye también los pedidos `PENDING_PAYMENT`).
   - `READY` (Listo para entrega al cliente).
+  - `DELIVERED` (Entregado; deja de mostrarse en la cola activa).
+  - `PENDING_PAYMENT` (Pago pendiente de un pedido LLEVAR/delivery; puede prepararse sin descontar inventario ni caja).
 - **Tarjetas Diferenciadas por Color:**
   - Cabecera Verde para pedidos **MESA**.
   - Cabecera Naranja/Azul para pedidos **LLEVAR**.
   - Insignia o borde Rojo/Naranja si el pedido tiene **PAGO PENDIENTE**.
 - **Acciones Rápidas con 1 Clic:**
-  - **"Iniciar Preparación":** Cambia estado a `IN_PREPARATION`.
-  - **"Cobrar Pedido" (para pagos pendientes):** Abre modal de cobro y ejecuta `POST /orders/{id}/pay`.
   - **"Marcar Listo":** Cambia estado a `READY` y notifica a la pantalla pública del local.
   - **"Entregar":** Cambia estado a `DELIVERED` y retira la comanda del panel activo.
+  - **"Cobrar Pedido" (para pagos pendientes):** Acción de la cajera; ejecuta `POST /orders/{id}/pay` y actualiza el pedido a pago confirmado. No es una transición de preparación de la despachadora.
+
+`CREATED` es transitorio y `CONFIRMED` pasa automáticamente a `PREPARING` al publicarse la comanda; `CLOSED` corresponde al cierre administrativo del turno; `CANCELLED` se reserva para la anulación manual según el tipo de pedido. `ON_HOLD` no se usa en V1. No hay una acción independiente de "iniciar preparación" ni se muestra `PARTIAL` como estado operativo: `PARTIAL` está reservado en V1.
+
+El rol **COCINERO** no tiene un panel de comandas en Sprint 1. Sus funciones documentadas son registrar el ingreso de presas procesadas, confirmar el ciclo de pollo crudo del turno y registrar consumos manuales (bolsas de papa, smile y otros insumos). La interfaz correspondiente es el dashboard de inventario y el formulario de `ShiftChickenLog`, no una acción de transición de órdenes.
 
 ---
 
 ### 3.5. Gestión de Catálogo de Productos y Variantes (`/admin/products`)
 - **Propósito:** Permite al **ADMINISTRADOR** mantener el menú actualizado, añadir o modificar platos, precios base, presas requeridas y sustituciones permitidas sin tocar código.
 - **Componentes Visuales:**
-  - **Tabla de Productos:** Columnas de Código, Nombre, Categoría, Precio Base, Cantidad de Variantes, Estado y Botones de Acción (Editar / Desactivar).
+  - **Tabla de Productos:** Columnas de Código de producto, Nombre, Categoría, Precio Base, Cantidad de Variantes, Estado y Botones de Acción (Editar / Desactivar).
   - **Modal de Creación / Edición de Producto:**
     - Nombre del Producto (ej. *Porción Media*).
-    - Código interno (ej. `P-002`).
+    - Código de producto para identificar el registro en el catálogo. El backend contempla `productCode`; el formato `P-002` es solo ilustrativo y no debe imponerse desde el frontend si el contrato no lo exige.
     - Categoría (*Plato Principal, Bebida, Extra*).
     - Precio Base (ej. `30.00 Bs`).
   - **Sección de Variantes y Componentes:**
     - Formulario de definición de presas requeridas (ej. `2 presas`).
-    - Configuración de Acompañamiento por defecto (ej. *Mixto*).
+    - Configuración del acompañamiento por defecto de la variante (ej. *Mixto*). Es necesaria porque forma parte de `Variant.components` y define la composición que el POS muestra; en V1 no se descuenta como inventario granular.
     - Lista de sustituciones habilitadas (ej. *Papa frita por Arroz / Papa frita por Smiles*).
 
 ---
 
 ### 3.6. Historial y Búsqueda de Pedidos (`/orders`)
 - **Propósito:** Permitir a la Cajera y Administrador consultar pedidos pasados, verificar montos o resolver reclamos.
-- **Filtros de Búsqueda:** Por Número de Pedido (`orderNumber`), Rango de Fechas, Estado (`paid`, `pending`, `cancelled`), Tipo (`MESA`, `LLEVAR`), o Datos del Cliente (CI/NIT/Nombre).
+- **Filtros de Búsqueda:** Por Número de Pedido (`orderNumber`), Rango de Fechas, Estado (`CREATED`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CLOSED`, `PENDING_PAYMENT`, `CANCELLED`), Tipo (`MESA`, `LLEVAR`), o Datos del Cliente (CI/NIT/Nombre).
 - **Detalle de Comanda (Modal de Inspección):** Despliega el snapshot completo guardado en la base de datos (`OrderItem.snapshot`), mostrando exactamente lo que se vendió, precios aplicados, presas seleccionadas y timestamp.
 
 ---
 
 ## 4. Estructura de Proyecto Sugerida para el Frontend (Next.js / React)
 
-Para asegurar un código mantenible, limpio y escalable acorde al backend NestJS, se propone la siguiente arquitectura basada en **App Router** de Next.js, **TailwindCSS** y **Zustand / TanStack Query**:
+Para asegurar un código mantenible, limpio y escalable acorde al backend NestJS, se propone la arquitectura por features definida en `frontend_code_style.md`, usando **App Router**, **MUI**, **Zod** y **Zustand**. Las rutas componen pantallas; las llamadas HTTP viven en `api/`; los stores coordinan datos compartidos y acciones; los componentes no llaman directamente a `fetch`.
 
 ```text
 src/
 ├── app/
+│   ├── layout.tsx
+│   ├── ClientProviders.tsx
 │   ├── (auth)/
 │   │   └── login/page.tsx               # FR-018: Autenticación
 │   ├── (dashboard)/
@@ -233,34 +239,34 @@ src/
 │   │   │   └── page.tsx                 # FR-012: Historial y Búsqueda de Pedidos
 │   │   └── admin/
 │   │       └── products/page.tsx        # FR-001: CRUD de Productos y Variantes
-│   └── layout.tsx
-├── components/
-│   ├── ui/                              # Botones, Modales, Inputs, Badges (Shadcn UI)
-│   ├── pos/
-│   │   ├── product-card.tsx             # Tarjeta de producto en POS
-│   │   ├── variant-modal.tsx            # Modal de presas/sustituciones
-│   │   ├── order-summary.tsx            # Carrito lateral
-│   │   ├── payment-modal.tsx            # Modal de cobro rápido
-│   │   └── customer-search.tsx          # FR-019: Buscador CI/NIT
-│   ├── dispatch/
-│   │   └── order-ticket.tsx             # Comanda digital para cocina
-│   └── shift/
-│       └── shift-open-form.tsx          # Formulario de apertura de turno
-├── store/
-│   ├── auth-store.ts                    # Token JWT, datos de usuario y rol
-│   ├── pos-store.ts                     # Estado del carrito actual y selecciones
-│   └── shift-store.ts                    # Estado del turno activo
-├── services/
-│   ├── api.ts                           # Instancia Axios con Interceptor de Bearer Token
-│   ├── products.service.ts              # Endpoints GET/POST productos
-│   ├── orders.service.ts                # Endpoints de creación y pago de pedidos
-│   ├── shifts.service.ts                # Endpoints de apertura/cierre de turno
-│   └── customers.service.ts             # FR-019: Búsqueda y registro de clientes
-└── types/
-    ├── product.ts
-    ├── order.ts
-    ├── shift.ts
-    └── customer.ts
+├── features/
+│   ├── auth/
+│   │   ├── api/
+│   │   ├── stores/
+│   │   ├── schemas/
+│   │   ├── components/
+│   │   └── types.ts
+│   ├── sales/
+│   │   ├── api/                         # pos/context, orders y custom orders
+│   │   ├── stores/                       # contexto POS y carrito compartido
+│   │   ├── schemas/
+│   │   ├── components/                   # POS, variante y resumen de orden
+│   │   └── types.ts
+│   ├── orders/
+│   │   ├── api/                         # listado, detalle, pago, cancelación y estado
+│   │   ├── stores/
+│   │   ├── components/                   # tabla, detalle y comanda
+│   │   └── types.ts
+│   ├── cash-register/
+│   ├── customers/
+│   ├── inventory/                        # dashboard y registros del cocinero
+│   ├── expenses/
+│   ├── vouchers/
+│   ├── reports/
+│   └── users/
+├── config/
+│   └── api.ts                            # Prefijo configurable de la API
+└── commonComponents/                     # UI reutilizable entre features
 ```
 
 ---
@@ -274,9 +280,9 @@ src/
 | **FR-003 (Comanda)** | Al confirmar el pedido en el POS, la comanda digital aparece al instante en el panel de despacho `/dispatch` con presas y bebidas detalladas. |
 | **FR-004 (Shift Mínimo)** | Pantalla `/shift/open` exige seleccionar el Período del turno (`MAÑANA`/`NOCHE`) y monto inicial antes de vender. Inicializa `lastOrderNumber`. |
 | **FR-008 / FR-013 (UI por Rol)**| Interfaz limpia e independiente por rol. Cajera ve POS/Caja; Despachadora ve Comandas; Admin ve Gestión Completa. |
-| **FR-011 (Pago Pendiente)**| Botón *"Pago Pendiente"* en POS crea orden `pending` para cocina. Panel de despacho permite cobrarlo posteriormente vía `POST /orders/{id}/pay`. |
+| **FR-011 (Pago Pendiente)**| Botón *"Pago Pendiente"* en POS crea una orden `PENDING_PAYMENT` para despacho. La cajera puede cobrarla posteriormente vía `POST /orders/{id}/pay`; el pedido se prepara desde el registro y no descuenta inventario hasta el pago. |
 | **FR-018 (Auth JWT)** | Login `/login` genera token Bearer JWT. Rutas protegidas según rol con redirección automática. |
-| **FR-019 (Clientes)** | Buscador rápido en header del POS por CI o NIT. Permite vincular cliente a la orden o seleccionar "S/N". |
+| **FR-019 (Clientes)** | Buscador rápido dentro del resumen de la orden por CI, NIT o nombre. Permite vincular `customerId` a la orden o seleccionar "S/N". |
 
 ---
 
