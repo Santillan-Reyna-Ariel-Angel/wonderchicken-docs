@@ -8,9 +8,7 @@ El estilo anterior resolvía una aplicación operativa grande con una organizaci
 
 ### 0.1 Organización por feature y caso de uso
 
-Next.js no obliga a usar una arquitectura concreta: permite organizar el código por ruta o por feature. Para este proyecto conviene mantener `app/` como capa de rutas y composición, y colocar los dominios funcionales en `features/` fuera de `app/`.
-
-`features/` sí es una estructura estándar y válida, pero no debe organizarse por rol. Un rol describe quién puede usar una capacidad; un feature describe qué puede hacer el sistema. Por ejemplo, `cashier` es un rol, mientras que `sales`, `orders` y `cash-register` son capacidades reutilizables.
+Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida.
 
 ```text
 src/
@@ -24,6 +22,8 @@ src/
 │     └─ admin/
 ├─ features/
 │  ├─ sales/
+│  │  ├─ api/
+│  │  └─ stores/
 │  ├─ orders/
 │  ├─ cash-register/
 │  ├─ expenses/
@@ -34,32 +34,27 @@ src/
 └─ commonComponents/
 ```
 
-Reglas:
-
-- Si un componente solo sirve para un feature, vive dentro de ese feature.
-- `commonComponents/` queda reservado para piezas visuales verdaderamente reutilizables, como `ConfirmDialog`, `PageState` o `FormField`.
-- `config/` contiene configuración transversal como `API_PREFIX`; no contiene lógica de negocio.
-- Las rutas de `app/` componen pantallas según el rol, pero no implementan reglas de negocio.
-
-#### Cómo se divide la interfaz de la cajera
-
-La cajera no necesita una carpeta `features/cashier` que contenga todo. Su layout o página compone capacidades independientes:
+La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
 
 ```text
 app/(authenticated)/cashier/
-├─ page.tsx                 # resumen o inicio de cajera
-├─ sales/page.tsx           # POS: venta estándar y venta custom
-├─ orders/page.tsx          # pedidos y pagos pendientes
-├─ cash-register/page.tsx   # apertura, cierre y arqueo
-├─ expenses/page.tsx        # gastos de caja
-├─ vouchers/page.tsx        # vales de trabajadores
-├─ customers/page.tsx       # búsqueda y registro para facturación
-└─ reports/page.tsx         # reportes permitidos para su rol
+├─ page.tsx
+├─ sales/page.tsx
+├─ orders/page.tsx
+├─ cash-register/page.tsx
+├─ expenses/page.tsx
+├─ vouchers/page.tsx
+├─ customers/page.tsx
+└─ reports/page.tsx
 ```
 
-Cada pantalla consume uno o más features. Por ejemplo, `sales/page.tsx` usa `features/sales`; `cash-register/page.tsx` usa `features/cash-register` y `features/reports` para mostrar el arqueo. La navegación filtra las opciones visibles según el rol, pero el backend sigue siendo la única frontera de autorización.
+Reglas:
 
-La regla práctica es: organizar por capacidad de negocio, componer por rol y enrutar por pantalla.
+- Un componente exclusivo de un feature vive dentro de ese feature.
+- `commonComponents/` queda reservado para UI reutilizable.
+- Los stores Zustand contienen datos compartidos de API y acciones del dominio.
+- `useState` contiene únicamente estado visual local y temporal.
+- Las rutas de `app/` componen pantallas, pero no implementan reglas de negocio.
 
 #### Estructura interna de un feature
 
@@ -70,56 +65,41 @@ features/sales/
 │  ├─ create-order.ts
 │  ├─ create-custom-order.ts
 │  └─ confirm-payment.ts
+├─ stores/
+│  └─ sales.store.ts
 ├─ components/
 │  ├─ sales-pos.tsx
 │  └─ custom-sale-form.tsx
-├─ hooks/
 ├─ schemas/
 └─ types.ts
 ```
 
-Este proyecto usa un flujo directo y deliberadamente simple:
+El flujo base es:
 
 ```text
-API -> Hook -> UI
+API -> Zustand Store -> UI
 ```
 
-La UI no llama directamente a `fetch`. El hook invoca las funciones de `api/`, guarda la respuesta y los estados de pantalla, y expone datos y acciones al componente visual.
+La UI no llama directamente a `fetch`. El store invoca `api/`, conserva los datos compartidos y expone selectores y acciones. Los hooks personalizados no forman parte de la arquitectura base.
 
-Cada carpeta tiene una responsabilidad concreta:
+- **`api/`**: realiza una llamada HTTP por endpoint. No renderiza ni decide reglas de negocio.
+- **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. No calcula precios, stock, descuentos ni permisos.
+- **`components/`**: recibe datos del store, renderiza controles y emite eventos.
+- **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
+- **`types.ts`**: define tipos compartidos sin esconder reglas de negocio.
 
-- **`api/` — llamadas al backend:** contiene funciones pequeñas que ejecutan una llamada HTTP por endpoint. Cada archivo conoce el método HTTP, la ruta, los parámetros, el token y los contratos de request/response. No renderiza componentes ni decide reglas del negocio.
-  - `get-pos-context.ts`: llama a `GET /api/v1/pos/context` y obtiene productos, variantes, descuentos autorizados, precios por presa, períodos y turno activo.
-  - `create-order.ts`: llama a `POST /api/v1/orders` para crear una orden estándar. Envía referencias e intención de la cajera; no envía precios ni totales.
-  - `create-custom-order.ts`: llama a `POST /api/v1/orders/custom` con la composición custom y el precio confirmado por la cajera.
-  - `confirm-payment.ts`: llama a `POST /api/v1/orders/{id}/pay` para confirmar el pago de un pedido pendiente.
-
-- **`components/` — interfaz visual:** contiene componentes React específicos del feature. Reciben datos por props, renderizan controles y emiten eventos mediante callbacks.
-  - `sales-pos.tsx`: muestra el POS, las categorías, los productos seleccionados y las acciones disponibles.
-  - `custom-sale-form.tsx`: muestra el formulario de una venta custom y comunica la selección realizada por la cajera.
-
-- **`hooks/` — estado y acciones de pantalla:** contiene hooks que invocan las funciones de `api/`, almacenan `data`, `isLoading`, `error` y otros estados temporales, y ofrecen funciones como `loadPosContext`, `createOrder` o `confirmPayment` para que la UI no conozca HTTP. No contienen reglas definitivas del negocio.
-
-- **`schemas/` — contratos de transporte:** contiene schemas Zod para verificar que las respuestas recibidas y los datos enviados tengan la forma esperada. Esta validación protege al frontend de respuestas malformadas y mejora los mensajes de formulario, pero no reemplaza la validación del backend ni constituye una frontera de seguridad.
-
-- **`types.ts` — tipos TypeScript:** contiene tipos compartidos por los componentes, hooks, API y schemas del feature, como `CreateOrderInput`, `ConfirmPaymentResponse` o `SalesProduct`. Los tipos describen la forma de los datos; no deben esconder reglas de negocio en el frontend.
-
-El flujo esperado es:
+El flujo completo es:
 
 ```text
-UI -> Hook -> API -> Backend
-UI <- Hook <- API response <- Backend
+UI -> Zustand Store -> API -> Backend
+UI <- Zustand Store <- API response <- Backend
 ```
 
-El frontend puede controlar selección de productos, estado visual, apertura de modales, navegación, estados de carga y presentación de errores. También puede calcular el **precio sugerido** de la venta custom cuando el backend entrega `piecePrices` en `GET /api/v1/pos/context`; ese valor es solo una ayuda visual. El backend sigue siendo la única autoridad para el precio confirmado, stock, descuentos, permisos, disponibilidad, totales y transiciones de pedidos.
-
-#### Regla de dependencias
-
-Las rutas de `app/` pueden usar features, `commonComponents` y configuración. Un feature puede usar otros módulos técnicos compartidos, pero no debe importar componentes internos de otro feature. Si dos features necesitan coordinarse, la composición ocurre en la página de `app/`.
+`useState` se reserva para modales, tabs, búsquedas, selección visual y formularios temporales. El backend sigue siendo la única autoridad para precio confirmado, stock, descuentos, permisos, disponibilidad, totales y transiciones.
 
 #### Alineación con el contrato actual del backend
 
-La estructura del frontend debe seguir los endpoints reales documentados en Swagger y en la guía técnica, no inventar una capa de negocio paralela en React:
+La estructura del frontend debe seguir los endpoints reales documentados en Swagger y en la guía técnica:
 
 | Feature         | API principal                                                                                                                                          | Uso de la UI                                                          |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
@@ -132,7 +112,7 @@ La estructura del frontend debe seguir los endpoints reales documentados en Swag
 
 El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI pinta esos datos y solo puede calcular el **precio sugerido** de una venta custom con `piecePrices`; el backend valida y persiste el precio confirmado.
 
-La respuesta de cada API debe conservar el contrato estándar del backend (`isSuccess`, `message`, `data`, `error`). Los hooks exponen esos datos a la UI sin mover reglas transaccionales al navegador.
+La respuesta de cada API debe conservar el contrato estándar del backend (`isSuccess`, `message`, `data`, `error`). Los stores exponen esos datos a la UI sin mover reglas transaccionales al navegador.
 
 ### 0.2 Composición antes que componentes monolíticos
 
@@ -188,51 +168,59 @@ La lógica de eliminar un usuario se implementa en el feature y se entrega como 
 El estilo anterior mezclaba a veces consulta, transformación, formulario y render en un mismo componente. La evolución recomendada conserva la división por módulo y agrega límites claros:
 
 - **Componentes:** renderizan y emiten eventos.
-- **Hooks:** coordinan estado de pantalla y efectos.
+- **Stores Zustand:** coordinan datos de API, estado compartido y acciones.
 - **API:** encapsula llamadas HTTP y contratos de request/response.
 - **Schemas:** validan entradas y respuestas externas.
-- **Stores:** contienen únicamente estado global que realmente se comparte.
+- **`useState`:** contiene únicamente estado visual local y temporal.
 
-No se debe llamar a la API directamente desde una tabla o un formulario. Tampoco se debe poner en Zustand el estado efímero de un input, un diálogo o una consulta usada por una sola pantalla.
+No se debe llamar a la API directamente desde una tabla o un formulario. Tampoco se debe poner en Zustand el estado efímero de un input, un diálogo o una consulta que solo necesita una pantalla.
 
-### 0.4 Hooks de dominio y estados explícitos
+### 0.4 Zustand como fuente global de datos
 
-Los hooks personalizados del estilo anterior eran una buena forma de reutilizar suscripciones y transformaciones. En Next.js deben representar casos de uso, con estados explícitos de carga, éxito y error.
+Los datos de API que deben ser compartidos viven en un store Zustand por dominio. Así todos los componentes consumen la misma fuente de verdad y una actualización se refleja en toda la aplicación. No se crean hooks personalizados para duplicar `data`, `isLoading` y `error`.
 
 ```tsx
-import { useEffect, useState } from 'react';
-import { getUsers, type User } from '../api/users';
+import { create } from 'zustand';
+import { getPosContext } from '../api/get-pos-context';
+import type { PosContext } from '../types';
 
-type UsersState = {
-  data: User[];
+type SalesState = {
+  posContext: PosContext | null;
   isLoading: boolean;
   error: string | null;
+  loadPosContext: () => Promise<void>;
 };
 
-export function useUsers(): UsersState {
-  const [state, setState] = useState<UsersState>({
-    data: [],
-    isLoading: true,
-    error: null,
-  });
+export const useSalesStore = create<SalesState>((set) => ({
+  posContext: null,
+  isLoading: false,
+  error: null,
 
-  useEffect(() => {
-    getUsers()
-      .then((data) => setState({ data, isLoading: false, error: null }))
-      .catch(() =>
-        setState({
-          data: [],
-          isLoading: false,
-          error: 'No se pudieron cargar los usuarios',
-        }),
-      );
-  }, []);
+  loadPosContext: async () => {
+    set({ isLoading: true, error: null });
 
-  return state;
-}
+    try {
+      const posContext = await getPosContext();
+      set({ posContext, isLoading: false });
+    } catch {
+      set({
+        isLoading: false,
+        error: 'No se pudo cargar el contexto del POS',
+      });
+    }
+  },
+}));
 ```
 
-La pantalla debe contemplar siempre los estados `loading`, `error`, `empty` y `success`. Esto mejora la experiencia operativa y evita que la interfaz dependa de `undefined` o de logs en consola.
+La UI selecciona únicamente lo que necesita del store:
+
+```tsx
+const posContext = useSalesStore((state) => state.posContext);
+const isLoading = useSalesStore((state) => state.isLoading);
+const loadPosContext = useSalesStore((state) => state.loadPosContext);
+```
+
+La pantalla debe contemplar siempre los estados `loading`, `error`, `empty` y `success`. Zustand mantiene esos estados porque forman parte del resultado compartido de la consulta; `useState` queda reservado para detalles visuales locales.
 
 ### 0.5 Formularios controlados, ahora con esquema único
 
@@ -381,7 +369,7 @@ export async function getUsers(): Promise<User[]> {
 }
 ```
 
-La función API es el único lugar que conoce la URL y el formato externo. El hook consume `User[]`, no una respuesta HTTP sin validar; el componente solo consume el estado y las acciones que el hook expone.
+La función API es el único lugar que conoce la URL y el formato externo. El store consume `User[]`, no una respuesta HTTP sin validar; el componente solo consume el estado y las acciones que el store expone.
 
 ---
 
@@ -656,71 +644,64 @@ console.log(result.success); // false
 
 # 🔹 Estado global con Zustand
 
-## Ejemplo simple — sin tipos
+Zustand es la fuente global para datos de API y estado compartido. Cada dominio debe tener su propio store: `auth.store.ts`, `sales.store.ts`, `orders.store.ts` o `cash-register.store.ts`.
 
 ```tsx
 import { create } from 'zustand';
+import { getPosContext } from '@/features/sales/api/get-pos-context';
+import type { PosContext } from '@/features/sales/types';
 
-const useBear = create((set) => ({
-  bears: 0,
-
-  increasePopulation: () =>
-    set((state) => ({
-      bears: state.bears + 1,
-    })),
-
-  removeAllBears: () =>
-    set({
-      bears: 0,
-    }),
-}));
-```
-
-✔ Rápido
-✔ Poco código
-✔ Ideal para UI state
-
----
-
-## Ejemplo recomendado — con tipos
-
-```tsx
-import { create } from 'zustand';
-
-type BearState = {
-  bears: number;
-  increasePopulation: () => void;
-  removeAllBears: () => void;
+type SalesState = {
+  posContext: PosContext | null;
+  isLoading: boolean;
+  error: string | null;
+  loadPosContext: () => Promise<void>;
 };
 
-const useBear = create<BearState>((set) => ({
-  bears: 0,
+export const useSalesStore = create<SalesState>((set) => ({
+  posContext: null,
+  isLoading: false,
+  error: null,
 
-  increasePopulation: () =>
-    set((state) => ({
-      bears: state.bears + 1,
-    })),
+  loadPosContext: async () => {
+    set({ isLoading: true, error: null });
 
-  removeAllBears: () =>
-    set({
-      bears: 0,
-    }),
+    try {
+      const posContext = await getPosContext();
+      set({ posContext, isLoading: false });
+    } catch {
+      set({
+        isLoading: false,
+        error: 'No se pudo cargar el contexto del POS',
+      });
+    }
+  },
 }));
 ```
 
----
+### Consumo desde la UI
 
-## ¿Cuándo tipar Zustand?
+Seleccioná únicamente las partes que el componente necesita:
 
-| Caso           | Tipar |
-| -------------- | ----- |
-| UI simple      | ❌ No |
-| Auth           | ✅ Sí |
-| Carrito        | ✅ Sí |
-| Config global  | ✅ Sí |
-| Flags visuales | ❌ No |
+```tsx
+const products = useSalesStore(
+  (state) => state.posContext?.products ?? [],
+);
+const isLoading = useSalesStore((state) => state.isLoading);
+const loadPosContext = useSalesStore((state) => state.loadPosContext);
+```
 
-> **Estados globales importantes = tipar**
+Después de una mutación, la acción del store debe actualizar el estado afectado o volver a cargarlo para que todas las pantallas reciban la información actualizada.
+
+### Qué no guardar en Zustand
+
+No guardes en Zustand modales, tabs, texto de búsqueda, inputs temporales ni estados visuales de una sola pantalla. Usá `useState` o React Hook Form para esos casos.
+
+### Regla de hooks personalizados
+
+No se crean hooks personalizados de dominio inicialmente. El hook generado por Zustand, como `useSalesStore`, sí se utiliza para seleccionar estado y ejecutar acciones. Solo se agregan hooks propios si aparece una necesidad real de coordinar varios stores o efectos de React, sin convertirse en una segunda fuente de datos.
+
+> **API para comunicación, Zustand para estado global, `useState` para estado visual y UI para renderizar.**
 
 ---
 
