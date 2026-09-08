@@ -219,7 +219,7 @@ git commit -m "Actualizo documentación"
 ### 3. Enviar cambios al repo central de documentación
 
 ```bash
-git subtree push --prefix=docs https://github.com/usuario/docs main
+git subtree push --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main
 ```
 
 ### 4. Publicar cambios en el repo del proyecto
@@ -238,7 +238,7 @@ git push origin main
 En el otro proyecto (ej. frontend si editaste en backend):
 
 ```bash
-git subtree pull --prefix=docs https://github.com/usuario/docs main --squash
+git subtree pull --prefix=docs https://github.com/Santillan-Reyna-Ariel-Angel/wonderchicken-docs main --squash
 ```
 
 ### 6. Resolver conflictos si aparecen
