@@ -202,3 +202,57 @@ Ejemplo cron (cada 5 minutos):
 - Si quieres historial centralizado y limpio, usa **Submodule**, pero recuerda que los archivos no se verán directamente en GitHub de frontend/backend.
 
 ---
+
+## ✅ Flujo correcto con Subtree (paso a paso)
+
+### 1. Editar documentación
+
+- Modifica cualquier archivo dentro de `docs/` en backend o frontend.
+
+### 2. Guardar cambios en el proyecto local
+
+```bash
+git add docs
+git commit -m "Actualizo documentación"
+```
+
+### 3. Enviar cambios al repo central de documentación
+
+```bash
+git subtree push --prefix=docs https://github.com/usuario/docs main
+```
+
+### 4. Publicar cambios en el repo del proyecto
+
+```bash
+git push origin main
+```
+
+👉 Esto asegura que:
+
+- El repo central `docs` recibe las actualizaciones.
+- Tu proyecto backend/frontend guarda la referencia correcta al commit actualizado de `docs`.
+
+### 5. Traer cambios al otro proyecto
+
+En el otro proyecto (ej. frontend si editaste en backend):
+
+```bash
+git subtree pull --prefix=docs https://github.com/usuario/docs main --squash
+```
+
+### 6. Resolver conflictos si aparecen
+
+```bash
+git status
+git add docs
+git commit
+```
+
+### 7. Publicar cambios del segundo proyecto
+
+```bash
+git push origin main
+```
+
+---
