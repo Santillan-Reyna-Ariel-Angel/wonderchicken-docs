@@ -1,25 +1,137 @@
 # GUÍA COMPLETA
 
-## Next.js + TypeScript (TSX) + MUI + Zod + Zustand
+## Next.js + JavaScript/TypeScript + MUI + Zod + Zustand
+
+## 0. Decisión de lenguaje: JavaScript primero, TypeScript donde protege el negocio
+
+El proyecto utiliza un enfoque híbrido deliberado:
+
+- **JavaScript/JSX (`.js`/`.jsx`)** para páginas, layouts visuales, componentes de presentación, modales, tablas, estilos y estado efímero de una pantalla.
+- **TypeScript (`.ts`/`.tsx`)** para autenticación, autorización, contratos de API, schemas Zod, stores Zustand compartidos, tipos de dominio, pagos, pedidos, inventario y otras rutas críticas.
+
+La extensión no define por sí sola la seguridad. Un archivo JavaScript no puede omitir la validación del backend ni recibir directamente datos externos sin validar. El objetivo es reducir la cantidad de tipado ceremonial en la UI sin quitar tipos en las fronteras donde un error puede afectar dinero, inventario, permisos o trazabilidad.
+
+**Regla práctica:** si un módulo transforma datos del backend, coordina una mutación, persiste estado compartido o decide un permiso, se escribe en TypeScript. Si solamente compone una vista y emite eventos ya definidos, puede escribirse en JavaScript/JSX.
+
+El repositorio actual está configurado con TypeScript estricto. Antes de migrar archivos existentes a JavaScript se debe ajustar la configuración y comprobar el impacto en ESLint y Next.js; no se hará una conversión masiva solo por cambiar extensiones.
+
+## 0.1 Reglas transversales de experiencia y presentación
+
+### Idioma de la interfaz
+
+Todo texto visible de la aplicación debe estar en **español**, sin importar el rol autenticado. Esto incluye títulos, botones, etiquetas, ayudas, validaciones, estados, mensajes vacíos, errores y notificaciones. Los valores técnicos del backend (`CASHIER`, `PENDING_PAYMENT`, `READY`, etc.) se conservan en código, pero la UI los presenta con textos en español como “Cajera”, “Pago pendiente” y “Listo”.
+
+No se deben mezclar traducciones improvisadas dentro de cada componente. Los textos repetidos o asociados a estados deben centralizarse en configuraciones simples del feature correspondiente.
+
+### Notificaciones con React-Toastify
+
+El proyecto utilizará `react-toastify` para mostrar confirmaciones breves después de recibir la respuesta del backend.
+
+- Los errores de API deben informarse mediante toast cuando la operación no pudo completarse, porque el usuario necesita saber que falló.
+- Los toasts de éxito no son automáticos para todas las respuestas correctas. Se reservan para ventas, pagos, eliminaciones, cambios de estado u otras operaciones críticas que necesiten confirmación visual.
+- Una respuesta correcta de una consulta rutinaria, una búsqueda, una carga de tabla o una actualización visual no necesita toast por defecto.
+- No se utiliza toast para cada interacción visual, cambio de tab, apertura de modal o modificación local del carrito.
+- Las operaciones críticas que modifican ventas, pagos, turnos, clientes, productos, variantes o estados de pedidos deben tener feedback visible. El feedback puede ser un toast de éxito cuando corresponda, estados de carga y actualización de la pantalla; cuando el error requiere corrección en un formulario, también debe mostrarse junto al campo correspondiente.
+- `ToastContainer` se monta una sola vez en el proveedor global de la aplicación y respeta el tema activo.
+- Los componentes de feature disparan notificaciones mediante una pequeña utilidad compartida; no se crea un sistema genérico de mensajes que oculte el flujo de la operación.
+
+La notificación no reemplaza los estados `loading`, `error`, `empty` y `success` de la pantalla. El botón debe indicar que la operación está en curso y el toast debe aparecer solo cuando exista una respuesta. Regla general: **toast para errores relevantes y para éxitos críticos; no toast por rutina**.
+
+### Iconos y tamaño de componentes MUI
+
+- Se utilizarán preferentemente los iconos de `@mui/icons-material`. No se incorporarán bibliotecas adicionales de iconos si Material UI ofrece un icono adecuado.
+- Los iconos deben conservar significado accesible mediante `aria-label`, `Tooltip` o texto visible cuando la acción no sea evidente.
+- Cuando un `Tooltip` se utilice dentro de un `Dialog`, `Modal` o superficie con portal, debe renderizarse por encima del modal. Se debe configurar su portal o `PopperProps` y el `z-index` correspondiente al theme de MUI para evitar que quede oculto detrás del overlay o del contenido del modal.
+- El tamaño predeterminado de los componentes MUI que acepten `size` será `small`, especialmente en formularios, campos, botones, selects, tablas y controles de operación.
+- `small` no es una obligación rígida: en móvil, acciones táctiles, diálogos, lectura prolongada o necesidades de accesibilidad se podrá usar `medium` u otro tamaño si mejora la experiencia.
+- Las decisiones de tamaño deben considerar escritorio y móvil; no se debe compactar tanto una interfaz que los controles sean difíciles de tocar o leer.
+
+### Responsive desde el inicio
+
+Todas las pantallas deben funcionar en monitor, laptop, tablet y teléfono. El diseño no se construye para una única resolución y luego se corrige con parches.
+
+- Las vistas operativas de cajera y administrador priorizan monitores, pero deben conservar navegación y acciones utilizables en pantallas reducidas.
+- Las vistas del cliente priorizan el uso móvil y deben evitar desplazamiento horizontal innecesario.
+- Se deben utilizar breakpoints, `Grid`, `Stack`, `Container`, `Box` y las herramientas responsive de MUI.
+- Las tablas densas deben tener una estrategia móvil explícita: columnas prioritarias, scroll horizontal controlado o transformación a filas/tarjetas cuando corresponda.
+- Los botones, campos, diálogos, tarjetas y tablas deben conservar tamaños táctiles y no depender de texto que se desborde.
+- No se deben fijar anchos rígidos que rompan el layout; usar `minWidth`, `maxWidth`, `flex`, `grid` y reglas responsive.
+
+### Tema claro y tema oscuro
+
+La aplicación debe permitir alternar entre tema claro y tema oscuro. Todos los componentes deben consumir valores del theme de MUI mediante `palette`, `spacing`, `typography`, `shape` y `breakpoints`.
+
+- No usar fondos, textos, bordes o sombras de color hardcodeados cuando representen superficies del sistema.
+- Preferir `background.default`, `background.paper`, `text.primary`, `text.secondary`, `divider` y colores semánticos (`primary`, `success`, `warning`, `error`, `info`).
+- Los estados de pedidos no deben depender únicamente del color; deben incluir texto, icono o etiqueta accesible.
+- Los estilos que necesiten una diferencia entre temas deben resolverse en la configuración del theme o mediante `theme.palette.mode`.
+- La preferencia del usuario puede persistirse, pero el cambio de tema debe resolverse desde un provider común y no desde cada pantalla.
+
+### Reutilización equilibrada y consistencia visual
+
+La reutilización es una herramienta, no un objetivo aislado. Se crea un componente común cuando existe una estructura, comportamiento o regla visual repetida y estable. Si un componente solo se parece superficialmente a otro o necesita demasiadas props condicionales, permanece dentro del feature.
+
+`commonComponents/` debe concentrar piezas de presentación reutilizables como botones con comportamiento uniforme, encabezados, estados vacíos, diálogos de confirmación, feedback de carga y una tabla común. No debe convertirse en un contenedor de componentes de negocio ni en una API genérica difícil de entender.
+
+La consistencia debe provenir principalmente del theme y de componentes pequeños bien definidos, no de una abstracción gigante que intente resolver todos los casos.
+
+### Agrupación de props y parámetros
+
+Como regla preferente, las props y los parámetros de una función deben agruparse en un objeto cuando forman parte de un mismo contrato o es probable que crezcan juntos. Esto aplica especialmente a configuraciones de componentes, filtros, payloads de API, opciones de búsqueda y acciones de dominio. El consumidor puede desestructurar únicamente lo que necesita y el orden de las propiedades deja de ser significativo.
+
+Esta regla no es absoluta. Se mantendrán parámetros simples cuando exista un único valor independiente y evidente, por ejemplo `formatCurrency(amount)` o `isAllowed(role)`. No se debe crear un objeto artificial para envolver un valor aislado, ni usar objetos genéricos como `options` o `data` que oculten el contrato. La decisión debe priorizar, en este orden, legibilidad, tipado, estabilidad del contrato y facilidad de prueba.
+
+El agrupamiento tampoco debe servir para pasar props que el componente no utiliza. Si un objeto contiene demasiadas propiedades o cruza límites de dominio, conviene dividir el componente, definir un tipo específico o mantener una función más pequeña.
+
+### Tabla común
+
+El proyecto tendrá un componente de tabla reutilizable, por ejemplo `CommonTable`, dentro de `commonComponents/`. Su responsabilidad es presentar datos y configuraciones, no conocer reglas de ventas, clientes o productos.
+
+La API de la tabla se organizará alrededor de un objeto de props tipado, pero `columns` será la fuente de verdad para las columnas visibles:
+
+- `rows`: datos a renderizar.
+- `columns`: arreglo de definiciones de columnas. Cada columna declara al menos su identificador, encabezado y campo; cuando el valor necesita una presentación especial, puede recibir una función `render` que devuelve contenido o un componente React.
+- La columna de acciones es opcional. Si el arreglo `columns` incluye una definición marcada como acciones, `CommonTable` la renderiza; si no existe, no agrega ninguna columna adicional. Su `render` recibe la fila y devuelve uno o varios elementos React —por ejemplo, botones para editar, eliminar, ver o seleccionar— definidos por el feature.
+- `loading`, `emptyMessage` y `error` cuando la pantalla lo necesite.
+- `showSearch` y, si está habilitado, un callback o valor controlado de búsqueda.
+- Configuración responsive mínima, como columnas prioritarias o contenido alternativo para móvil.
+
+La tabla no debe hacer llamadas HTTP, manejar stores ni decidir permisos. Cada feature prepara las filas, las columnas y el renderizado de la columna de acciones; `CommonTable` solo renderiza. Si una tabla necesita agrupación, edición compleja o una interacción específica de negocio, se crea un componente de tabla dentro del feature y se reutilizan las piezas visuales comunes sin forzar el caso dentro de `CommonTable`.
+
+### Indicadores de carga y feedback de operación
+
+Toda operación que pueda tardar debe ofrecer feedback de procesamiento. Se utilizarán los componentes de MUI adecuados para el contexto:
+
+- `CircularProgress` para acciones puntuales, botones que esperan una mutación y bloques pequeños.
+- `Skeleton` para tablas, listas, tarjetas o paneles que todavía están cargando una cantidad considerable de datos.
+- Un estado de carga de pantalla o sección para consultas críticas como el contexto del POS, historial de pedidos o panel de despacho.
+
+Durante una mutación se debe deshabilitar el control que la inició y, cuando ayude a la comprensión, mostrar su `CircularProgress`. Esto evita envíos duplicados sin bloquear controles independientes que sigan siendo seguros. El indicador de carga no reemplaza los estados `error`, `empty` y `success`.
+
+`react-toastify` puede utilizarse para errores de API y para confirmaciones puntuales de operaciones críticas. Es un mecanismo de feedback, no un sustituto de los estados de carga, error o vacío. Para mantener el código limpio y mantenible, no se crearán toasts para cada interacción ni capas genéricas innecesarias: se montará un único `ToastContainer` global y se reutilizará una utilidad pequeña solo cuando evite duplicación real.
 
 ## 0. Sinfronteras rescatado: principios que se mantienen
 
 El estilo anterior resolvía una aplicación operativa grande con una organización muy cercana al negocio. Esa experiencia sigue siendo valiosa, pero debe trasladarse a herramientas y límites más robustos.
 
-### 0.1 Organización por feature y caso de uso
+### 0.2 Organización por feature y caso de uso
 
-Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida.
+Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida. La jerarquía de carpetas del App Router se utilizará porque hace explícitas las URLs, layouts y límites de acceso, pero no reemplaza la autorización del backend.
 
 ```text
 src/
 ├─ app/
 │  ├─ layout.tsx
-│  ├─ providers.tsx
-│  └─ (authenticated)/
+│  ├─ ClientProviders.tsx
+│  ├─ (public)/
+│  │  ├─ login/page.jsx
+│  │  └─ order/[token]/page.jsx
+│  └─ (protected)/
+│     ├─ layout.tsx
+│     ├─ super-admin/
+│     ├─ branch-admin/
 │     ├─ cashier/
-│     ├─ dispatcher/
-│     ├─ cook/
-│     └─ admin/
+│     └─ dispatcher/
 ├─ features/
 │  ├─ sales/
 │  │  ├─ api/
@@ -34,19 +146,49 @@ src/
 └─ commonComponents/
 ```
 
+Los nombres entre paréntesis son **route groups**: organizan layouts y permisos sin agregarse a la URL. Por ejemplo, `app/(public)/login/page.jsx` expone `/login`, mientras que `app/(protected)/cashier/pos/page.jsx` expone `/cashier/pos`. Los segmentos dinámicos, como `order/[token]`, se reservan para la vista pública de una comanda.
+
+No se crea una ruta operativa para `cook` en V1. El rol cocinero permanece reservado hasta que se definan sus casos de uso; no debe aparecer en la navegación ni en la matriz de pantallas mientras no tenga una funcionalidad aprobada.
+
 La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
 
 ```text
-app/(authenticated)/cashier/
-├─ page.tsx
-├─ sales/page.tsx
-├─ orders/page.tsx
-├─ cash-register/page.tsx
-├─ expenses/page.tsx
-├─ vouchers/page.tsx
-├─ customers/page.tsx
-└─ reports/page.tsx
+app/(protected)/cashier/
+├─ page.jsx
+├─ pos/page.jsx
+├─ orders/page.jsx
+├─ cash-register/page.jsx
+├─ expenses/page.jsx
+├─ vouchers/page.jsx
+├─ customers/page.jsx
+└─ reports/page.jsx
 ```
+
+La cajera es un rol, no un feature. Sus rutas componen capacidades de negocio. El administrador de sucursal y el superadministrador también usan rutas por rol porque sus navegaciones, alcance de sucursal y permisos son diferentes. Los features no deben duplicarse por rol: `sales`, `orders`, `customers` y `cash-register` contienen la lógica compartida, mientras cada rol compone la vista que necesita.
+
+### Rutas y autorización
+
+El App Router es recomendable para este proyecto por cuatro motivos:
+
+1. Permite layouts persistentes para sesión, sucursal y navegación.
+2. Permite separar páginas públicas, autenticadas y vistas por rol con route groups.
+3. Permite cargar componentes y datos cerca de la ruta que los necesita.
+4. Hace visible la estructura de navegación en el sistema de archivos.
+
+La alternativa de una única página que cambia todo con `if (role)` tendría menos carpetas al principio, pero produciría una pantalla monolítica, mezclando navegación y permisos. No se recomienda.
+
+El layout o middleware puede redirigir por experiencia de usuario, pero el backend sigue siendo la frontera de seguridad. Cada endpoint debe validar JWT, rol y sucursal. Ocultar un enlace no autoriza una operación.
+
+### POS de cajera y experiencia del cliente
+
+No se recomienda reutilizar la misma pantalla completa para la cajera y el cliente. Comparten datos, contratos y componentes de dominio, pero tienen objetivos distintos:
+
+- **Cajera:** velocidad, teclado, búsqueda inmediata, alta densidad de información, cantidades y confirmaciones rápidas.
+- **Cliente:** descubrimiento del menú, imágenes, explicación de variantes, accesibilidad, carrito y seguimiento de su pedido.
+
+La reutilización correcta ocurre en capas. `features/sales` puede compartir tipos, schemas, lectura del catálogo, reglas de presentación de una variante y componentes pequeños como `ProductImage`, `Price`, `VariantSummary` o `OrderItemRow`. Cada experiencia debe tener su propio contenedor y flujo: `cashier-pos` para la operación interna y `customer-menu`/`customer-order` para el canal público. De esta forma se evita duplicar lógica sin obligar a dos usuarios con necesidades opuestas a utilizar la misma interfaz.
+
+La vista pública de una comanda no requiere login: se accede mediante el `publicToken` de la orden. Un futuro portal autenticado del cliente es una capacidad distinta y no debe mezclarse con las rutas operativas por rol.
 
 Reglas:
 
@@ -68,8 +210,8 @@ features/sales/
 ├─ stores/
 │  └─ sales.store.ts
 ├─ components/
-│  ├─ sales-pos.tsx
-│  └─ custom-sale-form.tsx
+│  ├─ sales-pos.jsx
+│  └─ custom-sale-form.jsx
 ├─ schemas/
 └─ types.ts
 ```
@@ -83,10 +225,10 @@ API -> Zustand Store -> UI
 La UI no llama directamente a `fetch`. El store invoca `api/`, conserva los datos compartidos y expone selectores y acciones. Los hooks personalizados no forman parte de la arquitectura base.
 
 - **`api/`**: realiza una llamada HTTP por endpoint. No renderiza ni decide reglas de negocio.
-- **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. No calcula precios, stock, descuentos ni permisos.
+- **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. Puede exponer datos para que la UI calcule subtotales y un total preliminar de presentación, pero no decide precios válidos, stock, descuentos aplicables ni permisos.
 - **`components/`**: recibe datos del store, renderiza controles y emite eventos.
 - **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
-- **`types.ts`**: define tipos compartidos sin esconder reglas de negocio.
+- **`types.ts`**: define tipos compartidos de los contratos críticos sin esconder reglas de negocio. No se crea un archivo de tipos para cada componente visual trivial.
 
 El flujo completo es:
 
@@ -110,7 +252,7 @@ La estructura del frontend debe seguir los endpoints reales documentados en Swag
 | `customers`     | `GET /api/v1/customers`, `POST /api/v1/customers`, `PATCH /api/v1/customers/{id}`                                                                      | Buscar, registrar y editar clientes para facturación.                 |
 | `reports`       | `GET /api/v1/reports/sales`, `/inventory-presas`, `/cash-audit`                                                                                        | Solicitar y renderizar reportes; el backend genera los totales y CSV. |
 
-El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI pinta esos datos y solo puede calcular el **precio sugerido** de una venta custom con `piecePrices`; el backend valida y persiste el precio confirmado.
+El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI utiliza esos datos para mostrar precios unitarios, subtotales y un total preliminar del carrito; también puede calcular el **precio sugerido** de una venta custom con `piecePrices`. El backend valida y persiste los valores confirmados.
 
 La respuesta de cada API debe conservar el contrato estándar del backend (`isSuccess`, `message`, `data`, `error`). Los stores exponen esos datos a la UI sin mover reglas transaccionales al navegador.
 
@@ -162,6 +304,84 @@ export function ConfirmDialog({
 ```
 
 La lógica de eliminar un usuario se implementa en el feature y se entrega como `onConfirm`; el diálogo solo presenta y coordina la interacción.
+
+### Modal con contenido React inyectable (referencia)
+
+Un patrón útil cuando se necesita un modal que pueda abrirse desde un botón o icono y renderizar contenido React arbitrario. El componente gestiona su propio estado de apertura/cierre y expone callbacks para que el feature decida qué hacer al confirmar o cancelar.
+
+```jsx
+import { useState } from 'react';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+
+function ActionModal({
+  triggerLabel = 'Abrir',
+  dialogTitle = 'Confirmar',
+  children,
+  onConfirm,
+  onCancel,
+  confirmLabel = 'Aceptar',
+  cancelLabel = 'Cancelar',
+  triggerColor = 'primary',
+  disabled = false,
+}) {
+  const [open, setOpen] = useState(false);
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
+  const handleConfirm = () => {
+    onConfirm?.();
+    setOpen(false);
+  };
+
+  const handleCancel = () => {
+    onCancel?.();
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <Button
+        variant="contained"
+        color={triggerColor}
+        disabled={disabled}
+        onClick={handleOpen}
+      >
+        {triggerLabel}
+      </Button>
+      <Dialog open={open} onClose={handleCancel}>
+        <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogContent>{children}</DialogContent>
+        <DialogActions>
+          <Button variant="contained" color="error" onClick={handleCancel}>
+            {cancelLabel}
+          </Button>
+          <Button variant="contained" color="success" onClick={handleConfirm} autoFocus>
+            {confirmLabel}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
+export { ActionModal };
+```
+
+**Qué rescatar del patrón:**
+- El modal es autónomo: maneja su propio `open`/`close` y se activa desde un botón o icono.
+- `children` permite inyectar cualquier contenido React (formularios, detalles, tablas, confirmaciones).
+- `onConfirm` y `onCancel` son callbacks opcionales que el feature define; el modal solo los invoca y se cierra.
+
+**Qué adaptar al proyecto:**
+- En TypeScript, tipar las props con `ReactNode` para `children` y tipos explícitos para callbacks.
+- No incluir navegación, `redirectPage` ni múltiples funciones opcionales dentro del modal; cada feature compone su propia lógica.
+- Si el modal necesita estado de carga, agregar `isLoading` y deshabilitar los botones mientras la operación está en curso, igual que en `ConfirmDialog`.
+- El `triggerLabel` puede ser un icono en lugar de texto; el botón puede reemplazarse por un `IconButton` si la acción lo requiere.
 
 ### 0.3 Separación entre UI, estado y datos
 
@@ -291,18 +511,31 @@ No requiere providers ni configuración extra.
 
 ---
 
-## 4. Estructura recomendada
+## 4. React-Toastify (notificaciones)
+
+```bash
+pnpm add react-toastify
+```
+
+`ToastContainer` debe montarse una sola vez dentro de `ClientProviders`. Las pantallas y stores lo utilizan para informar el resultado de operaciones críticas después de recibir la respuesta del backend. No se muestran notificaciones para cada cambio visual o interacción local.
+
+---
+
+## 5. Estructura recomendada
 
 ```text
 src/
 ├─ app/
 │  ├─ layout.tsx
-│  ├─ providers.tsx
-│  └─ (authenticated)/
+│  ├─ ClientProviders.tsx
+│  ├─ (public)/
+│  │  ├─ login/page.jsx
+│  │  └─ order/[token]/page.jsx
+│  └─ (protected)/
+│     ├─ super-admin/
+│     ├─ branch-admin/
 │     ├─ cashier/
-│     ├─ dispatcher/
-│     ├─ cook/
-│     └─ admin/
+│     └─ dispatcher/
 ├─ features/
 │  ├─ sales/
 │  ├─ orders/
@@ -315,9 +548,14 @@ src/
 ├─ config/
 │  └─ api.ts
 ├─ commonComponents/
+│  ├─ CommonTable.jsx
+│  ├─ EmptyState.jsx
+│  └─ ConfirmDialog.jsx
 └─ styles/
   └─ globals.css
 ```
+
+`CommonTable` debe mantenerse como una pieza de presentación simple y configurable. Recibe columnas, filas y opciones como búsqueda, acciones, carga, estado vacío y comportamiento responsive; no conoce endpoints ni reglas de negocio. Una tabla con edición compleja o una interacción específica permanece dentro del feature correspondiente.
 
 ### Configuración de la API
 
@@ -416,7 +654,7 @@ Hace automáticamente:
 
 El proveedor de MUI debe ser un Client Component independiente. Así el layout puede conservar `metadata` y el render del documento HTML en el servidor.
 
-### `src/app/providers.tsx`
+### `src/app/ClientProviders.tsx`
 
 ```tsx
 'use client';
@@ -430,7 +668,7 @@ type ProvidersProps = {
   children: ReactNode;
 };
 
-export function Providers({ children }: ProvidersProps) {
+export function ClientProviders({ children }: ProvidersProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -446,7 +684,7 @@ export function Providers({ children }: ProvidersProps) {
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
-import { Providers } from './providers';
+import { ClientProviders } from './ClientProviders';
 import './globals.css';
 
 const geistSans = Geist({
@@ -468,7 +706,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>{children}</Providers>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
@@ -483,6 +721,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 - ✔ `globals.css` sigue siendo mínimo
 - ✔ `metadata` permanece en un layout de servidor
 
+El mismo `ClientProviders` debe concentrar el theme activo, el control para alternar entre modo claro y oscuro y el `ToastContainer` de React-Toastify. Las pantallas no deben crear proveedores paralelos ni resolver el tema de forma aislada.
+
 ---
 
 # PARTE 2 — GUÍA DE USO
@@ -491,27 +731,39 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
 ---
 
-## 🔹 Next.js con TSX — Uso recomendado
+## 🔹 Next.js con JSX y TSX — Uso recomendado
 
-### Ejemplo de componente
+### Componente visual en JSX
 
-```tsx
-type Props = {
-  title: string;
-};
-
-export default function Card({ title }: Props) {
+```jsx
+export default function Card({ title }) {
   return <h2>{title}</h2>;
+}
+```
+
+La UI puede escribirse en JSX cuando recibe datos ya validados y solo compone la vista. No se debe usar JSX como excusa para omitir validación de respuestas, permisos o payloads.
+
+### Frontera crítica en TypeScript
+
+```ts
+import { z } from 'zod';
+
+const orderResponseSchema = z.object({
+  id: z.string(),
+  status: z.enum(['created', 'confirmed', 'preparing', 'ready', 'delivered', 'closed', 'pendingPayment', 'cancelled']),
+});
+
+export function parseOrderResponse(payload: unknown) {
+  return orderResponseSchema.parse(payload);
 }
 ```
 
 ### Recomendaciones
 
 - Empieza simple.
-- Agrega tipos solo en:
-  - Props
-  - Respuestas de API
-  - Funciones importantes
+- Usa JSX para presentación y estado visual local.
+- Usa TypeScript para contratos, API, stores, autenticación, permisos y mutaciones de negocio.
+- Usa Zod para validar datos externos incluso si el componente consumidor está escrito en JSX.
 
 ### Ventajas
 
@@ -522,7 +774,7 @@ export default function Card({ title }: Props) {
 
 ### Regla práctica
 
-> Usa `.tsx` como base y tipa solo donde aporta valor.
+> Usa `.jsx` para la UI no crítica y `.ts`/`.tsx` para las fronteras críticas del sistema.
 
 ---
 
