@@ -546,7 +546,8 @@ src/
 │  ├─ reports/
 │  └─ users/
 ├─ config/
-│  └─ api.ts
+│  ├─ api.ts               # Prefijo de la API (variable de entorno)
+│  └─ colors.ts            # Colores de la marca (único punto de verdad)
 ├─ commonComponents/
 │  ├─ CommonTable.jsx
 │  ├─ EmptyState.jsx
@@ -613,14 +614,97 @@ La función API es el único lugar que conoce la URL y el formato externo. El st
 
 ## 5. Theme mínimo de MUI
 
-### `src/theme/theme.ts`
+### Paleta de colores de la marca
+
+La paleta cromática del proyecto se define en un archivo de configuración centralizado (`src/config/colors.ts`) que el theme de MUI importa. De esta forma, los colores de la marca se cambian desde un solo lugar y cualquier componente que los necesite puede importar las constantes directamente.
+
+**Colores de Wonder Chicken:**
+
+| Rol en MUI | Color       | Hex       | Uso principal                            |
+|------------|-------------|-----------|------------------------------------------|
+| `primary`  | Rojo        | `#d32f2f` | Botones principales, encabezados, acentos |
+| `secondary`| Amarillo    | `#fbc02d` | Detalles, badges, highlights, ofertas     |
+| —          | Blanco      | `#ffffff` | Fondos, superficies claras                |
+| —          | Negro       | `#000000` | Textos, contrastes fuertes                |
+
+**Armonía con los colores semánticos de MUI:**
+
+Los colores de la marca NO deben reasignar ni confundirse con los colores semánticos que MUI usa para estados del sistema. MUI reserva:
+
+- `error` → rojo de advertencia/error (distinto al rojo de marca)
+- `warning` → naranja/ámbar
+- `info` → azul
+- `success` → verde
+
+El rojo de Wonder Chicken (`primary`) es un rojo intenso corporativo (#d32f2f), NO el rojo semántico de error. El amarillo (`secondary`) es un amarillo mostaza cálido (#fbc02d), NO el amarillo de advertencia. Esto permite que los botones de acción principales usen el rojo de marca sin que el usuario los interprete como "error" o "peligro".
+
+**Psicología del color aplicada:**
+
+- **Rojo corporativo:** Transmite energía, calidez, apetito (ideal para un restaurante de pollo). Al usarlo como `primary` y no como `error`, se asocia a acción positiva, no a peligro.
+- **Amarillo mostaza:** Transmite optimismo, calidez, familiaridad. Al ser un amarillo apagado (mostaza) y no brillante, no cansa la vista ni compite con el rojo.
+- **Blanco y negro:** Proporcionan el contraste necesario para la legibilidad y la jerarquía visual sin agregar ruido cromático.
+
+### Archivo de configuración centralizado
+
+Los valores de los colores deben vivir en `src/config/colors.ts`. El theme de MUI los importa y cualquier componente que necesite un color específico también puede importarlos sin depender del theme.
+
+```ts
+// src/config/colors.ts — Único punto de verdad para los colores de la marca
+
+export const BRAND_COLORS = {
+  primary: '#d32f2f',   // Rojo Wonder Chicken
+  secondary: '#fbc02d', // Amarillo Wonder Chicken
+  white: '#ffffff',
+  black: '#000000',
+} as const;
+```
+
+El theme importa estas constantes:
 
 ```tsx
+// src/theme/theme.ts
 import { createTheme } from '@mui/material/styles';
+import { BRAND_COLORS } from '@/config/colors';
 
 export const theme = createTheme({
   palette: {
     mode: 'light',
+    primary: {
+      main: BRAND_COLORS.primary,
+    },
+    secondary: {
+      main: BRAND_COLORS.secondary,
+    },
+  },
+  typography: {
+    fontFamily: 'var(--font-geist-sans), sans-serif',
+  },
+});
+```
+
+Si en el futuro el restaurante cambia su identidad visual, solo se actualiza `src/config/colors.ts` y el cambio se propaga a todo el theme y a cualquier componente que importe las constantes directamente.
+
+**Reglas:**
+
+- No hardcodear tonos de rojo, amarillo, blanco o negro fuera del theme o de `colors.ts`.
+- Cualquier variación cromática (hover, active, disabled) debe generarse desde el theme de MUI (`darken`, `lighten`, `alpha`), no definirse como constantes separadas.
+- Los colores semánticos de MUI (`error`, `warning`, `info`, `success`) se dejan con sus valores por defecto. No se deben reasignar con colores de la marca para no confundir estados del sistema con la identidad visual.
+
+### `src/theme/theme.ts`
+
+```tsx
+import { createTheme } from '@mui/material/styles';
+import { BRAND_COLORS } from '@/config/colors';
+
+export const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: BRAND_COLORS.primary,
+    },
+    secondary: {
+      main: BRAND_COLORS.secondary,
+    },
   },
   typography: {
     fontFamily: 'var(--font-geist-sans), sans-serif',

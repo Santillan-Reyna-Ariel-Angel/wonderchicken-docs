@@ -45,37 +45,37 @@ graph TD
     D --> O[Reportes de Sucursal]
 ```
 
-  ### 2.1. Decisiones de arquitectura de interfaz
+  ### 2.1. Decisiones de experiencia de interfaz
 
-La estructura de carpetas del App Router es adecuada para este proyecto. Se utilizarán **route groups** para separar páginas públicas, autenticadas y layouts por rol sin alterar las URLs públicas. La ruta permite organizar la experiencia, pero la autorización real continúa en el backend mediante JWT, rol y sucursal.
-
-La cajera y el cliente futuro no deben compartir la misma pantalla completa. Comparten contratos, datos del catálogo, schemas y componentes pequeños de dominio, pero sus contenedores son distintos:
+La cajera y el cliente futuro no deben compartir la misma pantalla completa. Comparten datos del catálogo y componentes pequeños de dominio, pero sus contenedores son distintos:
 
 - La cajera necesita velocidad, teclado, densidad de información y confirmaciones mínimas.
 - El cliente necesita descubrimiento del menú, imágenes, accesibilidad y seguimiento de su pedido.
 
 En Sprint 1 se diseña la operación de cajera. La vista pública de la comanda se reserva para el token de la orden; el portal autenticado del cliente queda fuera de este sprint y se incorporará como una experiencia separada cuando se defina su alcance.
 
-### 2.2. Criterios visuales transversales
+> **Implementación técnica:** La estructura de rutas, route groups, layouts por rol y autorización se definen en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md).
+
+### 2.2. Criterios visuales y de experiencia de usuario
 
 - Toda la interfaz se presenta en español. Los estados técnicos del backend se traducen para la UI: `PENDING_PAYMENT` se muestra como “Pago pendiente”, `PREPARING` como “En preparación” y `READY` como “Listo”.
-- Las llamadas a la API que fallan deben informar el error mediante `react-toastify`. También puede utilizarse para confirmar operaciones críticas como vender, cobrar, eliminar o cambiar estados, pero no es obligatorio usarlo para cada respuesta o interacción. Los éxitos rutinarios no generan toast automáticamente.
-- El `ToastContainer` se montará una sola vez en `ClientProviders` y respetará el tema activo. Los formularios y pantallas también deben mostrar errores junto al campo o sección que requiere corrección.
-- El criterio principal es mantener un código limpio, legible y fácil de mantener: no se agregarán toasts, wrappers o utilidades genéricas cuando el feedback local de la pantalla sea suficiente. `react-toastify` complementa los estados de la interfaz; no reemplaza la carga, el error, el estado vacío ni la actualización de datos.
 - Las pantallas deben ser responsive desde el inicio. La cajera y el administrador se optimizan para monitor, pero deben funcionar en tablet y móvil; la experiencia del cliente prioriza el teléfono.
 - La distribución se construirá con `Grid`, `Stack`, `Container`, `Box` y breakpoints de MUI. No se asumirán anchos ni resoluciones fijas.
 - La aplicación debe permitir tema claro y oscuro. Los componentes deben usar colores del theme de MUI (`background`, `text`, `divider` y colores semánticos) y evitar fondos, textos o bordes hardcodeados que rompan el contraste.
 - Los estados no dependerán únicamente del color: las etiquetas, iconos y textos deben seguir siendo comprensibles en ambos temas.
 - Los `Tooltip` utilizados dentro de diálogos o modales deben aparecer por encima del modal. Su portal y `z-index` deben configurarse con los valores del theme de MUI para que no queden ocultos por el overlay.
-- La reutilización será equilibrada. Se compartirán patrones estables y componentes pequeños, pero una pantalla o tabla específica puede permanecer dentro de su feature si una abstracción común exige demasiadas props o condicionales.
 - Se utilizarán preferentemente iconos de `@mui/icons-material`; no se agregará otra biblioteca de iconos cuando MUI tenga una alternativa adecuada. Los iconos sin texto deben incluir `Tooltip` o una etiqueta accesible. Si el icono aparece dentro de un modal, el tooltip debe respetar la regla de `z-index` anterior.
 - El tamaño predeterminado de los componentes MUI que acepten `size` será `small`, especialmente en formularios, botones, selects, tablas y controles operativos. Se podrá usar `medium` o un tamaño mayor cuando la legibilidad, accesibilidad o interacción táctil lo requiera.
-- `commonComponents/` incluirá una tabla común configurable, por ejemplo `CommonTable`, responsable de renderizar columnas, filas, búsqueda opcional, carga, estado vacío, errores y acciones. No realizará llamadas HTTP ni manejará reglas de negocio.
-- `CommonTable` recibirá un objeto de props tipado, con `rows`, `columns` y los estados/configuración visual que realmente necesite. `columns` será un arreglo de definiciones: cada columna declarará su identificador, encabezado y campo; si necesita una presentación especial, recibirá una función `render`.
-- La columna de acciones será opcional y se detectará dentro de `columns`. Si el arreglo no contiene una columna de acciones, la tabla no la renderizará. Cuando exista, su `render` recibirá la fila y devolverá uno o varios elementos React definidos por el feature, como acciones de editar, eliminar, ver o seleccionar. `CommonTable` no decide qué acciones están permitidas.
-- En lo posible, las props y parámetros relacionados se agruparán en objetos para conservar contratos estables y permitir desestructurar únicamente lo necesario. No se envolverán valores aislados en objetos ni se crearán abstracciones genéricas solo por uniformidad; la legibilidad y la simplicidad tienen prioridad.
 - Las tablas densas deben tener una estrategia móvil explícita: columnas prioritarias, desplazamiento horizontal controlado o una presentación alternativa cuando la tabla no sea legible en teléfono.
 - Los componentes críticos deben mostrar indicadores de carga. Se usará `CircularProgress` para acciones puntuales, botones y mutaciones, y `Skeleton` o un estado de carga de sección para tablas, listas, tarjetas, historial, contexto del POS y panel de despacho. Durante una mutación se deshabilitará el control que la inició para evitar duplicados, sin bloquear controles independientes que sigan siendo seguros.
+- Las llamadas a la API que fallan deben informar el error mediante `react-toastify`. También puede utilizarse para confirmar operaciones críticas como vender, cobrar, eliminar o cambiar estados, pero no es obligatorio usarlo para cada respuesta o interacción. Los éxitos rutinarios no generan toast automáticamente.
+- El `ToastContainer` se montará una sola vez en `ClientProviders` y respetará el tema activo. Los formularios y pantallas también deben mostrar errores junto al campo o sección que requiere corrección.
+- El criterio principal es mantener un código limpio, legible y fácil de mantener: no se agregarán toasts, wrappers o utilidades genéricas cuando el feedback local de la pantalla sea suficiente. `react-toastify` complementa los estados de la interfaz; no reemplaza la carga, el error, el estado vacío ni la actualización de datos.
+- La reutilización será equilibrada. Se compartirán patrones estables y componentes pequeños, pero una pantalla o tabla específica puede permanecer dentro de su feature si una abstracción común exige demasiadas props o condicionales.
+- `commonComponents/` incluirá una tabla común configurable (`CommonTable`) y componentes reutilizables como `EmptyState`, `ConfirmDialog` y `ActionModal`. La tabla común recibe un objeto de props con `rows`, `columns` y los estados visuales que necesite. La columna de acciones es opcional y se detecta dentro de `columns`; su `render` recibe la fila y devuelve uno o varios elementos React definidos por el feature.
+- En lo posible, las props y parámetros relacionados se agruparán en objetos para conservar contratos estables y permitir desestructurar únicamente lo necesario. No se envolverán valores aislados en objetos ni se crearán abstracciones genéricas solo por uniformidad; la legibilidad y la simplicidad tienen prioridad.
+
+> **Detalles de implementación:** La configuración técnica de `react-toastify`, `CommonTable`, `ActionModal`, `ConfirmDialog`, estados de carga, agrupación de props, paleta de colores y patrones de componentes se documentan en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md).
 
 ---
 
@@ -250,67 +250,24 @@ El rol **COCINERO** no tiene interfaz ni funcionalidades dentro de esta propuest
 
 ---
 
-## 4. Estructura de Proyecto Sugerida para el Frontend (Next.js / React)
+## 4. Rutas de Pantallas Previstas para Sprint 1
 
-Para asegurar un código mantenible, limpio y escalable acorde al backend NestJS, se propone la arquitectura por features definida en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md), usando **App Router**, **MUI**, **Zod** y **Zustand**. Las rutas componen pantallas; las llamadas HTTP viven en `api/`; los stores coordinan datos compartidos y acciones; los componentes no llaman directamente a `fetch`.
+Las siguientes rutas corresponden a las pantallas definidas en este documento. La implementación técnica (estructura de carpetas, route groups, layouts, stores, API, componentes comunes) se detalla en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md).
 
-```text
-src/
-├── app/
-│   ├── layout.tsx                       # Documento raíz y metadata
-│   ├── ClientProviders.tsx              # MUI y providers cliente
-│   ├── (public)/
-│   │   ├── login/page.jsx                # FR-018: Autenticación
-│   │   └── order/[token]/page.jsx        # FR-015: Comanda pública
-│   └── (protected)/
-│       ├── layout.tsx                    # Sesión y protección de rutas
-│       ├── super-admin/
-│       │   └── page.jsx                  # Sucursales y reportes globales
-│       ├── branch-admin/
-│       │   ├── page.jsx                  # Dashboard de sucursal
-│       │   └── products/page.jsx         # FR-001: Catálogo y variantes
-│       ├── cashier/
-│       │   ├── page.jsx
-│       │   ├── shift/open/page.jsx       # FR-004: Apertura de turno
-│       │   ├── pos/page.jsx              # FR-002: POS
-│       │   ├── orders/page.jsx           # FR-012: Historial
-│       │   └── customers/page.jsx        # FR-019: Clientes
-│       └── dispatcher/
-│           └── page.jsx                  # FR-003: Comandas
-├── features/
-│   ├── auth/
-│   │   ├── api/
-│   │   ├── stores/
-│   │   ├── schemas/
-│   │   ├── components/
-│   │   └── types.ts
-│   ├── sales/
-│   │   ├── api/                         # pos/context, orders y custom orders
-│   │   ├── stores/                       # contexto POS y datos compartidos
-│   │   ├── schemas/
-│   │   ├── components/                   # piezas compartidas; POS en JSX
-│   │   └── types.ts
-│   ├── orders/
-│   │   ├── api/                         # listado, detalle, pago, cancelación y estado
-│   │   ├── stores/
-│   │   ├── components/                   # tabla, detalle y comanda
-│   │   └── types.ts
-│   ├── cash-register/
-│   ├── customers/
-│   ├── inventory/                        # reservado hasta definir la UI del cocinero
-│   ├── expenses/
-│   ├── vouchers/
-│   ├── reports/
-│   └── users/
-├── config/
-│   └── api.ts                            # Prefijo configurable de la API
-└── commonComponents/                     # UI reutilizable entre features
-  ├── CommonTable.jsx                   # Tabla configurable mediante rows y columns
-  ├── EmptyState.jsx                    # Estados sin datos
-  └── ConfirmDialog.jsx                 # Confirmaciones reutilizables
+```
+/login                              → Autenticación (FR-018)
+/super-admin                        → Dashboard global (solo SUPER_ADMIN)
+/branch-admin                       → Dashboard de sucursal (solo ADMIN)
+/branch-admin/products              → Gestión de catálogo y variantes (FR-001)
+/cashier/shift/open                 → Apertura de turno (FR-004)
+/cashier/pos                        → POS / registro de ventas (FR-002)
+/cashier/orders                     → Historial de pedidos (FR-012)
+/cashier/customers                  → Gestión de clientes (FR-019)
+/dispatcher                         → Panel de comandas digitales (FR-003)
+/order/[token]                      → Comanda pública (sin autenticación)
 ```
 
-La estructura de carpetas se utiliza para organizar rutas reales y layouts, no para duplicar cada feature dentro de cada rol. La lógica crítica permanece en `.ts`; las páginas y componentes de presentación pueden ser `.jsx`. El rol determina la navegación y la composición, mientras el backend determina si una operación está autorizada. `CommonTable` recibe un objeto de props con `rows`, `columns` y los estados de carga/vacío/error que correspondan. Si `columns` contiene una definición de acciones, la tabla renderiza esa columna; su función `render` devuelve uno o varios elementos React definidos por el feature. La tabla no implementa ni decide operaciones, no realiza llamadas HTTP y no debe forzar una abstracción de acciones cuando una tabla especializada resulte más clara.
+> **Nota:** El rol COCINERO no tiene rutas ni pantallas en Sprint 1. Se mantiene como rol reservado para futuras definiciones.
 
 ---
 
@@ -331,6 +288,6 @@ La estructura de carpetas se utiliza para organizar rutas reales y layouts, no p
 
 ## 6. Siguientes Pasos Recomendados
 
-1. **Aprobación de la arquitectura:** Confirmar rutas por grupos, matriz de roles y separación entre POS interno y canal cliente.
-2. **Implementación de componentes base:** Desarrollar los componentes reutilizables (`VariantModal`, `OrderSummary`, `OrderTicket`) y mantener las reglas críticas en TypeScript.
+1. **Aprobación de las interfaces:** Confirmar el mapa de navegación, matriz de roles y separación entre POS interno y canal cliente.
+2. **Implementación técnica:** Seguir la guía de [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md) para desarrollar los componentes base (`CommonTable`, `ConfirmDialog`, `ActionModal`), stores Zustand, API calls y estructura de rutas.
 3. **Conexión con endpoints de Sprint 1:** Probar la integración con `POST /orders`, `POST /shifts/open`, `GET /pos/context` y `POST /auth/login`.
