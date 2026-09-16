@@ -110,7 +110,7 @@ Mapa rápido (el detalle campo por campo, abajo):
 | `AuditLog` | Rastro inmutable de acciones críticas ([PDR §2.9](../business/pdr.md#29-auditoría)). |
 
 - **Branch** *(NUEVO - Multi-sucursal V1)*
-  - `id: UUID`, `name: string`, `address: string`, `active: boolean` *(sucursal activa/inactiva)*
+  - `id: UUID`, `name: string`, `address: string`, `phone: string?`, `active: boolean` *(teléfono de contacto opcional; sucursal activa/inactiva)*
   - `createdAt: datetime`, `updatedAt: datetime`
   - *Relaciones: `User.branchId` (nullable para SUPER_ADMIN), `Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` (required para entidades locales).*
 
@@ -448,9 +448,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role, branchId }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
 - `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (firstName, lastName, email, phone, ci, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El CI viaja solo en alta/edición y se guarda hasheado como `passwordHash` (bcryptjs, §5.2)
-- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address }`, `active` por defecto `true`. Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
-- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `active`
-- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`)
+- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address, phone? }`, `active` por defecto `true`. `phone` es opcional y se persiste como string libre (sin validación de formato en V1). Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
+- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `phone`, `active`
+- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address?, phone? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`). Al menos un campo debe estar presente.
 - `PATCH /api/v1/branches/{id}/toggle-active` — **alternar** el estado de una sucursal (**solo SUPER_ADMIN**): si está `active: true` la desactiva (`active: false`) y si está inactiva la reactiva (`active: true`). Invierte el estado actual sin body. No borra datos; las entidades locales conservan su `branchId`
 - `POST /api/v1/products` — crear producto
 - `GET /api/v1/products` — listar productos
