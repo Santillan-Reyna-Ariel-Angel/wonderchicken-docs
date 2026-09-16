@@ -437,7 +437,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, email, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
 2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes, vales, gastos) NO reciben `shiftId`: el backend resuelve el **turno abierto de la sesión de cajera** autenticada (1 sesión activa por turno, FR-008b) y lo asigna. Mismo criterio para cualquier vínculo deducible de la sesión.
 3. **Precios y totales los calcula el backend desde la BD.** En la **orden estándar** el front **NO** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` / `Variant` y calcula `totalPrice` y `total`. **Única excepción:** la **venta custom**, donde la cajera confirma un `unitPrice` (input de negocio legítimo, §2.10). Snapshots (`discountAmount`, `customerName`) también los congela el backend, no el front.
-4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, manda `customerId` (lo obtuvo de `GET /customers`), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para los **descuentos**: el ítem lleva `discountId` (referencia al catálogo) y el backend valida, congela el snapshot y deriva los totales. El front jamás manda montos de descuento.
+4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, primero hace un lookup exacto (`GET /customers/by-ci/{ci}` o `GET /customers/by-nit/{nit}`) y obtiene el `id` (UUID). Luego, al crear la orden, manda `customerId` (UUID), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para los **descuentos**: el ítem lleva `discountId` (referencia al catálogo) y el backend valida, congela el snapshot y deriva los totales. El front jamás manda montos de descuento.
 5. **Respuestas listas para renderizar.** El backend devuelve todo lo que la UI muestra, **ya calculado y con nombres resueltos**. Los campos de actor se devuelven como objeto `{ id, name }` (ej. `createdBy: { id, name }`), no como id suelto, para que el frontend **solo pinte** sin segundas consultas ni cálculos.
 6. **Una operación de negocio = una llamada.** Todo lo que la cajera decide en una misma pantalla viaja en **un solo request** y el backend lo resuelve en **una sola transacción**. Los descuentos por plato van como `discountId` en cada ítem de `POST /orders` — **no existe** un endpoint separado para "aplicar descuento". Los endpoints separados se reservan para **momentos distintos en el tiempo** (`/pay` cuando el delivery paga al retirar, `/cancel`, `/status`), nunca para pasos de una misma operación.
 
@@ -465,10 +465,13 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `PATCH /api/v1/orders/{id}/status` — despacho marca `ready`/`delivered` ([§6.11b](#611b-orderstatusupdateresponse-despacho))
 - `POST /api/v1/orders/{id}/pay` — confirmar pago: `pendingPayment` → `paid` ([§6.4b](#64b-payorderresponse-confirmar-pago-de-un-pendiente))
 - `POST /api/v1/orders/{id}/cancel` — anular pedido pagado, motivo y detalle obligatorios ([§6.11](#611-cancelorderresponse-anulación-de-pedido-pagado))
-- `GET /api/v1/customers?search=<ci|nit|nombre>` — buscar cliente registrado por CI, NIT o nombre (la cajera lo usa al facturar nominado)
+- `GET /api/v1/customers/by-ci/{ci}` — lookup exacto de cliente activo por CI (cédula). El POS lo usa en el componente G al tipear el CI y presionar Enter / onBlur.
+- `GET /api/v1/customers/by-nit/{nit}` — lookup exacto de cliente activo por NIT (factura razón social). Mismo patrón que `by-ci`.
 - `POST /api/v1/customers` — registrar cliente ([§6.2a](#62a-customercreateresponse--customersearchresponse))
-- `GET /api/v1/customers/{id}` — obtener datos del cliente
+- `GET /api/v1/customers/{id}` — obtener datos completos del cliente (UUID interno; uso administrativo en Sprint 4)
 - `PATCH /api/v1/customers/{id}` — editar datos personales del cliente
+- `PATCH /api/v1/customers/{id}/toggle-active` — activar/desactivar cliente (admin)
+- `GET /api/v1/customers/{id}/orders` — historial de pedidos del cliente (cross-sucursal)
 - `POST /api/v1/inventory/adjust` — ajustar inventario (admin, con motivo)
 - `GET /api/v1/inventory/dashboard` — **dashboard de stock cocido** por tipo de presa + delta del turno (vendido/ajustado desde la apertura) — FR-006
 - `POST /api/v1/inventory/manual-consumption` — registrar consumos manuales por turno
@@ -600,7 +603,8 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /orders/{id}`, `GET /orders` *(panel despacho + historial)* | `CASHIER`, `DISPATCHER`, `ADMIN` |
 | `PATCH /orders/{id}/status` (ready / delivered) | `DISPATCHER` |
 | `GET /public/orders/{token}`, `GET /public/ready-orders` | **público** (token no adivinable / solo números de pedido) |
-| `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
+| `GET /customers/by-ci/{ci}`, `GET /customers/by-nit/{nit}`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
+| `PATCH /customers/{id}/toggle-active` | `ADMIN` |
 | `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
 | `GET /shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
 | `POST /shift-periods`, `PATCH /shift-periods/{id}` | `ADMIN` |
@@ -722,8 +726,8 @@ Response (200):
 }
 ```
 
-## 6.2a CustomerCreateResponse / CustomerSearchResponse
-> Alta de cliente para factura nominada (el cliente puede dictar CI o NIT). La búsqueda (`GET /customers?search=<ci|nit|nombre>`) devuelve un array con la misma forma en `data`.
+## 6.2a CustomerCreateResponse / CustomerLookupResponse
+> Alta de cliente para factura nominada (el cliente puede dictar CI o NIT). Los lookups exactos (`GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`) devuelven el mismo shape de `data` que `POST /customers` (un objeto `customer`). En Sprint 4 se suma `GET /customers/{id}` para detalle administrativo.
 
 Request (`POST /customers` — `nit`, `birthDate`, `phone` y `email` opcionales):
 ```json
@@ -1347,7 +1351,7 @@ El LLM debe generar `openapi: 3.0.3` con:
 7b. Emitir vale con "Descuento personal": front manda `productId` + `discountId` → backend calcula `amount = originalAmount − discountAmount` (ej. 30 − 7 = 23, snapshot del descuento); el inventario descuenta las presas reales (no el equivalente al precio); el vale registra `originalAmount`, `discountAmount` y `amount`. Fuera de la ventana `endOfShift` el descuento no se ofrece.
 8. Pedido `preparing` → comanda digital aparece en panel despacho → marcar `ready` → pantalla pública muestra → marcar `delivered`.
 9. Cliente accede a `GET /public/orders/{token}` con el `publicToken` de su pedido → ve su comanda; probar un token aleatorio o el `id` interno → **404** (el token es no adivinable, FR-015).
-9b. Registrar cliente nuevo vía `POST /customers` → queda buscable por CI **y** por NIT vía `GET /customers?search=`. Crear orden con ese `customerId` → al abrir el `publicToken` de uno de sus pedidos, la vista lista **todos sus pedidos del día** (agrupados por `customerId` + fecha). Acceder con el NIT crudo en la URL → no funciona (el NIT no es llave; FR-019).
+9b. Registrar cliente nuevo vía `POST /customers` → queda buscable por CI **y** por NIT vía `GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`. Crear orden con ese `customerId` → al abrir el `publicToken` de uno de sus pedidos, la vista lista **todos sus pedidos del día** (agrupados por `customerId` + fecha). Acceder con el NIT crudo en la URL → no funciona (el NIT no es llave; FR-019).
 9c. Venta anónima "S/N" (sin `customerId`) → su `publicToken` muestra **solo ese pedido**; no hay vista del día porque no hay identidad para agrupar.
 10. Cliente pide factura → impresora térmica imprime; impresora desconectada → PDF se descarga.
 11. Anular pedido pagado → motivo y detalles obligatorios → inventario revertido → aparece en arqueo.
@@ -1407,7 +1411,7 @@ Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnic
 | Auditoría de acciones críticas (§2.9) | `AuditLog` (+`shiftId?`: el log nace sabiendo su turno); consulta sin paginación vía `POST /audit-logs/shift` y `/month` (§4.3, §6.14) |
 | Turnos del día y tercer turno futuro (§13.3 PDR) | Catálogo `ShiftPeriod` (no enum); `Shift.periodId` **declarado al abrir**, nunca inferido del reloj |
 | Registro de gastos desde caja (§2.6 / FR-009) | `POST /expenses`; `shiftId`/`createdBy` derivados (§5.0); aparece en arqueo y reportes |
-| Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); búsqueda por CI/NIT vía `GET /customers?search=`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
+| Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); lookup exacto por CI/NIT vía `GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
 | Vista del cliente — por pedido y pedidos del día (§7.4 / FR-015 / FR-019) | `Order.publicToken` no adivinable; `GET /public/orders/{token}` (público); identidad (`customerId`) **agrupa** los pedidos del día, el **token** da acceso — el NIT no es llave |
 | Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total se calcula automáticamente con `InventoryItem.salePrice` (ya definido en V1), sin intervención de la cajera |
 | Visión V2: cuenta de cliente (§2.12 / §7.4) | Auto-registro + login del cliente; `GET /me/orders` seguro por auth, sin token por pedido |

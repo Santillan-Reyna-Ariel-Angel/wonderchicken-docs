@@ -62,7 +62,7 @@ graph TD
 | **D** | Pantalla | `/branch-admin` | `ADMIN` | Dashboard de sucursal: resumen operativo y accesos de administración. |
 | **E** | Pantalla | `/cashier/shift/open` | `CAJERA` | Apertura obligatoria de turno. Declara Período (`MAÑANA`/`NOCHE`) y monto inicial. Habilita el POS. |
 | **F** | Pantalla | `/cashier/pos` | `CAJERA` | Interfaz principal del POS. Catálogo a la izquierda, resumen de orden a la derecha. |
-| **G** | Componente | Dentro de F (panel derecho, sobre el carrito) | `CAJERA` | Selector de cliente en el resumen de la orden: dropdown con clientes recientes/encontrados, búsqueda por CI/NIT/nombre y botón `+ Nuevo` que abre el modal de registro rápido. Permite `S/N` (venta anónima). Asocia el `customerId` a la orden. |
+| **G** | Componente | Dentro de F (panel derecho, sobre el carrito) | `CAJERA` | Selector de cliente en el resumen de la orden: input único con lookup exacto por CI o NIT (Enter / onBlur dispara `GET /customers/by-ci/:ci` o `GET /customers/by-nit/:nit`). Soporta `S/N` (venta anónima) cuando el lookup falla. El botón `+ Nuevo` queda **deshabilitado hasta Sprint 4** (cuando llegue la pantalla `/cashier/customers`). Asocia el `customerId` (UUID) a la orden. |
 | **H** | Modal | Disparado desde F al seleccionar un plato con variantes | `CAJERA` | Configuración de variante: presas obligatorias, acompañamiento/sustitución, bebida y temperatura. |
 | **I** | Modal | Disparado desde F al confirmar venta | `CAJERA` | Confirmación de cobro inmediato o registro de `PENDING_PAYMENT` (solo `LLEVAR`/delivery). |
 | **J** | Pantalla | `/cashier/orders` | `CAJERA`, `ADMIN` | Historial y búsqueda de pedidos con filtros por número, fecha, estado, tipo y cliente. |
@@ -203,10 +203,20 @@ La configuración se conserva como estado local del ítem hasta que la cajera lo
 - Selector de Tipo de Pedido:
   - **MESA** o **LLEVAR**. No se solicita número de mesa en el frontend; `tableNumber` es opcional en el backend y no forma parte de esta interfaz.
 - **Componente G — Selector de cliente en el resumen de la orden** *(FR-019 parcial, Sprint 1)*:
-  - Buscador rápido de Cliente dentro del resumen de la orden: búsqueda por CI, NIT o nombre, selección de un cliente pre-cargado y acción `Cliente S/N` para una venta anónima. La orden envía únicamente el `customerId`; el backend genera el snapshot del nombre en `Order.customerName`.
-  - Backend: `GET /customers?search=…` (módulo `customers/` mínimo cableado en [`implementation_guide.md` §3 paso 6](../backend/implementation_guide.md#3-sprint-1--catálogo--pos-básico)). Búsqueda cross-sucursal.
-  - Sin alta rápida en Sprint 1: la pantalla completa de registro de clientes se entrega en Sprint 4 (§7.1). En Sprint 1 la cajera selecciona de los clientes pre-cargados vía seed, o marca `S/N`.
-  - El snapshot `customerName` queda congelado en la orden al confirmar; las ediciones futuras del cliente **no** lo modifican ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
+  - **Lookup exacto** de cliente por CI o NIT dentro del resumen de la orden. Sin búsqueda con prefijo, sin debounce, sin autocomplete: la cajera tipea el identificador y, al presionar `Enter` o al perder el foco (`onBlur`), el frontend llama al endpoint correspondiente. Si el backend devuelve 404, el frontend muestra *"No se encontró — usa S/N o esperá a Sprint 4 (vista `/cashier/customers`) para crearlo"*.
+  - **Endpoints backend:**
+    - `GET /customers/by-ci/:ci` — para el campo CI (flujo normal).
+    - `GET /customers/by-nit/:nit` — para el campo NIT (factura "Razón Social").
+  - **Flujo UI:**
+    1. El campo del selector muestra SIEMPRE un input. Sin dropdown hasta que la cajera presione Enter o salga del campo.
+    2. Al activarse (Enter / onBlur), el frontend llama al endpoint correspondiente según el campo activo (`by-ci` o `by-nit`).
+    3. Si 200 → el cliente se asocia a la orden (`Order.customerId` = `customer.id` UUID), el frontend guarda `customerName` para mostrarlo en la UI.
+    4. Si 404 → mensaje claro + opción "Usar S/N" (venta anónima) o "Crear cliente" (botón deshabilitado hasta Sprint 4).
+    5. Validación cliente: `length < 3` caracteres → no llamar al backend, mostrar hint "mínimo 3 caracteres".
+  - **Sin alta rápida en Sprint 1:** la pantalla completa de registro de clientes (`/cashier/customers`) se entrega en Sprint 4 (§7.1). En Sprint 1 la cajera selecciona de los clientes pre-cargados vía seed, o marca `S/N`.
+  - **Cross-sucursal** automático: el `Customer` es global (sin `branchId`) — la cajera de cualquier sucursal ve clientes registrados por cualquier otra.
+  - **El snapshot `customerName` queda congelado** en la orden al confirmar; las ediciones futuras del cliente **no** lo modifican ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
+  - **Decisión de diseño:** se eligió lookup exacto (sin búsqueda con prefijo, sin debounce, sin autocomplete, sin precarga en el context) para minimizar llamadas al backend y cumplir con la regla de minimización de exposición de datos personales del [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada). La búsqueda con prefijo y la precarga se reservan para la pantalla administrativa de Sprint 4 donde la operación es explícitamente "explorar clientes", no "vender".
 - Tabla MUI de ítems agregados, con columnas `Producto`, `Cantidad`, `Composición`, `Precio unitario`, `Subtotal` y `Acciones`. La columna de acciones ofrece aumentar/disminuir cantidad, editar composición mientras el ítem siga en el carrito y eliminar. La composición puede mostrarse en una fila expandible o en un `Tooltip`/`Popover` para conservar una tabla compacta sin perder presas, bebidas y sustituciones.
 - Totalizador visible calculado por el frontend usando los precios unitarios recibidos en `GET /pos/context`: subtotal por ítem (`precio unitario × cantidad`) y total preliminar del carrito. El backend vuelve a validar precios, descuentos, stock y total al recibir la orden; el cálculo del frontend no reemplaza esa validación.
 - **Acciones de Cierre de Venta:**
@@ -284,7 +294,7 @@ El rol **COCINERO** no tiene interfaz ni funcionalidades dentro de esta propuest
 ### 3.6. Historial y Búsqueda de Pedidos (`/orders`)
 - **Propósito:** Permitir a la Cajera y Administrador consultar pedidos pasados, verificar montos o resolver reclamos.
 - **Carga y feedback:** El historial mostrará un estado de sección con `Skeleton` mientras consulta datos; los errores de API podrán comunicarse mediante `react-toastify` y también en la sección cuando el usuario necesite corregir o reintentar la consulta.
-- **Filtros de Búsqueda:** Por Número de Pedido (`orderNumber`), Rango de Fechas, Estado (`CREATED`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CLOSED`, `PENDING_PAYMENT`, `CANCELLED`), Tipo (`MESA`, `LLEVAR`), o Datos del Cliente (CI/NIT/Nombre).
+- **Filtros de Búsqueda:** Por Número de Pedido (`orderNumber`), Rango de Fechas, Estado (`CREATED`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CLOSED`, `PENDING_PAYMENT`, `CANCELLED`), Tipo (`MESA`, `LLEVAR`), `customerId` (UUID del cliente — filtra todos los pedidos asociados a ese cliente), o Datos del Cliente (CI/NIT/Nombre).
 - **Detalle de Comanda (Modal de Inspección):** Despliega el snapshot completo guardado en la base de datos (`OrderItem.snapshot`), mostrando exactamente lo que se vendió, precios aplicados, presas seleccionadas y timestamp.
 
 ---
@@ -339,7 +349,7 @@ Las siguientes rutas corresponden a las pantallas de este documento. La implemen
 
 1. **Aprobación de las interfaces Sprint 1:** Confirmar el mapa de navegación, matriz de roles y separación entre POS interno y canal cliente.
 2. **Implementación técnica:** Seguir la guía de [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md) para desarrollar los componentes base (`CommonTable`, `ConfirmDialog`, `ActionModal`), stores Zustand, API calls y estructura de rutas.
-3. **Conexión con endpoints de Sprint 1:** Probar la integración con `POST /orders` (acepta `customerId`), `POST /shifts/open`, `GET /pos/context`, `POST /auth/login` y `GET /customers?search=` (módulo mínimo Sprint 1).
+3. **Conexión con endpoints de Sprint 1:** Probar la integración con `POST /orders` (acepta `customerId`), `POST /shifts/open`, `GET /pos/context`, `POST /auth/login`, `GET /customers/by-ci/:ci` y `GET /customers/by-nit/:nit` (módulo `customers/` mínimo Sprint 1).
 4. **Planificación Sprint 4:** Las interfaces de gestión de clientes (§7) requieren los endpoints ampliados del módulo `customers/` documentados en [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión).
 
 ---
@@ -371,7 +381,8 @@ Las siguientes rutas corresponden a las pantallas de este documento. La implemen
     - `Guardar Cliente (F10)`: persiste el cliente y lo deja disponible para asociar.
     - `Guardar y Asociar a Orden (F9)`: persiste y, si hay una orden en curso en el POS, asigna el `customerId` automáticamente.
 - **Integración Backend (Sprint 4):**
-  - `GET /customers?search=…` (búsqueda por CI / NIT / nombre).
+  - `GET /customers/by-ci/:ci` (lookup exacto por CI — mismo endpoint que ya usa el componente G del POS).
+  - `GET /customers/by-nit/:nit` (lookup exacto por NIT).
   - `POST /customers` (registro).
   - `PATCH /customers/{id}` (edición; **no altera** el `customerName` snapshot de órdenes pasadas — [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
   - `GET /customers/{id}` (consulta).
@@ -402,11 +413,11 @@ Las siguientes rutas corresponden a las pantallas de este documento. La implemen
   - Botón `+ Nuevo Cliente` en la cabecera de la tabla abre el mismo formulario de alta que usa la cajera, con los mismos atajos (`Esc`, `F10`, `F9`).
   - `F9` (Guardar y Asociar a Orden) **no aplica** en esta pantalla (no hay orden en curso en la vista admin). El botón se oculta o se desactiva.
 - **Integración Backend (Sprint 4):**
-  - `GET /customers?search=&page=&pageSize=&status=&from=&to=` (búsqueda cross-sucursal con filtros y paginación; el `?search=` mínimo ya está cableado en Sprint 1).
+  - `GET /customers?search=&page=&pageSize=&status=&from=&to=` (búsqueda **exclusiva** para la pantalla administrativa — el POS NO la usa, sigue con los lookups exactos `by-ci` / `by-nit` que ya consume desde Sprint 1).
   - `POST /customers`.
-  - `GET /customers/{id}`.
+  - `GET /customers/{id}` (UUID interno, para detalle admin).
   - `PATCH /customers/{id}`.
-  - `PATCH /customers/{id}/toggle-active` (nuevo — `ADMIN` puede desactivar clientes; mismo patrón que `users` y `branches`).
+  - `PATCH /customers/{id}/toggle-active` (mismo patrón que `users` y `branches`).
   - `GET /customers/{id}/orders?from=&to=` (historial de pedidos del cliente, cross-sucursal — vista resumida optimizada para el modal).
 - **Reglas de UX y auditoría:**
   - **Deduplicación:** si al intentar registrar un cliente el CI ya existe (en cualquier sucursal), el sistema muestra el cliente existente y **no permite crear duplicado**. La primera registración gana (`Customer.ci` es `UNIQUE` en el schema).
