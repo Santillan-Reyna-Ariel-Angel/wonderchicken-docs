@@ -114,14 +114,22 @@ Durante una mutación se debe deshabilitar el control que la inició y, cuando a
 
 El estilo anterior resolvía una aplicación operativa grande con una organización muy cercana al negocio. Esa experiencia sigue siendo valiosa, pero debe trasladarse a herramientas y límites más robustos.
 
-### 0.2 Organización por feature y caso de uso
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+### 0.1 Organización por feature y caso de uso
 
-Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida. La jerarquía de carpetas del App Router se utilizará porque hace explícitas las URLs, layouts y límites de acceso, pero no reemplaza la autorización del backend.
+Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida.
 
 ```text
 src/
-├─ app/
 │  ├─ layout.tsx
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+│  ├─ providers.tsx
+│  └─ (authenticated)/
+│     ├─ cashier/
+│     ├─ dispatcher/
+│     ├─ cook/
+│     └─ admin/
+=======
 │  ├─ ClientProviders.tsx
 │  ├─ (public)/
 │  │  ├─ login/page.jsx
@@ -132,6 +140,7 @@ src/
 │     ├─ branch-admin/
 │     ├─ cashier/
 │     └─ dispatcher/
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ features/
 │  ├─ sales/
 │  │  ├─ api/
@@ -146,6 +155,22 @@ src/
 └─ commonComponents/
 ```
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
+
+```text
+app/(authenticated)/cashier/
+├─ page.tsx
+├─ sales/page.tsx
+├─ orders/page.tsx
+├─ cash-register/page.tsx
+├─ expenses/page.tsx
+├─ vouchers/page.tsx
+├─ customers/page.tsx
+└─ reports/page.tsx
+```
+
+=======
 Los nombres entre paréntesis son **route groups**: organizan layouts y permisos sin agregarse a la URL. Por ejemplo, `app/(public)/login/page.jsx` expone `/login`, mientras que `app/(protected)/cashier/pos/page.jsx` expone `/cashier/pos`. Los segmentos dinámicos, como `order/[token]`, se reservan para la vista pública de una comanda.
 
 No se crea una ruta operativa para `cook` en V1. El rol cocinero permanece reservado hasta que se definan sus casos de uso; no debe aparecer en la navegación ni en la matriz de pantallas mientras no tenga una funcionalidad aprobada.
@@ -190,6 +215,7 @@ La reutilización correcta ocurre en capas. `features/sales` puede compartir tip
 
 La vista pública de una comanda no requiere login: se accede mediante el `publicToken` de la orden. Un futuro portal autenticado del cliente es una capacidad distinta y no debe mezclarse con las rutas operativas por rol.
 
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 Reglas:
 
 - Un componente exclusivo de un feature vive dentro de ese feature.
@@ -210,8 +236,13 @@ features/sales/
 ├─ stores/
 │  └─ sales.store.ts
 ├─ components/
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+│  ├─ sales-pos.tsx
+│  └─ custom-sale-form.tsx
+=======
 │  ├─ sales-pos.jsx
 │  └─ custom-sale-form.jsx
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ schemas/
 └─ types.ts
 ```
@@ -225,10 +256,17 @@ API -> Zustand Store -> UI
 La UI no llama directamente a `fetch`. El store invoca `api/`, conserva los datos compartidos y expone selectores y acciones. Los hooks personalizados no forman parte de la arquitectura base.
 
 - **`api/`**: realiza una llamada HTTP por endpoint. No renderiza ni decide reglas de negocio.
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+- **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. No calcula precios, stock, descuentos ni permisos.
+- **`components/`**: recibe datos del store, renderiza controles y emite eventos.
+- **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
+- **`types.ts`**: define tipos compartidos sin esconder reglas de negocio.
+=======
 - **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. Puede exponer datos para que la UI calcule subtotales y un total preliminar de presentación, pero no decide precios válidos, stock, descuentos aplicables ni permisos.
 - **`components/`**: recibe datos del store, renderiza controles y emite eventos.
 - **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
 - **`types.ts`**: define tipos compartidos de los contratos críticos sin esconder reglas de negocio. No se crea un archivo de tipos para cada componente visual trivial.
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 El flujo completo es:
 
@@ -252,7 +290,11 @@ La estructura del frontend debe seguir los endpoints reales documentados en Swag
 | `customers`     | `GET /api/v1/customers`, `POST /api/v1/customers`, `PATCH /api/v1/customers/{id}`                                                                      | Buscar, registrar y editar clientes para facturación.                 |
 | `reports`       | `GET /api/v1/reports/sales`, `/inventory-presas`, `/cash-audit`                                                                                        | Solicitar y renderizar reportes; el backend genera los totales y CSV. |
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI pinta esos datos y solo puede calcular el **precio sugerido** de una venta custom con `piecePrices`; el backend valida y persiste el precio confirmado.
+=======
 El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI utiliza esos datos para mostrar precios unitarios, subtotales y un total preliminar del carrito; también puede calcular el **precio sugerido** de una venta custom con `piecePrices`. El backend valida y persiste los valores confirmados.
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 La respuesta de cada API debe conservar el contrato estándar del backend (`isSuccess`, `message`, `data`, `error`). Los stores exponen esos datos a la UI sin mover reglas transaccionales al navegador.
 
@@ -305,6 +347,8 @@ export function ConfirmDialog({
 
 La lógica de eliminar un usuario se implementa en el feature y se entrega como `onConfirm`; el diálogo solo presenta y coordina la interacción.
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+=======
 ### Modal con contenido React inyectable (referencia)
 
 Un patrón útil cuando se necesita un modal que pueda abrirse desde un botón o icono y renderizar contenido React arbitrario. El componente gestiona su propio estado de apertura/cierre y expone callbacks para que el feature decida qué hacer al confirmar o cancelar.
@@ -383,6 +427,7 @@ export { ActionModal };
 - Si el modal necesita estado de carga, agregar `isLoading` y deshabilitar los botones mientras la operación está en curso, igual que en `ConfirmDialog`.
 - El `triggerLabel` puede ser un icono en lugar de texto; el botón puede reemplazarse por un `IconButton` si la acción lo requiere.
 
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ### 0.3 Separación entre UI, estado y datos
 
 El estilo anterior mezclaba a veces consulta, transformación, formulario y render en un mismo componente. La evolución recomendada conserva la división por módulo y agrega límites claros:
@@ -511,6 +556,9 @@ No requiere providers ni configuración extra.
 
 ---
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+## 4. Estructura recomendada
+=======
 ## 4. React-Toastify (notificaciones)
 
 ```bash
@@ -522,11 +570,20 @@ pnpm add react-toastify
 ---
 
 ## 5. Estructura recomendada
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ```text
 src/
 ├─ app/
 │  ├─ layout.tsx
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+│  ├─ providers.tsx
+│  └─ (authenticated)/
+│     ├─ cashier/
+│     ├─ dispatcher/
+│     ├─ cook/
+│     └─ admin/
+=======
 │  ├─ ClientProviders.tsx
 │  ├─ (public)/
 │  │  ├─ login/page.jsx
@@ -536,6 +593,7 @@ src/
 │     ├─ branch-admin/
 │     ├─ cashier/
 │     └─ dispatcher/
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ features/
 │  ├─ sales/
 │  ├─ orders/
@@ -546,18 +604,26 @@ src/
 │  ├─ reports/
 │  └─ users/
 ├─ config/
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+│  └─ api.ts
+├─ commonComponents/
+=======
 │  ├─ api.ts               # Prefijo de la API (variable de entorno)
 │  └─ colors.ts            # Colores de la marca (único punto de verdad)
 ├─ commonComponents/
 │  ├─ CommonTable.jsx
 │  ├─ EmptyState.jsx
 │  └─ ConfirmDialog.jsx
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 └─ styles/
   └─ globals.css
 ```
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+=======
 `CommonTable` debe mantenerse como una pieza de presentación simple y configurable. Recibe columnas, filas y opciones como búsqueda, acciones, carga, estado vacío y comportamiento responsive; no conoce endpoints ni reglas de negocio. Una tabla con edición compleja o una interacción específica permanece dentro del feature correspondiente.
 
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ### Configuración de la API
 
 El prefijo de la API no debe quedar escrito dentro de las llamadas API. Si la versión cambia de `/api/v1` a `/api/v2`, solo se actualiza la variable de entorno.
@@ -614,6 +680,12 @@ La función API es el único lugar que conoce la URL y el formato externo. El st
 
 ## 5. Theme mínimo de MUI
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+### `src/theme/theme.ts`
+
+```tsx
+import { createTheme } from '@mui/material/styles';
+=======
 ### Paleta de colores de la marca
 
 La paleta cromática del proyecto se define en un archivo de configuración centralizado (`src/config/colors.ts`) que el theme de MUI importa. De esta forma, los colores de la marca se cambian desde un solo lugar y cualquier componente que los necesite puede importar las constantes directamente.
@@ -665,10 +737,13 @@ El theme importa estas constantes:
 // src/theme/theme.ts
 import { createTheme } from '@mui/material/styles';
 import { BRAND_COLORS } from '@/config/colors';
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 export const theme = createTheme({
   palette: {
     mode: 'light',
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+=======
     primary: {
       main: BRAND_COLORS.primary,
     },
@@ -705,6 +780,7 @@ export const theme = createTheme({
     secondary: {
       main: BRAND_COLORS.secondary,
     },
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
   },
   typography: {
     fontFamily: 'var(--font-geist-sans), sans-serif',
@@ -738,7 +814,11 @@ Hace automáticamente:
 
 El proveedor de MUI debe ser un Client Component independiente. Así el layout puede conservar `metadata` y el render del documento HTML en el servidor.
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+### `src/app/providers.tsx`
+=======
 ### `src/app/ClientProviders.tsx`
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ```tsx
 'use client';
@@ -752,7 +832,11 @@ type ProvidersProps = {
   children: ReactNode;
 };
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+export function Providers({ children }: ProvidersProps) {
+=======
 export function ClientProviders({ children }: ProvidersProps) {
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -768,7 +852,11 @@ export function ClientProviders({ children }: ProvidersProps) {
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+import { Providers } from './providers';
+=======
 import { ClientProviders } from './ClientProviders';
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 import './globals.css';
 
 const geistSans = Geist({
@@ -790,7 +878,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+        <Providers>{children}</Providers>
+=======
         <ClientProviders>{children}</ClientProviders>
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
       </body>
     </html>
   );
@@ -805,8 +897,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 - ✔ `globals.css` sigue siendo mínimo
 - ✔ `metadata` permanece en un layout de servidor
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+=======
 El mismo `ClientProviders` debe concentrar el theme activo, el control para alternar entre modo claro y oscuro y el `ToastContainer` de React-Toastify. Las pantallas no deben crear proveedores paralelos ni resolver el tema de forma aislada.
 
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ---
 
 # PARTE 2 — GUÍA DE USO
@@ -815,16 +910,38 @@ El mismo `ClientProviders` debe concentrar el theme activo, el control para alte
 
 ---
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+## 🔹 Next.js con TSX — Uso recomendado
+
+### Ejemplo de componente
+
+```tsx
+type Props = {
+  title: string;
+};
+
+export default function Card({ title }: Props) {
+=======
 ## 🔹 Next.js con JSX y TSX — Uso recomendado
 
 ### Componente visual en JSX
 
 ```jsx
 export default function Card({ title }) {
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
   return <h2>{title}</h2>;
 }
 ```
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+### Recomendaciones
+
+- Empieza simple.
+- Agrega tipos solo en:
+  - Props
+  - Respuestas de API
+  - Funciones importantes
+=======
 La UI puede escribirse en JSX cuando recibe datos ya validados y solo compone la vista. No se debe usar JSX como excusa para omitir validación de respuestas, permisos o payloads.
 
 ### Frontera crítica en TypeScript
@@ -848,6 +965,7 @@ export function parseOrderResponse(payload: unknown) {
 - Usa JSX para presentación y estado visual local.
 - Usa TypeScript para contratos, API, stores, autenticación, permisos y mutaciones de negocio.
 - Usa Zod para validar datos externos incluso si el componente consumidor está escrito en JSX.
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ### Ventajas
 
@@ -858,7 +976,11 @@ export function parseOrderResponse(payload: unknown) {
 
 ### Regla práctica
 
+<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
+> Usa `.tsx` como base y tipa solo donde aporta valor.
+=======
 > Usa `.jsx` para la UI no crítica y `.ts`/`.tsx` para las fronteras críticas del sistema.
+>>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ---
 
