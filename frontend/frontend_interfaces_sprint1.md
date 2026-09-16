@@ -2,15 +2,17 @@
 
 **Proyecto:** Wonder Chicken — Sistema Informático de Ventas  
 **Documentos de Referencia:** [`../business/pdr.md`](../business/pdr.md), [`../business/requirements.md`](../business/requirements.md), [`../backend/technical_guide.md`](../backend/technical_guide.md), [`../backend/implementation_guide.md`](../backend/implementation_guide.md)  
-**Alcance:** Sprint 1 — Catálogo de Productos/Variantes + POS Básico (MESA/LLEVAR) + Comanda Digital + Manejo Mínimo de Turnos + Gestión de Clientes.  
+**Alcance:** Sprint 1 — Catálogo de Productos/Variantes + POS Básico (MESA/LLEVAR) + Comanda Digital + Manejo Mínimo de Turnos + Asociación de Cliente pre-cargado en el POS.  
 **Versión:** 1.0  
 **Fecha:** Agosto 2026  
+
+> **Interfaces futuras:** Las pantallas completas de **gestión de clientes** (`/cashier/customers` operativa y `/branch-admin/customers` administrativa) se entregan en **Sprint 4**. El contrato UX se documenta igual en la **§7** para no perder contexto, pero **no forma parte del alcance de Sprint 1**. Ver [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión).
 
 ---
 
 ## 1. Resumen Ejecutivo del Sprint 1
 
-El **Sprint 1** se enfoca en resolver el núcleo operativo de ventas del restaurante: eliminar las anotaciones manuales en papel, estructurar el catálogo dinámico de productos con sus variantes/sustituciones sin costo adicional, habilitar el registro ultrarrápido de ventas en caja (MESA y LLEVAR) y publicar la comanda digital en el panel de despacho de cocina.
+El **Sprint 1** se enfoca en resolver el núcleo operativo de ventas del restaurante: eliminar las anotaciones manuales en papel, estructurar el catálogo dinámico de productos con sus variantes/sustituciones sin costo adicional, habilitar el registro ultrarrápido de ventas en caja (MESA y LLEVAR), publicar la comanda digital en el panel de despacho de cocina y permitir la asociación rápida de un cliente pre-cargado a la orden (FR-019 parcial).
 
 ### Requerimientos Funcionales Cubiertos en este Sprint:
 - **FR-001 (Gestión de Productos y Variantes):** Administración del catálogo, variantes, presas obligatorias, acompañamientos por defecto y reglas de sustitución permitida.
@@ -19,7 +21,8 @@ El **Sprint 1** se enfoca en resolver el núcleo operativo de ventas del restaur
 - **FR-004 / Shift Mínimo (Apertura de Caja):** Apertura obligatoria de turno declarando el **Período** (Mañana/Noche) y Monto Inicial para emitir el `orderNumber` atómico.
 - **FR-008 / FR-013 (UI Diferenciada y Limpia por Rol):** Adaptación estricta de la pantalla según el rol (Superadministrador, Administrador de sucursal, Cajera y Despachadora). El rol Cocinero queda reservado hasta definir sus casos de uso.
 - **FR-011 (Pedidos con Pago Pendiente - Parcial):** Registro de pedidos LLEVAR/delivery en estado `PENDING_PAYMENT` para envío directo a despacho, con cobro posterior vía `POST /orders/{id}/pay`.
-- **FR-018 / FR-019 (Autenticación JWT y Clientes):** Inicio de sesión seguro y búsqueda/asociación rápida de clientes por CI/NIT (o venta anónima S/N).
+- **FR-018 (Autenticación JWT):** Inicio de sesión seguro con email + CI y JWT Bearer.
+- **FR-019 (Clientes — parcial):** Asociación rápida de un cliente pre-cargado por CI/NIT desde el resumen de la orden (componente G del POS). El CRUD completo de clientes se entrega en **Sprint 4** (ver §7).
 
 ---
 
@@ -69,8 +72,8 @@ graph TD
 | **N1** | Pantalla | `/branch-admin/products` | `ADMIN` | Gestión del catálogo de productos, variantes y sustituciones permitidas. |
 | **N2** | Pantalla | `/branch-admin/users` | `ADMIN` | Gestión de usuarios de la sucursal (cajeras, despachadoras, administradores). |
 | **O** | Pantalla | `/branch-admin/reports` | `ADMIN` | Reportes operativos de la sucursal (ventas, caja, inventario). |
-| **P** | Pantalla | `/cashier/customers` | `CAJERA`, `SUPER_ADMIN` | **Módulo FR-019 (vista operativa):** directorio y registro de clientes. Permite buscar por CI/NIT/nombre, registrar clientes nuevos (CI, NIT opcional, nombres, apellidos, sexo, celular, correo, fecha de nacimiento opcional) y acceder al alta completa con la nota legal RND 102100000011. Búsqueda **cross-sucursal**. Expone el acceso rápido para asociar el cliente recién creado a una orden en curso (atajo `F9`). NO es la vista administrativa masiva — esa es la pantalla **Q**. |
-| **Q** | Pantalla | `/branch-admin/customers` | `ADMINISTRADOR`, `SUPER_ADMIN` | **Módulo FR-019 (vista administrativa cross-sucursal):** gestión completa de clientes. Listado paginado con filtros (CI, NIT, nombre, fecha de registro, sucursal de registro), edición de datos, ver historial de pedidos del cliente (todas las sucursales), activar/desactivar (`toggle-active`). La búsqueda opera cross-sucursal: muestra clientes registrados por cualquier sucursal. Ver [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada) — entidad `Customer` global. |
+| **P** | Pantalla | `/cashier/customers` | `CAJERA`, `SUPER_ADMIN` | **Módulo FR-019 (vista operativa, *futuro — Sprint 4*):** directorio y registro de clientes. Permite buscar por CI/NIT/nombre, registrar clientes nuevos (CI, NIT opcional, nombres, apellidos, sexo, celular, correo, fecha de nacimiento opcional) y acceder al alta completa con la nota legal RND 102100000011. Búsqueda **cross-sucursal**. Expone el acceso rápido para asociar el cliente recién creado a una orden en curso (atajo `F9`). NO es la vista administrativa masiva — esa es la pantalla **Q**. **Contrato UX detallado en §7.1.** |
+| **Q** | Pantalla | `/branch-admin/customers` | `ADMINISTRADOR`, `SUPER_ADMIN` | **Módulo FR-019 (vista administrativa cross-sucursal, *futuro — Sprint 4*):** gestión completa de clientes. Listado paginado con filtros (CI, NIT, nombre, fecha de registro, estado), edición de datos, ver historial de pedidos del cliente (todas las sucursales, vía `GET /customers/{id}/orders`), activar/desactivar (`PATCH /customers/{id}/toggle-active`). La búsqueda opera cross-sucursal: muestra clientes registrados por cualquier sucursal. Ver [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada) — entidad `Customer` global. **Contrato UX detallado en §7.2.** |
 
 > **Convenciones de la tabla:**
 > - **Pantalla** = ruta navegable propia con layout dedicado.
@@ -199,7 +202,11 @@ La configuración se conserva como estado local del ítem hasta que la cajera lo
 #### D. Panel Derecho — Carrito / Resumen de la Orden
 - Selector de Tipo de Pedido:
   - **MESA** o **LLEVAR**. No se solicita número de mesa en el frontend; `tableNumber` es opcional en el backend y no forma parte de esta interfaz.
-- Buscador rápido de Cliente dentro del resumen de la orden: búsqueda por CI, NIT o nombre, selección de un cliente registrado y acción `Cliente S/N` para una venta anónima. La orden envía únicamente el `customerId`; el backend genera el snapshot del nombre.
+- **Componente G — Selector de cliente en el resumen de la orden** *(FR-019 parcial, Sprint 1)*:
+  - Buscador rápido de Cliente dentro del resumen de la orden: búsqueda por CI, NIT o nombre, selección de un cliente pre-cargado y acción `Cliente S/N` para una venta anónima. La orden envía únicamente el `customerId`; el backend genera el snapshot del nombre en `Order.customerName`.
+  - Backend: `GET /customers?search=…` (módulo `customers/` mínimo cableado en [`implementation_guide.md` §3 paso 6](../backend/implementation_guide.md#3-sprint-1--catálogo--pos-básico)). Búsqueda cross-sucursal.
+  - Sin alta rápida en Sprint 1: la pantalla completa de registro de clientes se entrega en Sprint 4 (§7.1). En Sprint 1 la cajera selecciona de los clientes pre-cargados vía seed, o marca `S/N`.
+  - El snapshot `customerName` queda congelado en la orden al confirmar; las ediciones futuras del cliente **no** lo modifican ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
 - Tabla MUI de ítems agregados, con columnas `Producto`, `Cantidad`, `Composición`, `Precio unitario`, `Subtotal` y `Acciones`. La columna de acciones ofrece aumentar/disminuir cantidad, editar composición mientras el ítem siga en el carrito y eliminar. La composición puede mostrarse en una fila expandible o en un `Tooltip`/`Popover` para conservar una tabla compacta sin perder presas, bebidas y sustituciones.
 - Totalizador visible calculado por el frontend usando los precios unitarios recibidos en `GET /pos/context`: subtotal por ítem (`precio unitario × cantidad`) y total preliminar del carrito. El backend vuelve a validar precios, descuentos, stock y total al recibir la orden; el cálculo del frontend no reemplaza esa validación.
 - **Acciones de Cierre de Venta:**
@@ -282,14 +289,71 @@ El rol **COCINERO** no tiene interfaz ni funcionalidades dentro de esta propuest
 
 ---
 
-### 3.7. Directorio y Registro de Clientes (`/cashier/customers`) — *[FR-019 — Sprint 4, vista operativa]*
+> **Nota:** Las pantallas de gestión de clientes (`/cashier/customers` operativa y `/branch-admin/customers` administrativa) **no forman parte del alcance de Sprint 1**. Se documentan completas en la **§7** para fijar el contrato UX temprano, pero su implementación se materializa en **Sprint 4** según el [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión). En Sprint 1 la cajera usa el componente **G** del POS (§3.3 D) que opera sobre clientes pre-cargados vía seed.
 
-> **Nota de alcance:** Esta pantalla se describe aquí para fijar el contrato de UX temprano, pero su **implementación se materializa en Sprint 4** según el [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión). En Sprint 1 la asociación de cliente a la orden (nodo **G**) trabaja únicamente con clientes pre-cargados vía seed; el buscador y el alta rápida ya están pensados para Sprint 1 con stubs del módulo.
+---
 
-> **Separación por rol (FR-013 — UI limpia por rol):** esta es la vista **operativa** de la cajera (alta rápida + asociación al pedido). La vista **administrativa** (listado completo, filtros, edición, auditoría cross-sucursal) es responsabilidad del `ADMINISTRADOR` y vive en `/branch-admin/customers` (sección **3.8**). El `Customer` es una **entidad global** (sin `branchId`); ambas pantallas consultan y operan sobre el mismo conjunto de datos — solo cambia el alcance funcional y el tipo de acciones disponibles.
+## 4. Rutas de Pantallas Previstas para Sprint 1
+
+Las siguientes rutas corresponden a las pantallas de este documento. La implementación técnica (estructura de carpetas, route groups, layouts, stores, API, componentes comunes) se detalla en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md).
+
+```
+/login                              → Autenticación (FR-018)
+/super-admin                        → Dashboard global (solo SUPER_ADMIN)
+/super-admin/branches               → Gestión global de sucursales (SUPER_ADMIN)
+/branch-admin                       → Dashboard de sucursal (solo ADMIN)
+/branch-admin/products              → Gestión de catálogo y variantes (FR-001)
+/branch-admin/users                 → Gestión de usuarios de la sucursal (ADMIN, Sprint 1)
+/branch-admin/reports               → Reportes operativos de la sucursal (ADMIN)
+/cashier/shift/open                 → Apertura de turno (FR-004)
+/cashier/pos                        → POS / registro de ventas (FR-002) — incluye componente G (cliente)
+/cashier/orders                     → Historial de pedidos (FR-012)
+/dispatcher                         → Panel de comandas digitales (FR-003)
+/order/[token]                      → Comanda pública (sin autenticación)
+```
+
+> **Rutas diferidas a sprints posteriores** (documentadas en §7):
+> - `/cashier/customers` — vista operativa de clientes — **Sprint 4**.
+> - `/branch-admin/customers` — vista administrativa de clientes — **Sprint 4**.
+
+> **Nota:** El rol COCINERO no tiene rutas ni pantallas en Sprint 1. Se mantiene como rol reservado para futuras definiciones.
+
+---
+
+## 5. Matriz de Cumplimiento de Criterios de Aceptación (Sprint 1)
+
+| Requerimiento | Criterio de Aceptación Cumplido en la Interfaz Propuesta |
+| :--- | :--- |
+| **FR-001 (Productos)** | El administrador de sucursal administra productos y variantes en `/branch-admin/products`. Las variantes quedan disponibles de inmediato en el POS con su descomposición y precio. |
+| **FR-002 (POS)** | El POS permite registrar ventas MESA/LLEVAR en 3 pasos o menos (Seleccionar plato → Configurar presas/sustitución → Confirmar pago). El total es exacto. |
+| **FR-003 (Comanda)** | Al confirmar el pedido en el POS, la comanda digital aparece al instante en el panel de despacho `/dispatcher` con presas y bebidas detalladas. |
+| **FR-004 (Shift Mínimo)** | Pantalla `/cashier/shift/open` exige seleccionar el Período del turno (`MAÑANA`/`NOCHE`) y monto inicial antes de vender. Inicializa `lastOrderNumber`. |
+| **FR-008 / FR-013 (UI por Rol)**| Interfaz limpia e independiente por rol. Superadministrador ve el alcance global; administrador ve su sucursal; cajera ve POS/Caja; despachadora ve Comandas. El cocinero queda fuera de la interfaz hasta definir su alcance. |
+| **FR-011 (Pago Pendiente)**| Botón *"Pago Pendiente"* en POS crea una orden `PENDING_PAYMENT` para despacho. La cajera puede cobrarla posteriormente vía `POST /orders/{id}/pay`; el pedido se prepara desde el registro y no descuenta inventario hasta el pago. |
+| **FR-018 (Auth JWT)** | Login `/login` genera token Bearer JWT. Rutas protegidas según rol con redirección automática. |
+| **FR-019 (Clientes — parcial)** | Buscador rápido dentro del resumen de la orden (componente **G** del POS) por CI, NIT o nombre. Permite vincular `customerId` a la orden o seleccionar "S/N". La pantalla completa de gestión de clientes (operativa y administrativa) se entrega en **Sprint 4** — ver §7. |
+
+---
+
+## 6. Siguientes Pasos Recomendados
+
+1. **Aprobación de las interfaces Sprint 1:** Confirmar el mapa de navegación, matriz de roles y separación entre POS interno y canal cliente.
+2. **Implementación técnica:** Seguir la guía de [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md) para desarrollar los componentes base (`CommonTable`, `ConfirmDialog`, `ActionModal`), stores Zustand, API calls y estructura de rutas.
+3. **Conexión con endpoints de Sprint 1:** Probar la integración con `POST /orders` (acepta `customerId`), `POST /shifts/open`, `GET /pos/context`, `POST /auth/login` y `GET /customers?search=` (módulo mínimo Sprint 1).
+4. **Planificación Sprint 4:** Las interfaces de gestión de clientes (§7) requieren los endpoints ampliados del módulo `customers/` documentados en [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión).
+
+---
+
+## 7. Interfaces Futuras — Actualizaciones Previstas en Sprints Posteriores
+
+> Esta sección documenta el contrato UX de las pantallas **futuras** para no perder contexto durante la construcción de Sprint 1. Su implementación se materializa en **Sprint 4** según el [`implementation_guide.md` §6](../backend/implementation_guide.md#6-sprint-4--cliente-vistas-públicas-e-impresión). En Sprint 1 **no se construyen** estas pantallas.
+
+### 7.1. Vista Operativa de Clientes (`/cashier/customers`) — *[FR-019 — Sprint 4]*
+
+> **Separación por rol (FR-013 — UI limpia por rol):** esta es la vista **operativa** de la cajera (alta rápida + asociación al pedido). La vista **administrativa** (listado completo, filtros, edición, auditoría cross-sucursal) es responsabilidad del `ADMINISTRADOR` y vive en `/branch-admin/customers` (sección 7.2). El `Customer` es una **entidad global** (sin `branchId`); ambas pantallas consultan y operan sobre el mismo conjunto de datos — solo cambia el alcance funcional y el tipo de acciones disponibles.
 
 - **Propósito:** Cumplir con [FR-019](../business/requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) en su uso **operativo**: la cajera registra clientes nuevos para **facturación nominada** y los busca por **CI o NIT** de manera **cross-sucursal**, asociándolos rápidamente a la orden en curso. El vínculo a la orden es **opcional** (anónimo = `S/N`, ventas < Bs 1.000).
-- **Usuarios Destino:** `CAJERA` (uso principal — [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)) y `SUPER_ADMIN` (acceso global cross-sucursal). La gestión administrativa masiva queda en `/branch-admin/customers` (sección 3.8).
+- **Usuarios Destino:** `CAJERA` (uso principal — [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)) y `SUPER_ADMIN` (acceso global cross-sucursal). La gestión administrativa masiva queda en `/branch-admin/customers` (sección 7.2).
 - **Componentes Visuales (basados en el prototipo funcional):**
   - **Sidebar de Cajera:** `POS Ventas`, `Resumen de Apertura`, `Pago Pendiente [FR-011]`, `Despacho Cocina (KDS)`, `Historial de Pedidos`, **`Clientes`** (activo) y `Cerrar Sesión`. La sidebar se reutiliza entre las pantallas de la cajera.
   - **Cabecera de Contexto:** Indicador de `Sucursal Central` y `TURNO: MAÑANA` (estado del turno activo).
@@ -311,17 +375,15 @@ El rol **COCINERO** no tiene interfaz ni funcionalidades dentro de esta propuest
   - `POST /customers` (registro).
   - `PATCH /customers/{id}` (edición; **no altera** el `customerName` snapshot de órdenes pasadas — [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
   - `GET /customers/{id}` (consulta).
-- **Reglas de UX aplicables ya en Sprint 1 (aunque la pantalla completa se entregue en Sprint 4):**
+- **Reglas de UX aplicables al Sprint 4:**
   - El componente **G** del POS consume el mismo cliente del directorio: el `+ Nuevo` dentro del resumen de orden abre el formulario de esta pantalla como **modal de alta rápida** y al confirmar vuelve al POS con el cliente ya vinculado.
   - La edición de un cliente **no debe propagarse** a los snapshots de órdenes pasadas; el frontend no debe ofrecer acciones que sugieran lo contrario.
   - La búsqueda opera por **CI o NIT** (no por `id` interno) y nunca muestra más datos de los necesarios para la selección (privacidad por defecto).
   - El POS **no debe** listar pedidos tipeando un NIT/CI en la URL — el acceso a la vista del cliente va siempre por `publicToken` (regla de seguridad, [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
 
----
+### 7.2. Vista Administrativa de Clientes (`/branch-admin/customers`) — *[FR-019 — Sprint 4, cross-sucursal]*
 
-### 3.8. Gestión Administrativa de Clientes (`/branch-admin/customers`) — *[FR-019 — Sprint 4, vista administrativa cross-sucursal]*
-
-- **Propósito:** Vista administrativa del [FR-019](../business/requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) para que el `ADMINISTRADOR` gestione clientes de forma masiva: consulta cross-sucursal, edición, activación/desactivación y consulta del historial de pedidos del cliente. **No es la vista de la cajera** (esa es `/cashier/customer`s, sección 3.7).
+- **Propósito:** Vista administrativa del [FR-019](../business/requirements.md#fr-019--registro-y-búsqueda-de-clientes-alta) para que el `ADMINISTRADOR` gestione clientes de forma masiva: consulta cross-sucursal, edición, activación/desactivación y consulta del historial de pedidos del cliente. **No es la vista de la cajera** (esa es `/cashier/customers`, sección 7.1).
 - **Usuarios Destino:** `ADMINISTRADOR` ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)) y `SUPER_ADMIN` (acceso global). **El `ADMINISTRADOR` ve clientes de todas las sucursales** porque `Customer` es una entidad global sin `branchId` ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
 - **Componentes Visuales:**
   - **Cabecera con contexto:** badge `Sucursal Central` + `Módulo FR-019 • Gestión Administrativa de Clientes (cross-sucursal)`.
@@ -330,74 +392,26 @@ El rol **COCINERO** no tiene interfaz ni funcionalidades dentro de esta propuest
     - `NIT` (búsqueda exacta o por prefijo).
     - `Nombre` (búsqueda parcial: nombres o apellidos, case-insensitive).
     - `Rango de fecha de registro` (`desde` / `hasta`).
-    - `Sucursal de registro` (opcional; filtra los clientes cuya primera registración fue en la sucursal seleccionada — útil para auditoría).
     - `Estado` (`activo` / `inactivo` / `todos`).
-  - **Tabla de Clientes** (columnas): `CI`, `NIT`, `Nombres`, `Apellidos`, `Celular`, `Correo`, `Fecha de registro`, `Sucursal de registro`, `Registrado por` (usuario), `Estado` (badge activo/inactivo), `Acciones`.
+  - **Tabla de Clientes** (columnas): `CI`, `NIT`, `Nombres`, `Apellidos`, `Celular`, `Correo`, `Fecha de registro`, `Estado` (badge activo/inactivo), `Acciones`.
   - **Acciones por fila:**
     - `Editar` → abre modal de edición (mismos campos que el alta, pero con `CI` y `NIT` no editables). `PATCH /customers/{id}`.
-    - `Ver historial de pedidos` → abre modal/lista con todos los pedidos del cliente (todas las sucursales, todos los días), con link al detalle de cada pedido.
-    - `Activar / Desactivar` (`PATCH /customers/{id}/toggle-active`) → cambia el flag `active`. Inverso del estado actual, sin body.
+    - `Ver historial de pedidos` → abre modal/lista con todos los pedidos del cliente (todas las sucursales, todos los días), llamando a `GET /customers/{id}/orders`. Link al detalle de cada pedido.
+    - `Activar / Desactivar` (`PATCH /customers/{id}/toggle-active`) → invierte el flag `active`. Mismo patrón que `users` y `branches`. Sin body.
 - **Alta desde la vista admin:**
   - Botón `+ Nuevo Cliente` en la cabecera de la tabla abre el mismo formulario de alta que usa la cajera, con los mismos atajos (`Esc`, `F10`, `F9`).
   - `F9` (Guardar y Asociar a Orden) **no aplica** en esta pantalla (no hay orden en curso en la vista admin). El botón se oculta o se desactiva.
 - **Integración Backend (Sprint 4):**
-  - `GET /customers?search=&page=&pageSize=&registeredBranchId=&status=&from=&to=` (búsqueda cross-sucursal con filtros y paginación).
+  - `GET /customers?search=&page=&pageSize=&status=&from=&to=` (búsqueda cross-sucursal con filtros y paginación; el `?search=` mínimo ya está cableado en Sprint 1).
   - `POST /customers`.
   - `GET /customers/{id}`.
   - `PATCH /customers/{id}`.
-  - `PATCH /customers/{id}/toggle-active` (nuevo — `ADMIN` puede desactivar clientes).
-  - `GET /customers/{id}/orders?from=&to=` (historial de pedidos del cliente, cross-sucursal).
+  - `PATCH /customers/{id}/toggle-active` (nuevo — `ADMIN` puede desactivar clientes; mismo patrón que `users` y `branches`).
+  - `GET /customers/{id}/orders?from=&to=` (historial de pedidos del cliente, cross-sucursal — vista resumida optimizada para el modal).
 - **Reglas de UX y auditoría:**
-  - **Deduplicación:** si al intentar registrar un cliente el CI ya existe (en cualquier sucursal), el sistema muestra el cliente existente y **no permite crear duplicado**. La primera registración gana.
+  - **Deduplicación:** si al intentar registrar un cliente el CI ya existe (en cualquier sucursal), el sistema muestra el cliente existente y **no permite crear duplicado**. La primera registración gana (`Customer.ci` es `UNIQUE` en el schema).
   - **Edición no propaga a snapshots:** los `customerName` ya guardados en órdenes pasadas **no se modifican** al editar el cliente. El frontend debe evitar cualquier UI que sugiera lo contrario.
   - **Privacidad:** la tabla no debe mostrar más columnas de las necesarias para la gestión administrativa; campos sensibles (correo, celular) pueden ocultarse tras click en `Ver detalle`.
   - **Auditoría:** la creación, edición y toggle-active deben registrarse en `AuditLog` como acciones críticas (datos personales). El frontend no implementa la auditoría — solo dispara los endpoints que el backend audit-loggea.
   - **El POS NO debe** listar pedidos tipeando un NIT/CI en la URL — el acceso a la vista del cliente va siempre por `publicToken` (regla de seguridad, [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)). Esta pantalla es para gestión interna del admin, no para vistas públicas.
-
----
-
-## 4. Rutas de Pantallas Previstas para Sprint 1
-
-Las siguientes rutas corresponden a las pantallas definidas en este documento. La implementación técnica (estructura de carpetas, route groups, layouts, stores, API, componentes comunes) se detalla en [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md).
-
-```
-/login                              → Autenticación (FR-018)
-/super-admin                        → Dashboard global (solo SUPER_ADMIN)
-/super-admin/branches               → Gestión global de sucursales (SUPER_ADMIN)
-/branch-admin                       → Dashboard de sucursal (solo ADMIN)
-/branch-admin/products              → Gestión de catálogo y variantes (FR-001)
-/branch-admin/users                 → Gestión de usuarios de la sucursal (ADMIN)
-/branch-admin/customers             → Gestión administrativa de clientes — cross-sucursal (FR-019, ADMIN)
-/branch-admin/reports               → Reportes operativos de la sucursal (ADMIN)
-/cashier/shift/open                 → Apertura de turno (FR-004)
-/cashier/pos                        → POS / registro de ventas (FR-002)
-/cashier/orders                     → Historial de pedidos (FR-012)
-/cashier/customers                  → Vista operativa de clientes — alta rápida (FR-019, CAJERA)
-/dispatcher                         → Panel de comandas digitales (FR-003)
-/order/[token]                      → Comanda pública (sin autenticación)
-```
-
-> **Nota:** El rol COCINERO no tiene rutas ni pantallas en Sprint 1. Se mantiene como rol reservado para futuras definiciones.
-
----
-
-## 5. Matriz de Cumplimiento de Criterios de Aceptación (Sprint 1)
-
-| Requerimiento | Criterio de Aceptación Cumplido en la Interfaz Propuesta |
-| :--- | :--- |
-| **FR-001 (Productos)** | El administrador de sucursal administra productos y variantes en `/branch-admin/products`. Las variantes quedan disponibles de inmediato en el POS con su descomposición y precio. |
-| **FR-002 (POS)** | El POS permite registrar ventas MESA/LLEVAR en 3 pasos o menos (Seleccionar plato → Configurar presas/sustitución → Confirmar pago). El total es exacto. |
-| **FR-003 (Comanda)** | Al confirmar el pedido en el POS, la comanda digital aparece al instante en el panel de despacho `/dispatcher` con presas y bebidas detalladas. |
-| **FR-004 (Shift Mínimo)** | Pantalla `/cashier/shift/open` exige seleccionar el Período del turno (`MAÑANA`/`NOCHE`) y monto inicial antes de vender. Inicializa `lastOrderNumber`. |
-| **FR-008 / FR-013 (UI por Rol)**| Interfaz limpia e independiente por rol. Superadministrador ve el alcance global; administrador ve su sucursal; cajera ve POS/Caja; despachadora ve Comandas. El cocinero queda fuera de la interfaz hasta definir su alcance. |
-| **FR-011 (Pago Pendiente)**| Botón *"Pago Pendiente"* en POS crea una orden `PENDING_PAYMENT` para despacho. La cajera puede cobrarla posteriormente vía `POST /orders/{id}/pay`; el pedido se prepara desde el registro y no descuenta inventario hasta el pago. |
-| **FR-018 (Auth JWT)** | Login `/login` genera token Bearer JWT. Rutas protegidas según rol con redirección automática. |
-| **FR-019 (Clientes)** | Buscador rápido dentro del resumen de la orden por CI, NIT o nombre. Permite vincular `customerId` a la orden o seleccionar "S/N". |
-
----
-
-## 6. Siguientes Pasos Recomendados
-
-1. **Aprobación de las interfaces:** Confirmar el mapa de navegación, matriz de roles y separación entre POS interno y canal cliente.
-2. **Implementación técnica:** Seguir la guía de [`old-docs/frontend_code_style.md`](old-docs/frontend_code_style.md) para desarrollar los componentes base (`CommonTable`, `ConfirmDialog`, `ActionModal`), stores Zustand, API calls y estructura de rutas.
-3. **Conexión con endpoints de Sprint 1:** Probar la integración con `POST /orders`, `POST /shifts/open`, `GET /pos/context` y `POST /auth/login`.
+  - **No existe "sucursal de registro":** el `Customer` no tiene `branchId` (es entidad global). Por eso esta UI no expone el filtro "Sucursal de registro" — si en el futuro se necesita derivar, se hace a partir del primer `Order` del cliente (fuera de alcance V1).
