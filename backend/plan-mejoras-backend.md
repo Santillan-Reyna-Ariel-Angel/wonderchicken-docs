@@ -2,7 +2,7 @@
 
 > **Fecha:** 2026-10-05 · **Estado:** ✅ **ejecutado y verificado** (§1) · Rama: `feature_sprint1_integrate_front`
 > **Origen:** revisión del backend (2026-10-05) y entrevista de decisiones, una pregunta por vez.
-> **Relación con otros documentos:** complementa [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (§4: cambios #1 a #16 del backend, todos hechos salvo #16). Lo que quedó **pendiente** vive en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
+> **Relación con otros documentos:** complementa [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (cómo conecta el front con el API). Lo que quedó **pendiente** vive en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
 > **Convención:** el código, los identificadores y las referencias a código en la documentación van en **inglés**; la documentación en sí, en español.
 
 ---
@@ -216,7 +216,7 @@ Las diferencias esperadas se compararon con la foto después de cada paso.
 
 ### Interacción con el plan de integración
 
-Los cambios #1 a #15 del plan de integración se implementaron **sobre** estos patrones (errores del catálogo, respuestas tipadas, alcance por guard) y están todos hechos; #7 quedó absorbido por el paso 2. **#16** (`branches-summary`) se aplazó (decisión 18).
+Los cambios de backend que pidió la integración con el front (`GET /auth/me`, alcance de usuarios y pedidos, `?branchId=` para el SUPER_ADMIN en cajas e inventario, períodos inactivos, administración de clientes, ajuste y dashboard de inventario, y los datos derivados de sucursales) se implementaron **sobre** estos patrones (errores del catálogo, respuestas tipadas, alcance por guard) y están hechos. `branches-summary` se aplazó (decisión 18).
 
 ---
 
@@ -230,59 +230,12 @@ Los cambios #1 a #15 del plan de integración se implementaron **sobre** estos p
 
 ---
 
-## 7. Reglas vigentes de alcance y autorización
+## 7. Reglas de alcance y autorización
 
-Consolidado de lo decidido y probado con la foto (la fuente de verdad es el código; el contrato por endpoint está en `technical_guide.md`).
-
-| Recurso | SUPER_ADMIN | ADMIN | Otros roles |
-|---|---|---|---|
-| **Usuarios** | cualquier rol y sucursal; único que traslada personal | solo `CASHIER`, `DISPATCHER`, `COOK` **de su sucursal**; lo demás: 404; rol o sucursal no permitidos: 403 | no gestionan usuarios |
-| **Sucursales** | todas | — | — |
-| **Cajas e inventario** | `?branchId=` (o todas) y `branchId` en el alta; edita cualquier sucursal | su sucursal | `CASHIER` ve las cajas de la suya; `COOK` lee inventario y dashboard de la suya |
-| **Pedidos** | todos | **solo los de su sucursal** (403 `ORDER_FROM_OTHER_BRANCH` / lista vacía) | `CASHIER` y `DISPATCHER`: los de su sucursal |
-| **Clientes** (globales) | todo | lista, detalle, edición, toggle e historial **cross-sucursal** | `CASHIER`: lookup, alta, detalle y edición, **solo de clientes activos** |
-| **Turnos** | — | períodos con `?includeInactive=true` | `CASHIER`: un turno abierto por cajera y una caja por cajera a la vez |
-
-Reglas transversales: fuera de alcance responde **404** (no se revela que existe); asignar algo no permitido responde **403**; un cambio de rol, sucursal o estado aplica **al instante**.
+Las reglas vigentes de alcance por rol y sucursal (usuarios, sucursales, cajas, inventario, pedidos, clientes y turnos) están en [technical_guide.md §5.6](technical_guide.md#56-alcance-por-rol-y-sucursal); las decisiones que las originaron, en la §2 de este documento (14, 15 y 16).
 
 ---
 
-## 8. Qué cambia para el front (checklist antes de tocarlo)
+## 8. Qué cambia para el front
 
-El front aún no se modificó. Esto es lo que tiene que adaptar. El detalle por endpoint está en `technical_guide.md` y en `swagger.json`.
-
-**1. Manejo de errores**
-- `error.details` es **siempre un array** `[{ field, message }]` (vacío si no hay campo). Antes era `{ fields: [...] }` o `{ name: "..." }`. Usar `field` para marcar el input.
-- Decidir por `error.code`, no por el texto. La lista vigente es `src/common/errors/error-codes.ts`.
-
-| Antes | Ahora |
-|---|---|
-| `POST /shifts/open`: `SHIFT_PERIOD_NOT_FOUND`, `CASH_REGISTER_NOT_FOUND` | `SHIFT_PERIOD_REFERENCE_NOT_FOUND`, `CASH_REGISTER_REFERENCE_NOT_FOUND`; nuevos `SHIFT_ALREADY_OPEN` y `CASH_REGISTER_IN_USE` (409) |
-| `POST /orders`: `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `CUSTOMER_NOT_FOUND` | `PRODUCT_REFERENCE_NOT_FOUND`, `VARIANT_REFERENCE_NOT_FOUND`, `CUSTOMER_REFERENCE_NOT_FOUND` |
-| 401 `Unauthorized` | `INVALID_CREDENTIALS`, `TOKEN_REQUIRED`, `TOKEN_INVALID`, `USER_INACTIVE` |
-| 404 sin código (`Not Found`) | `BRANCH_NOT_FOUND`, `USER_NOT_FOUND`, `ORDER_NOT_FOUND`, `SHIFT_NOT_FOUND` |
-| `Bad Request` en duplicados | `USER_EMAIL_ALREADY_EXISTS`, `USER_CI_ALREADY_EXISTS`, `USER_PHONE_ALREADY_EXISTS`, `DUPLICATE_PRODUCT_NAME` |
-| `Bad Request` / `Forbidden` genéricos | `BAD_REQUEST` (ids con formato inválido), `FORBIDDEN`, `ROLE_NOT_ALLOWED`, `BRANCH_OUT_OF_SCOPE` |
-
-**2. Sesión**
-- `401 USER_INACTIVE` (usuario desactivado) y `TOKEN_INVALID` (vencido) → volver al login.
-- Los tokens duran 2 h en `development` y 8 h en `production`; no hay renovación todavía ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
-- Para el header usar **`GET /auth/me`** (`{ id, firstName, lastName, email, role, branchId, branchName }`) en vez de decodificar el JWT y llamar a `GET /users/:id`.
-
-**3. Restricciones que dejan de ser del cliente**
-- El backend ya impone el alcance por rol y sucursal (§7). El front puede **ocultar** acciones como ayuda visual, pero ya no necesita filtrar usuarios por `branchId`, limitar roles ni esconder toggles para que sea correcto.
-- SUPER_ADMIN: para cajas e inventario usa un selector de sucursal → `?branchId=` en las listas y `branchId` en el body al crear.
-
-**4. Endpoints nuevos o ampliados que el front puede consumir**
-- `GET /auth/me`; `GET /branches` con `cashRegistersCount` y `admin`; `GET /shifts/shift-periods?includeInactive=true`.
-- Clientes: `GET /customers` (búsqueda, estado, fechas, paginación), `GET` y `PATCH /customers/:id` (`ci` y `nit` no se editan), `toggle-active` y `GET /customers/:id/orders`.
-- Inventario: `PATCH /inventory/items/:id/toggle-active`, `POST /inventory/adjust` y `GET /inventory/dashboard`.
-- Paginación común: `?page=&pageSize=` (máximo 100).
-
-**5. Detalles de comportamiento a tener presentes**
-- `POST /orders/:id/pay` y `/cancel` responden **201** (no 200).
-- Los importes `Decimal` viajan como **string** (`"45"`).
-- `?active=abc` y `?includeInactive=abc` dan 400 (antes se leían como `false`).
-- Los mensajes de validación de reglas poco comunes pueden salir en inglés ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
-
-**6. Documentación del front a actualizar** (no se tocó): `docs/frontend/plan-front-cruds-feature-test-cruds.md` todavía describe como pendientes el alcance de `/users` y la restricción de roles "del lado del cliente" (líneas 64 y 73), y el mapa de errores del paso 1 usa el formato anterior de `details`.
+El checklist para el front (errores, sesión, `GET /auth/me`, alcance, formatos) está en [plan-integracion-front-datos-reales.md §2.2](plan-integracion-front-datos-reales.md#22-contrato-que-el-front-debe-respetar) y el contrato de cada endpoint en [technical_guide.md §6](technical_guide.md#6-contratos-por-módulo-requestresponse).
