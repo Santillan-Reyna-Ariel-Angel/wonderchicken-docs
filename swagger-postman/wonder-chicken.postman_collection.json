@@ -6591,6 +6591,59 @@
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shifts",
+                    "open"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"openingAmount\": 200,\n  \"cashRegisterId\": \"01900000-0000-7000-8000-000000000201\",\n  \"periodId\": \"01900000-0000-7000-8000-000000000301\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Ya tiene un turno abierto. Ciérrelo antes de abrir otro.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"SHIFT_ALREADY_OPEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
             }
           ],
           "event": [],

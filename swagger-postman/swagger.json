@@ -4308,6 +4308,30 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "SHIFT_ALREADY_OPEN": {
+                    "summary": "SHIFT_ALREADY_OPEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+                      "data": null,
+                      "error": {
+                        "code": "SHIFT_ALREADY_OPEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
