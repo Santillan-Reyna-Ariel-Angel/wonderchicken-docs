@@ -75,7 +75,7 @@ BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta 
 | 5 | ✅ **HECHO**. **`?branchId=` opcional solo para SUPER_ADMIN** en cajas e inventario | `implementation_guide` (inventario: "SUPER_ADMIN filtra por sucursal"; cajas: "puede crear en cualquiera"); `technical_guide` §5.2: "el SUPER_ADMIN opera global". **El código no lo hace.** | SA puede usar las pantallas de cajas e inventario. |
 | 7 | ✅ **HECHO** (plan-mejoras-backend, paso 2). **Códigos de error estables** en users, branches, alta de producto y de variante, y errores planos → `NOT_FOUND`/`FORBIDDEN`. *(El filtro global ya desanida `error.code` y los 404 de cajas, períodos, productos, variantes e inventario ya tienen código estable.)* | `technical_guide` §5.4: `code` será string estable. Hoy en esos módulos salen `"Not Found"`, `"Bad Request"`. | Un solo mapa de mensajes en español. |
 | 4 | ✅ **HECHO**. `?includeInactive=true` en `GET /shifts/shift-periods` (default sin cambios) | La doc prevé "editar/**desactivar** período (admin)"; reactivar exige verlo. | Reactivar períodos sin caché local. |
-| 12 | **Clientes admin:** `GET /customers?search=&page=&pageSize=&status=&from=&to=`, `GET /:id`, `PATCH /:id` (`ci`/`nit` no editables), `PATCH /:id/toggle-active`, `GET /:id/orders` | Sprint 4 paso 1, contrato exacto en §6.2a. Precedente: `POST /customers` ya se adelantó del Sprint 4 al 1. | La pantalla de clientes pasa a ser 100% real. |
+| 12 | ✅ **HECHO**. **Clientes admin:** `GET /customers?search=&page=&pageSize=&status=&from=&to=`, `GET /:id`, `PATCH /:id` (`ci`/`nit` no editables), `PATCH /:id/toggle-active`, `GET /:id/orders` | Sprint 4 paso 1, contrato exacto en §6.2a. Precedente: `POST /customers` ya se adelantó del Sprint 4 al 1. | La pantalla de clientes pasa a ser 100% real. |
 | 15 | **Inventario:** `POST /inventory/adjust`, `PATCH /inventory/:id/sale-price`, `GET /inventory/dashboard` | Sprint 2, `implementation_guide` línea 158. Falta implementarlos. | Ajuste de stock y dashboard de cocina reales. |
 | 16 | ⏸️ **POSTERGADO**. `GET /reports/branches-summary` (solo SA) | `technical_guide` §5.1 (línea 505). Es mayor (agregaciones). **Decidido: el dashboard (datos resumen) es lo último que se hace en la aplicación**; hasta entonces el front mantiene esos KPIs como complemento local. | KPIs del dashboard global. |
 
@@ -100,7 +100,7 @@ BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta 
 
 ### 4.4 Orden de implementación y actualización de docs
 
-1. **Orden:** **#2** ✅ → **#7** ✅ → **#1** ✅ → **#5** ✅ → **#4** ✅ → **#3** ✅ → **#12** → **#15**. **#6** ✅ hecho; **#16** postergado al final (§7).
+1. **Orden:** **#2** ✅ → **#7** ✅ → **#1** ✅ → **#5** ✅ → **#4** ✅ → **#3** ✅ → **#12** ✅ → **#15**. **#6** ✅ hecho; **#16** postergado al final (§7).
 2. **Dónde:** en **esta misma rama** (`feature_sprint1_integrate_front`), como un nuevo change de openspec (mismo flujo que `add-master-data-cruds`).
 3. **Docs:** en el mismo cambio, actualizar `implementation_guide` (mover #12 del Sprint 4 y, si aplica, #16 al sprint actual, como ya hace la guía con sus "Ajuste sobre PDR"), `technical_guide` §5.1/§5.2/§6.x, y agregar casos E2E en §8.
 4. **Ejemplos de Swagger:** cada endpoint nuevo debe sumar sus ids/ejemplos a `src/common/swagger/example-data.ts` (§2) para que la colección de Postman siga ejecutándose sin editar valores.

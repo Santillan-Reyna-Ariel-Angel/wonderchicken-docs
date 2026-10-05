@@ -267,3 +267,11 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 - **#5.** Cajas e inventario: el SUPER_ADMIN usa `?branchId=` (opcional; sin él ve todas las sucursales) y manda `branchId` en el body al crear (obligatorio: `BRANCH_REQUIRED`; sucursal inexistente: `BRANCH_REFERENCE_NOT_FOUND`). Edita y activa/desactiva en cualquier sucursal. Un rol de sucursal que nombre otra recibe 403 `BRANCH_OUT_OF_SCOPE`. La lógica vive en `src/common/auth/branch-scope.ts` (`readableBranchId`, `resolveWriteBranchId`, `assertBranchExists`).
 - **#4.** `GET /shifts/shift-periods?includeInactive=true` (default sin cambios; la cajera nunca ve inactivos). Un valor que no sea `true`/`false` da 400; lo mismo vale ahora para `?active=` en inventario (antes `?active=abc` se leía como `false`).
 - **#3.** `GET /branches` agrega `cashRegistersCount` y `admin` por sucursal. Se expone como `cashRegistersCount` y no como el `_count` de Prisma, para no filtrar detalles del ORM al contrato.
+
+### Después de la ejecución: clientes administrativos (cambio #12)
+
+- `GET /customers` (ADMIN) con búsqueda libre, estado, fechas de alta y paginación; `GET /customers/:id`, `PATCH /customers/:id` (sin `ci` ni `nit`), `PATCH /customers/:id/toggle-active` y `GET /customers/:id/orders`.
+- La cajera nunca ve ni edita un cliente desactivado; el ADMIN sí.
+- **Excepción deliberada al alcance por sucursal:** el historial de pedidos de un cliente (`/customers/:id/orders`) trae los de **todas** las sucursales y es solo para ADMIN, porque el PDR §2.12 define la vista del administrador sobre el cliente como cross-sucursal. Cada pedido indica su sucursal.
+- Paginación común en `src/common/http/pagination-query.dto.ts` (`?page=&pageSize=`, máximo 100), reutilizable por las listas que vengan.
+- Los rechazos de `forbidNonWhitelisted` ("property x should not exist") ahora salen en español.
