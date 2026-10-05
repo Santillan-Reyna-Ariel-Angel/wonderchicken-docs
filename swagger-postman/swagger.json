@@ -9377,6 +9377,416 @@
           "inventory"
         ]
       }
+    },
+    "/api/v1/inventory/adjust": {
+      "post": {
+        "operationId": "InventoryController_adjust",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustInventoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ajuste de inventario registrado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Ajuste de inventario registrado correctamente"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/InventoryAdjustmentData"
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ítem de inventario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "INVENTORY_ITEM_NOT_FOUND": {
+                    "summary": "INVENTORY_ITEM_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ítem de inventario no encontrado",
+                      "data": null,
+                      "error": {
+                        "code": "INVENTORY_ITEM_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stock insuficiente: el ajuste dejaría el stock en negativo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "INSUFFICIENT_STOCK": {
+                    "summary": "INSUFFICIENT_STOCK",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Stock insuficiente: el ajuste dejaría el stock en negativo",
+                      "data": null,
+                      "error": {
+                        "code": "INSUFFICIENT_STOCK",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría.",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/dashboard": {
+      "get": {
+        "operationId": "InventoryController_dashboard",
+        "parameters": [
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma las de todas. Los demás roles ven siempre la suya (si piden otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard de inventario obtenido correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Dashboard de inventario obtenido correctamente"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/InventoryDashboardData"
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN | COOK).",
+        "tags": [
+          "inventory"
+        ]
+      }
     }
   },
   "info": {
@@ -11903,6 +12313,252 @@
             "nullable": true
           }
         }
+      },
+      "InventoryMovementUserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000101",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Jhonny"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Hurtado Zardan"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "InventoryTransactionEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000a01",
+            "format": "uuid"
+          },
+          "inventoryItemId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000601",
+            "format": "uuid"
+          },
+          "delta": {
+            "type": "number",
+            "example": 5,
+            "description": "Negative = decrement"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SALE",
+              "ADJUSTMENT",
+              "RECEPTION",
+              "VALE",
+              "MANUAL_CONSUMPTION",
+              "CANCELLATION_REVERT"
+            ],
+            "example": "RECEPTION"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Compra del día a proveedor"
+          },
+          "referenceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "user": {
+            "$ref": "#/components/schemas/InventoryMovementUserRef"
+          }
+        },
+        "required": [
+          "id",
+          "inventoryItemId",
+          "delta",
+          "reason",
+          "note",
+          "referenceId",
+          "timestamp",
+          "user"
+        ]
+      },
+      "InventoryAdjustmentData": {
+        "type": "object",
+        "properties": {
+          "transaction": {
+            "$ref": "#/components/schemas/InventoryTransactionEntity"
+          },
+          "inventoryItem": {
+            "$ref": "#/components/schemas/InventoryItemEntity"
+          }
+        },
+        "required": [
+          "transaction",
+          "inventoryItem"
+        ]
+      },
+      "AdjustInventoryDto": {
+        "type": "object",
+        "properties": {
+          "inventoryItemId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000601",
+            "format": "uuid"
+          },
+          "delta": {
+            "type": "number",
+            "example": 5,
+            "description": "Piezas a sumar (positivo) o restar (negativo). No puede ser 0 ni dejar el stock en negativo."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "ADJUSTMENT",
+              "RECEPTION"
+            ],
+            "example": "RECEPTION",
+            "description": "ADJUSTMENT: corrección de stock (conteo, merma). RECEPTION: ingreso de mercadería."
+          },
+          "note": {
+            "type": "string",
+            "example": "Compra del día a proveedor",
+            "maxLength": 200,
+            "description": "Motivo del movimiento: queda en el libro y en la auditoría."
+          }
+        },
+        "required": [
+          "inventoryItemId",
+          "delta",
+          "reason",
+          "note"
+        ]
+      },
+      "DashboardShiftRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "startAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "startAt"
+        ]
+      },
+      "DashboardDelta": {
+        "type": "object",
+        "properties": {
+          "sold": {
+            "type": "number",
+            "example": 12,
+            "description": "Pieces sold since the shift opened (positive)"
+          },
+          "adjusted": {
+            "type": "number",
+            "example": -2,
+            "description": "Net of manual adjustments"
+          },
+          "received": {
+            "type": "number",
+            "example": 20,
+            "description": "Pieces received"
+          },
+          "net": {
+            "type": "number",
+            "example": 6,
+            "description": "Net change of the stock, every reason included"
+          }
+        },
+        "required": [
+          "sold",
+          "adjusted",
+          "received",
+          "net"
+        ]
+      },
+      "DashboardPiece": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "PECHO",
+              "ALA",
+              "PIERNA",
+              "ENTREPIERNA",
+              "BEBIDA",
+              "INSUMO"
+            ],
+            "example": "PECHO"
+          },
+          "items": {
+            "type": "number",
+            "example": 1,
+            "description": "Active inventory items of this type"
+          },
+          "currentStock": {
+            "type": "number",
+            "example": 40,
+            "description": "Cooked stock right now"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/DashboardDelta"
+          }
+        },
+        "required": [
+          "type",
+          "items",
+          "currentStock",
+          "delta"
+        ]
+      },
+      "InventoryDashboardData": {
+        "type": "object",
+        "properties": {
+          "shift": {
+            "nullable": true,
+            "description": "Oldest OPEN shift of the scope: the delta counts from its start. null when no shift is open (every delta is 0).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DashboardShiftRef"
+              }
+            ]
+          },
+          "pieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardPiece"
+            }
+          }
+        },
+        "required": [
+          "shift",
+          "pieces"
+        ]
       }
     }
   }

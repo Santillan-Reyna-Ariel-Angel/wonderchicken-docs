@@ -13933,6 +13933,628 @@
           "protocolProfileBehavior": {
             "disableBodyPruning": true
           }
+        },
+        {
+          "name": "Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría.",
+          "request": {
+            "name": "Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "adjust"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Ajuste de inventario registrado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Ajuste de inventario registrado correctamente\",\n  \"data\": {\n    \"transaction\": {\n      \"id\": \"01900000-0000-7000-8000-000000000a01\",\n      \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n      \"delta\": 5,\n      \"reason\": \"RECEPTION\",\n      \"note\": \"Compra del día a proveedor\",\n      \"referenceId\": null,\n      \"timestamp\": \"2026-05-01T12:00:00.000Z\",\n      \"user\": {\n        \"id\": \"01900000-0000-7000-8000-000000000101\",\n        \"firstName\": \"Jhonny\",\n        \"lastName\": \"Hurtado Zardan\"\n      }\n    },\n    \"inventoryItem\": {\n      \"id\": \"01900000-0000-7000-8000-000000000601\",\n      \"productCode\": \"PRESA-PECHO\",\n      \"name\": \"Presa de pecho\",\n      \"unit\": \"PRESA\",\n      \"type\": \"PECHO\",\n      \"currentStock\": 40,\n      \"unitMeasure\": \"250 g\",\n      \"salePrice\": \"12\",\n      \"active\": true,\n      \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Ítem de inventario no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Ítem de inventario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INVENTORY_ITEM_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Stock insuficiente: el ajuste dejaría el stock en negativo",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Stock insuficiente: el ajuste dejaría el stock en negativo\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INSUFFICIENT_STOCK\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN | COOK).",
+          "request": {
+            "name": "Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN | COOK).",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "dashboard"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Dashboard de inventario obtenido correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Dashboard de inventario obtenido correctamente\",\n  \"data\": {\n    \"shift\": {\n      \"id\": \"01900000-0000-7000-8000-000000000801\",\n      \"startAt\": \"2026-05-01T12:00:00.000Z\"\n    },\n    \"pieces\": [\n      {\n        \"type\": \"PECHO\",\n        \"items\": 1,\n        \"currentStock\": 40,\n        \"delta\": {\n          \"sold\": 12,\n          \"adjusted\": -2,\n          \"received\": 20,\n          \"net\": 6\n        }\n      },\n      {\n        \"type\": \"PECHO\",\n        \"items\": 1,\n        \"currentStock\": 40,\n        \"delta\": {\n          \"sold\": 12,\n          \"adjusted\": -2,\n          \"received\": 20,\n          \"net\": 6\n        }\n      }\n    ]\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
         }
       ],
       "event": []
