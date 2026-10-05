@@ -146,6 +146,8 @@ Actualmente tienes:
 
 ### 2. Unificación de comando de arranque
 
+> ⚠️ **Actualizado 2026-10-05 — este esquema se abandonó.** Poner `sync-docs` dentro de `start:dev` frenaba el arranque y generaba un commit de merge en cada pull. Además `git subtree pull` **exige todo el árbol de trabajo limpio** (no solo `docs/`): aborta con `working tree has modifications` apenas hay un archivo modificado. Hoy `start:dev` **no** sincroniza docs en ninguno de los dos proyectos: solo **avisa** si hay novedades (`pnpm docs:check`, script `scripts/docs-subtree.js`, igual en ambos repos); se sincroniza a mano con `pnpm docs:pull` (traer) y `pnpm docs:push` (subir). Ver `docs/backend/sincronizar-swagger-postman.md` §5. El bloque que sigue queda solo como historial.
+
 Para que ambos proyectos usen el mismo comando (`start:dev`), debes redefinir los scripts así:
 
 **Backend (`nest`)**
@@ -196,8 +198,8 @@ Ejemplo cron (cada 5 minutos):
 ## ✅ Recomendación final
 
 - Usa **Git Subtree** si quieres que los archivos se vean en GitHub dentro de cada proyecto y evitar duplicación.
-- Define el mismo script `start:dev` en frontend y backend para unificar el flujo.
-- Automatiza la sincronización con `package.json` (cuando arrancas) o con cron/Task Scheduler (en segundo plano).
+- Define los mismos scripts `docs:pull` (traer), `docs:push` (subir) y `docs:check` (avisar) en frontend y backend; **no** los encadenes a `start:dev` (ver la nota de la sección 2).
+- No automatices el `git subtree pull` con cron/Task Scheduler ni al arrancar: aborta con el árbol sucio y crea commits de merge. Sincronizá a mano, con el árbol limpio, cuando haga falta.
 - Si prefieres simplicidad absoluta y aceptas el riesgo de conflictos, usa **robocopy/rsync**.
 - Si quieres historial centralizado y limpio, usa **Submodule**, pero recuerda que los archivos no se verán directamente en GitHub de frontend/backend.
 
