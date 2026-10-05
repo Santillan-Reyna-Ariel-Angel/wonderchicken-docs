@@ -9,11 +9,22 @@
 ## Índice
 
 **Material de origen**
+- [Datos del negocio](#datos-del-negocio)
 - [Citas textuales del documento](#citas-textuales-del-documento)
 - [Wonder Chicken — Menú (2026)](#wonder-chicken---menú-2026)
 - [Ejemplo de inventario diario](#ejemplo-de-inventario-diario)
 - [Ejemplo de comandas/tickets (sistema actual)](#ejemplo-de-comadastickets-impresas-por-el-sistema-actual-a-remplar)
 
+
+---
+
+## DATOS DEL NEGOCIO:
+
+- **Restaurante:** Wonder Chicken.
+- **Propietario (SUPER_ADMIN):** Erick Antonio Hurtado Zardan.
+- **NIT:** 5640971015.
+- **Casa matriz:** Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero).
+- **Teléfono:** 64-64864 · **Celular:** 64333477.
 
 ---
 

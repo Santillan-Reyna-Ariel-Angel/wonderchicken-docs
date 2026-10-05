@@ -913,7 +913,7 @@ Lo impone el backend. Si algo cae fuera del alcance del usuario responde **404**
     "user": {
       "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez",
       "email": "cajera1@gmail.com", "role": "CASHIER",
-      "branchId": "uuid-branch-1", "branchName": "Sucursal Principal"
+      "branchId": "uuid-branch-1", "branchName": "Casa Matriz"
     }
   }
 }
@@ -930,13 +930,13 @@ Lo impone el backend. Si algo cae fuera del alcance del usuario responde **404**
 Solo `SUPER_ADMIN`. Objeto `branch`:
 
 ```json
-{ "id": "uuid-branch-1", "name": "Sucursal Principal", "address": "Av. Principal #123, Ciudad", "phone": null, "active": true, "createdAt": "2026-05-01T12:00:00.000Z", "updatedAt": "2026-05-01T12:00:00.000Z" }
+{ "id": "uuid-branch-1", "name": "Casa Matriz", "address": "Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)", "phone": "64-64864 / 64333477", "active": true, "createdAt": "2026-05-01T12:00:00.000Z", "updatedAt": "2026-05-01T12:00:00.000Z" }
 ```
 
 **`GET /branches`** ✅ — `data: { branches, total }`, de la más reciente a la más antigua. Cada sucursal trae dos campos **derivados** (el schema no cambia): `cashRegistersCount` (cajas, activas o no) y `admin` (`{ id, firstName, lastName }` del ADMIN **activo más antiguo** de la sede, o `null` si no tiene).
 
 ```json
-{ "data": { "branches": [ { "id": "uuid-branch-1", "name": "Sucursal Principal", "address": "Av. Principal #123, Ciudad", "phone": null, "active": true, "createdAt": "…", "updatedAt": "…", "cashRegistersCount": 2, "admin": { "id": "uuid-user-admin", "firstName": "Jhonny", "lastName": "Hurtado Zardan" } } ], "total": 1 } }
+{ "data": { "branches": [ { "id": "uuid-branch-1", "name": "Casa Matriz", "address": "Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)", "phone": "64-64864 / 64333477", "active": true, "createdAt": "…", "updatedAt": "…", "cashRegistersCount": 2, "admin": { "id": "uuid-user-admin", "firstName": "Jhonny", "lastName": "Hurtado Zardan" } } ], "total": 1 } }
 ```
 
 **`POST /branches`** ✅ — `201 { branch }`.
