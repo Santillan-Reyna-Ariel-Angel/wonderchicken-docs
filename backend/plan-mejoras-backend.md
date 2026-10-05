@@ -275,3 +275,11 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 - **Excepción deliberada al alcance por sucursal:** el historial de pedidos de un cliente (`/customers/:id/orders`) trae los de **todas** las sucursales y es solo para ADMIN, porque el PDR §2.12 define la vista del administrador sobre el cliente como cross-sucursal. Cada pedido indica su sucursal.
 - Paginación común en `src/common/http/pagination-query.dto.ts` (`?page=&pageSize=`, máximo 100), reutilizable por las listas que vengan.
 - Los rechazos de `forbidNonWhitelisted` ("property x should not exist") ahora salen en español.
+
+### Después de la ejecución: ajuste y dashboard de inventario (cambio #15)
+
+- `POST /inventory/adjust`: movimiento manual con motivo (`ADJUSTMENT` o `RECEPTION`) y nota obligatoria; no deja el stock en negativo; stock, libro y auditoría en una transacción.
+- `GET /inventory/dashboard`: stock cocido por tipo de presa y variación desde la apertura del turno.
+- **Decisión de diseño tomada sin consulta y fácil de cambiar:** la ventana del delta empieza en el turno **abierto más antiguo** de la sucursal (no por cajera). Es una regla de lectura, así que cambiarla no toca datos.
+- **`PATCH /inventory/:id/sale-price` no se creó:** `PATCH /inventory/items/:id` ya acepta `salePrice`. Si el front prefiere una ruta propia, es un alias de una línea.
+- **Sigue pendiente (Sprint 2, fuera de #15):** que pagar un pedido descuente el inventario (`decrementForOrder`, la línea que la receta de `orders.create()` ya deja prevista), los consumos manuales y el ciclo crudo. Hasta entonces, `sold` del dashboard solo refleja lo que ya está en el libro.
