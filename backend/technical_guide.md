@@ -110,7 +110,7 @@ Mapa rápido (el detalle campo por campo, abajo):
 | `AuditLog` | Rastro inmutable de acciones críticas ([PDR §2.9](../business/pdr.md#29-auditoría)). |
 
 - **Branch** *(NUEVO - Multi-sucursal V1)*
-  - `id: UUID`, `name: string`, `address: string`, `active: boolean` *(sucursal activa/inactiva)*
+  - `id: UUID`, `name: string`, `address: string`, `phone: string?`, `active: boolean` *(teléfono de contacto opcional; sucursal activa/inactiva)*
   - `createdAt: datetime`, `updatedAt: datetime`
   - *Relaciones: `User.branchId` (nullable para SUPER_ADMIN), `Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` (required para entidades locales).*
 
@@ -448,13 +448,23 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role, branchId }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
 - `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
 - `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (firstName, lastName, email, phone, ci, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El CI viaja solo en alta/edición y se guarda hasheado como `passwordHash` (bcryptjs, §5.2)
-- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address }`, `active` por defecto `true`. Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
-- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `active`
-- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`)
+- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address, phone? }`, `active` por defecto `true`. `phone` es opcional y se persiste como string libre (sin validación de formato en V1). Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
+- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `phone`, `active`
+- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address?, phone? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`). Al menos un campo debe estar presente.
 - `PATCH /api/v1/branches/{id}/toggle-active` — **alternar** el estado de una sucursal (**solo SUPER_ADMIN**): si está `active: true` la desactiva (`active: false`) y si está inactiva la reactiva (`active: true`). Invierte el estado actual sin body. No borra datos; las entidades locales conservan su `branchId`
 - `POST /api/v1/products` — crear producto
-- `GET /api/v1/products` — listar productos
+- `GET /api/v1/products` — listar productos (`ADMIN` ve todos; `CASHIER` solo `active` + `isSellable`, que es lo que consume el POS)
+- `GET /api/v1/products/{id}` — obtener producto con sus variantes
+- `PATCH /api/v1/products/{id}` — editar producto (`name`, `basePrice`, `category`, `description`, `isSellable`, `isInventoryItem`). **No** cambia `active` — la baja va por `toggle-active`. No acepta precio del front sin revalidar contra el catálogo (§5.0 princ. 3)
+- `PATCH /api/v1/products/{id}/toggle-active` — **alternar** `active` (admin): retira el producto del POS sin tocar las órdenes ya creadas (esas conservan su `snapshot`). Mismo patrón que branches/users/customers
 - `POST /api/v1/variants` — crear variante
+- `GET /api/v1/variants` — listar variantes (`?productId=` para filtrar)
+- `PATCH /api/v1/variants/{id}` — editar variante (`name`, `components`, `isDefault`). No cambia `active`
+- `PATCH /api/v1/variants/{id}/toggle-active` — alternar `active` (admin)
+- `POST /api/v1/cash-registers` — crear caja (**`ADMIN`**): `{ name }`. El `branchId` **se deriva del actor** (§5.0 princ. 1) — la caja pertenece a la sucursal del admin que la crea; no se acepta `branchId` en el body. `name` es único por sucursal (`@@unique([branchId, name])`): duplicado → `CASH_REGISTER_ALREADY_EXISTS`. Es **prerrequisito directo** de `POST /shifts/open`
+- `GET /api/v1/cash-registers` — listar cajas de la sucursal del actor (incluye inactivas; la validación de pertenencia/actividad la hace `shifts/open`)
+- `PATCH /api/v1/cash-registers/{id}` — editar caja (`name`). No cambia `active`
+- `PATCH /api/v1/cash-registers/{id}/toggle-active` — alternar `active` (admin)
 - `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR) con **N ítems** (`productId` + `quantity`; sin `customPieces`). Cada ítem acepta `discountId?` opcional: el backend valida (disponibilidad + autorización — `DISCOUNT_NOT_AVAILABLE` / `DISCOUNT_NOT_AUTHORIZED`), congela el snapshot y deriva `totalPrice` y `total` — **una sola llamada y transacción** (§5.0 princ. 6; el front NO manda precios ni montos). Request/response y la cuenta completa en [§6.3](#63-ordercreateresponse-mesa-pagado-con-sustitución) / [§6.6](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada).
   > **No existe endpoint separado para aplicar descuentos.** Descuento post-creación: sin soporte en V1 (sin caso real) — `pendingPayment` sin pagar → cancelar y recrear; pagada → anulación FR-011b.
 - `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR): ítems con `customPieces`, extras/bebidas opcionales, **precio unitario confirmado** por la cajera y `discountId?` opcional. El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `pos/context`; se persiste el confirmado, nunca la sugerencia (§2.10). Endpoint **separado** para DTOs y validaciones limpias por flujo. Payload en [§6.5](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
@@ -472,6 +482,9 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `PATCH /api/v1/customers/{id}` — editar datos personales del cliente
 - `PATCH /api/v1/customers/{id}/toggle-active` — activar/desactivar cliente (admin)
 - `GET /api/v1/customers/{id}/orders` — historial de pedidos del cliente (cross-sucursal)
+- `POST /api/v1/inventory/items` — **crear ítem de inventario** (admin): `{ productCode, name, unit, type, unitMeasure?, salePrice?, initialStock? }`. El `branchId` **se deriva del actor** (§5.0 princ. 1) — el inventario es local por sucursal; no se acepta `branchId` en el body. `productCode` es único **por sucursal** (`@@unique([branchId, productCode])`): duplicado → `INVENTORY_ITEM_CODE_ALREADY_EXISTS`. `salePrice` es **solo VENTA** y aplica únicamente a `type ∈ {PECHO, ALA, PIERNA, ENTREPIERNA}` (alimenta el precio sugerido custom, §2.10); se rechaza en `INSUMO`. **`initialStock > 0` crea la `InventoryTransaction` con `reason: RECEPTION` en la MISMA transacción** que el alta (delta = `initialStock`): `currentStock` es un cache del libro de transacciones y nunca se escribe sin rastro, así el dashboard/delta del turno se calcula siempre desde las transacciones. Cargar el stock inicial por `/adjust` aparte obligaría a dos llamadas y dejaría el ítem existiendo en 0 sin que conste el ingreso
+- `GET /api/v1/inventory/items` — listar ítems del inventario de la sucursal del actor (`ADMIN`, `COOK`) con filtros `?type=&active=&search=`. Alimenta el selector de insumos del formulario de consumos manuales (FR-017) y la vista de stock del cocinero (FR-008)
+- `PATCH /api/v1/inventory/items/{id}` — editar **solo** `name`, `unit`, `unitMeasure`, `salePrice` (admin). **`currentStock` NO es editable por acá**: cualquier movimiento de stock pasa por `POST /inventory/adjust` con motivo, que es la vía auditable y la única que escribe en el libro de transacciones
 - `POST /api/v1/inventory/adjust` — ajustar inventario (admin, con motivo)
 - `GET /api/v1/inventory/dashboard` — **dashboard de stock cocido** por tipo de presa + delta del turno (vendido/ajustado desde la apertura) — FR-006
 - `POST /api/v1/inventory/manual-consumption` — registrar consumos manuales por turno
@@ -480,9 +493,10 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 - `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
 - `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — [PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). Request en [§6.10](#610-cashopenresponse-éxito)
 - `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo)). Además ejecuta el **cierre administrativo** de [PDR §4](../business/pdr.md#4-máquina-de-estados-de-pedidos): las órdenes `delivered` del turno transicionan a `closed` en la misma operación (extingue también las `DiscountAuthorization` y la sesión de cajera del turno)
-- `GET /api/v1/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
-- `POST /api/v1/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
-- `PATCH /api/v1/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
+- `GET /api/v1/shifts/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra)
+- `POST /api/v1/shifts/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
+- `PATCH /api/v1/shifts/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
+  > **Nota de ruta:** el catálogo de períodos se expone **anidado bajo `/shifts`** (y no top-level como `/shift-periods`) para mantenerlo junto al recurso que lo consume — el `periodId` que declara `POST /shifts/open`. Es la ruta ya implementada en `src/shifts/shifts.controller.ts`; el código manda sobre la doc (regla de precedencia del [implementation guide](implementation_guide.md)). El módulo nuevo de `cash-registers` sí va **top-level** (`/cash-registers`), por ser un recurso propio de la sucursal y no parte del turno.
 - `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009); error claro sin turno abierto. Aparece en arqueo y reportes; no se audita (§2.9). Sin GET de listado en V1 (se agrega con un caso real). Request en [§6.13](#613-expensecreateresponse-gasto-desde-caja--fr-009)
 - `POST /api/v1/vouchers` — crear vale ([§6.7](#67-vouchercreateresponse))
 - `GET /api/v1/vouchers` — listar vales con filtros
@@ -595,8 +609,10 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `POST /auth/logout` | cualquier rol autenticado |
 | `POST /users`, `GET /users`, `PATCH /users/{id}`, `PATCH /users/{id}/toggle-active` | `ADMIN` |
 | `POST /branches`, `GET /branches`, `PATCH /branches/{id}`, `PATCH /branches/{id}/toggle-active` | **`SUPER_ADMIN`** *(gestión de sucursales — FR-000; el `RolesGuard` deja pasar siempre al SUPER_ADMIN)* |
-| `POST /products`, `POST /variants` | `ADMIN` |
-| `GET /products` | `ADMIN`, `CASHIER` *(el POS lo consume)* |
+| `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `PATCH /products/{id}/toggle-active` | `ADMIN` |
+| `POST /variants`, `GET /variants`, `PATCH /variants/{id}`, `PATCH /variants/{id}/toggle-active` | `ADMIN` |
+| `GET /products` *(lectura POS)* | `ADMIN`, `CASHIER` *(el POS lo consume)* |
+| `POST /cash-registers`, `GET /cash-registers`, `PATCH /cash-registers/{id}`, `PATCH /cash-registers/{id}/toggle-active` | `ADMIN` *(caja local de su sucursal; el `SUPER_ADMIN` opera global)* |
 | `POST /orders`, `POST /orders/custom` *(incluye descuentos por ítem vía `discountId`)* | `CASHIER` |
 | `POST /orders/{id}/pay`, `POST /orders/{id}/cancel` | `CASHIER` |
 | `GET /pos/context` | `CASHIER` |
@@ -606,14 +622,14 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 | `GET /customers/by-ci/{ci}`, `GET /customers/by-nit/{nit}`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
 | `PATCH /customers/{id}/toggle-active` | `ADMIN` |
 | `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
-| `GET /shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
-| `POST /shift-periods`, `PATCH /shift-periods/{id}` | `ADMIN` |
+| `GET /shifts/shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
+| `POST /shifts/shift-periods`, `PATCH /shifts/shift-periods/{id}` | `ADMIN` |
 | `POST /expenses` | `CASHIER` |
 | `POST /vouchers` | `CASHIER` |
 | `GET /vouchers` | `CASHIER`, `ADMIN` |
 | `POST /print/invoice`, `GET /print/invoice/{id}/pdf` | `CASHIER` |
-| `POST /inventory/adjust` | `ADMIN` |
-| `PATCH /inventory/{id}/sale-price` | `ADMIN` |
+| `POST /inventory/items`, `PATCH /inventory/items/{id}`, `POST /inventory/adjust`, `PATCH /inventory/{id}/sale-price` | `ADMIN` |
+| `GET /inventory/items` *(listar insumos / stock)* | `ADMIN`, `COOK` *(FR-008: el cocinero ve stock e insumos)* |
 | `POST /inventory/manual-consumption` | `COOK` |
 | `POST/GET /inventory/shift-chicken-log[...]` | `COOK` |
 | `POST /discounts`, `PATCH /discounts/{id}` | `ADMIN` |
@@ -1316,7 +1332,7 @@ Request / response (resumen):
 ```
 > Día sin turnos en el período pedido → `shifts: []`, `rows: []` (no es error). `/month` incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que no aparecen en `/shift`. Un **año** completo no se consulta por acá: es un export CSV de reportes (V2).
 
-**`GET /api/v1/shift-periods`** — catálogo para la pantalla de apertura y el admin:
+**`GET /api/v1/shifts/shift-periods`** — catálogo para la pantalla de apertura y el admin:
 ```json
 { "isSuccess": true, "message": "Períodos de turno",
   "data": [
@@ -1365,8 +1381,14 @@ El LLM debe generar `openapi: 3.0.3` con:
 15. Usuario logueado como CASHIER intenta logear como DISPATCHER en mismo turno → falla.
 16. Registro de gastos (FR-009): `POST /expenses` con `{ description, amount, paidBy }` → el gasto queda ligado al turno activo de la cajera (`shiftId` derivado, no enviado) y aparece en el arqueo del cierre bajo `totals.expenses`; intentar registrar sin turno abierto → error claro; el gasto NO genera `AuditLog` (no es acción crítica §2.9).
 17. Consulta de auditoría por turno (FK directa): generar ventas en turno Mañana y turno Noche del mismo día → `POST /audit-logs/shift` con `{ date, periodId: noche }` devuelve **solo** los logs con `shiftId` de ese turno (los de la mañana no aparecen), orden `timestamp DESC`, con `user`, `period` y `shifts` (con su `cashRegister`) resueltos; con **dos cajas** abiertas en el mismo período, agregar `cashRegisterId` al body separa los logs por caja y omitirlo devuelve ambas; día sin turnos → `shifts: []`, `rows: []` (no error); la respuesta NO tiene `page`/`pageSize` (sin paginación). Un `ADJUST_INVENTORY` del admin (sin turno, `shiftId = null`) NO aparece en `/shift` pero SÍ en `POST /audit-logs/month`. Con token de CASHIER → **403**. La consulta en sí NO crea filas de audit.
-17b. Catálogo de períodos sin migración: el admin crea el período "Tarde" vía `POST /shift-periods` → aparece en `GET /shift-periods` y en `pos/context.shiftPeriods` → una cajera abre turno con ese `periodId` → `POST /audit-logs/shift` con ese período lo consulta normalmente. Todo sin tocar schema ni código. Los horarios de referencia son informativos: editarlos (`PATCH /shift-periods/{id}`) no reclasifica ningún turno existente.
+17b. Catálogo de períodos sin migración: el admin crea el período "Tarde" vía `POST /shifts/shift-periods` → aparece en `GET /shifts/shift-periods` y en `pos/context.shiftPeriods` → una cajera abre turno con ese `periodId` → `POST /audit-logs/shift` con ese período lo consulta normalmente. Todo sin tocar schema ni código. Los horarios de referencia son informativos: editarlos (`PATCH /shifts/shift-periods/{id}`) no reclasifica ningún turno existente. Desactivar el período (`active: false`) lo retira de las opciones de apertura sin tocar los turnos históricos que ya lo referencian.
 17c. El período se declara, no se infiere: abrir un turno a las 20:00 declarando `periodId = Mañana` → el sistema lo acepta (el reloj NO clasifica); `shifts/open` sin `periodId` → `VALIDATION_ERROR`.
+18. **Maestros creados por API sin seeder (criterio de aceptación del flujo §9)**: con la base vacía, `SUPER_ADMIN` crea sucursal y usuarios → `ADMIN` crea períodos, cajas, catálogo e ítems de inventario → `CASHIER` crea cliente, abre turno y registra venta pagada. Ningún paso requiere `pnpm seed` ni SQL directo. Si alguno lo necesita, es que falta un endpoint de alta.
+19. **Caja por sucursal**: `POST /cash-registers` con `name` repetido en la misma sucursal → `400 CASH_REGISTER_ALREADY_EXISTS`; el mismo `name` en **otra** sucursal → `201` (unicidad `@@unique([branchId, name])`); `PATCH /cash-registers/{id}/toggle-active` desactiva y reactiva sin borrar los turnos que referencian la caja; `POST /shifts/open` con caja inexistente, de otra sucursal o inactiva → `400` sin crear turno. `CASHIER` que intente `POST /cash-registers` → `403`.
+20. **Stock inicial con rastro**: `POST /inventory/items` con `initialStock: 40` para una presa → el ítem queda con `currentStock: 40` **y** existe una `InventoryTransaction` con `delta: 40`, `reason: RECEPTION`, `note: "Carga inicial de inventario"` ligada a ese ítem, creada en la MISMA transacción del alta (si el alta falla, no hay transacción). `productCode` repetido en la misma sucursal → `400 INVENTORY_ITEM_CODE_ALREADY_EXISTS`; en otra sucursal → `201`. `salePrice` en un ítem de tipo `INSUMO` → `400` (solo aplica a presas); `initialStock` negativo → `400`. `PATCH /inventory/items/{id}` con `currentStock` en el body → `400 VALIDATION_ERROR` (el stock solo se mueve por el alta o por `/inventory/adjust`, que exige motivo). `GET /inventory/items` responde `200` para `ADMIN` y para `COOK` (FR-008/FR-017) y `403` para `CASHIER`.
+21. **Baja de catálogo sin perder historial**: `PATCH /products/{id}/toggle-active` desactiva un producto → deja de aparecer en `GET /products` con token de `CASHIER` y en `GET /pos/context`; las órdenes históricas que lo consumieron se conservan con su `unitPrice` y su `snapshot` intactos; `PATCH /products/{id}` para cambiar el `basePrice` NO recalcula los totales ya cobrados. Editar con un `name` duplicado → `400 DUPLICATE_PRODUCT_NAME`. Mismo criterio para variantes (`PATCH /variants/{id}/toggle-active`): la variante desaparece del POS, el historial queda.
+22. **Alta de cliente en el POS**: `POST /customers` con `ci`, nombres y `sex` válidos → `201` con el cliente disponible de inmediato en `GET /customers/by-ci/{ci}` y `by-nit/{nit}`; `ci` repetido (incluso desde otra sucursal, porque el `Customer` es global) → `400 CUSTOMER_CI_ALREADY_EXISTS`; `nit` repetido → `400 CUSTOMER_NIT_ALREADY_EXISTS`; `sex` fuera del enum o `ci` con letras → `400 VALIDATION_ERROR`; `birthDate` válida (`YYYY-MM-DD`) se persiste, inválida → `400`. La respuesta **nunca** expone `passwordHash`. `DISPATCHER` y `COOK` attempting `POST /customers` → `403`.
+23. **Cliente en la orden (identidad ≠ copia)**: `POST /orders` con `customerId` válido y **sin** `customerName` → la orden persiste el `customerName` resuelto desde la base como snapshot; con `customerId` inexistente → `400 CUSTOMER_NOT_FOUND` **sin crear la orden**; con `customerId` de un cliente inactivo → `400 CUSTOMER_INACTIVE`; sin `customerId` → la orden queda como venta anónima "S/N" (`customerId: null`, `customerName: null`).
 
 ---
 

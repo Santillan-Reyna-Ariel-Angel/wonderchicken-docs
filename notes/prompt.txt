@@ -3,5 +3,3 @@ Quiero que luzca igual a la imagen que te pasare usando MUI.
 Quiero que seas riguroso(respeta) con los colores, estilos y funcioanlidad, para esto puedes revisar el proyecto de origen (D:\SISTEMAS\wonderchicken-prototype)
 Recuerda en tu memoria cual es el proyecto de origen (D:\SISTEMAS\wonderchicken-prototype)
 Para la busqueda de terminos dentro del proyecto puedes usar tgrep (es una skill o cli)
-
-3: Quisera que el proyecto tenga identidad por ello deberiamos usar los colores de wonder chicken: rojo(e31017/227-16-23), amarillo(e8fc21/232-252-33), naranja blanco y negro (revisa wonder-logo.png) aho tendras los colore.
