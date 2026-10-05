@@ -523,9 +523,9 @@
       },
       "item": [
         {
-          "name": "Crear usuario (admin)",
+          "name": "Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal.",
           "request": {
-            "name": "Crear usuario (admin)",
+            "name": "Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal.",
             "description": {},
             "url": {
               "path": [
@@ -623,7 +623,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal",
+              "name": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -727,7 +727,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -785,9 +785,9 @@
           }
         },
         {
-          "name": "Listar usuarios con filtro por rol (admin)",
+          "name": "Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal.",
           "request": {
-            "name": "Listar usuarios con filtro por rol (admin)",
+            "name": "Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal.",
             "description": {},
             "url": {
               "path": [
@@ -1531,7 +1531,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1649,6 +1649,67 @@
                 }
               ],
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Usuario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000101",
+                      "key": "id",
+                      "description": "(Required) UUID del usuario (admin1@gmail.com del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Jhonny\",\n  \"lastName\": \"Hurtado Zardan\",\n  \"email\": \"admin1@gmail.com\",\n  \"phone\": \"+591 70000000\",\n  \"ci\": \"ADMIN-001\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_HAS_OPEN_SHIFT\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -1866,7 +1927,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para cambiar el estado de un usuario con ese rol",
+              "name": "Acceso denegado: privilegios insuficientes",
               "originalRequest": {
                 "url": {
                   "path": [

@@ -307,7 +307,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal",
+            "description": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal · La sucursal indicada no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -378,6 +378,18 @@
                         "details": []
                       }
                     }
+                  },
+                  "BRANCH_REFERENCE_NOT_FOUND": {
+                    "summary": "BRANCH_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La sucursal indicada no existe",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -432,7 +444,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
@@ -450,6 +462,30 @@
                         "details": []
                       }
                     }
+                  },
+                  "ROLE_NOT_ALLOWED": {
+                    "summary": "ROLE_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos para asignar ese rol",
+                      "data": null,
+                      "error": {
+                        "code": "ROLE_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -461,7 +497,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear usuario (admin)",
+        "summary": "Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal.",
         "tags": [
           "users"
         ]
@@ -645,7 +681,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar usuarios con filtro por rol (admin)",
+        "summary": "Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal.",
         "tags": [
           "users"
         ]
@@ -1035,7 +1071,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
@@ -1050,6 +1086,30 @@
                       "data": null,
                       "error": {
                         "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  },
+                  "ROLE_NOT_ALLOWED": {
+                    "summary": "ROLE_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos para asignar ese rol",
+                      "data": null,
+                      "error": {
+                        "code": "ROLE_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
                         "details": []
                       }
                     }
@@ -1074,6 +1134,30 @@
                       "data": null,
                       "error": {
                         "code": "USER_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "USER_HAS_OPEN_SHIFT": {
+                    "summary": "USER_HAS_OPEN_SHIFT",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_HAS_OPEN_SHIFT",
                         "details": []
                       }
                     }
@@ -1226,7 +1310,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos para cambiar el estado de un usuario con ese rol",
+            "description": "Acceso denegado: privilegios insuficientes",
             "content": {
               "application/json": {
                 "schema": {
@@ -1241,18 +1325,6 @@
                       "data": null,
                       "error": {
                         "code": "FORBIDDEN",
-                        "details": []
-                      }
-                    }
-                  },
-                  "USER_TOGGLE_NOT_ALLOWED": {
-                    "summary": "USER_TOGGLE_NOT_ALLOWED",
-                    "value": {
-                      "isSuccess": false,
-                      "message": "No tiene permisos para cambiar el estado de un usuario con ese rol",
-                      "data": null,
-                      "error": {
-                        "code": "USER_TOGGLE_NOT_ALLOWED",
                         "details": []
                       }
                     }
@@ -8028,7 +8100,7 @@
           },
           "branchId": {
             "type": "string",
-            "description": "Sucursal asignada (null para SUPER_ADMIN)",
+            "description": "Sucursal asignada. Obligatoria para SUPER_ADMIN salvo que cree otro SUPER_ADMIN. Un ADMIN no la manda: se usa la suya (y si manda otra, 403).",
             "example": "01900000-0000-7000-8000-000000000001"
           }
         },
@@ -8057,11 +8129,14 @@
           },
           "phone": {
             "type": "string",
-            "example": "+591 70000000"
+            "nullable": true,
+            "example": "+591 70000000",
+            "description": "null borra el teléfono"
           },
           "ci": {
             "type": "string",
-            "example": "ADMIN-001"
+            "example": "ADMIN-001",
+            "description": "También es la contraseña de login: se actualizan juntas."
           },
           "role": {
             "type": "string",
@@ -8076,7 +8151,9 @@
           },
           "branchId": {
             "type": "string",
-            "description": "Sucursal asignada (null para SUPER_ADMIN)",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Sucursal asignada. Cambiarla (traslado) es solo de SUPER_ADMIN; null solo vale para el rol SUPER_ADMIN.",
             "example": "01900000-0000-7000-8000-000000000001"
           }
         }
