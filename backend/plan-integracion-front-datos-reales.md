@@ -1,140 +1,149 @@
 # Plan — Integración Front ↔ Back con datos reales
 
 > **Actualizado:** 2026-10-05
-> **Objetivo:** que el front muestre **datos reales del API en la mayor parte de sus pantallas**, **sin modificar los componentes ni estilos ya definidos**, y que todo el API se pueda probar desde Postman sin armar datos a mano.
-> **Dónde se trabaja:** todos los cambios de backend de este plan van en **esta misma rama** (`feature_sprint1_integrate_front`), sin rama aparte. El front, en `feature-test-cruds` (repo `wonderchicken-front`), creada desde `feature_sprint1_prototype_ui`; su plan está en [../frontend/plan-front-cruds-feature-test-cruds.md](../frontend/plan-front-cruds-feature-test-cruds.md).
-> **Estado (2026-10-05):** ✅ hecho: CRUDs de maestros, ejemplos de Swagger alineados con el seed, login por rol, sincronización con Postman y **todos los cambios de backend de §4 (#1 a #15; #16 postergado al final)**, más la mejora transversal del backend ([plan-mejoras-backend.md](plan-mejoras-backend.md)) · 🔲 pendiente: ejecutar la colección dentro de Postman (§2.3) y **el front (§5–6)**. Antes de tocar el front, leer [plan-mejoras-backend.md §8](plan-mejoras-backend.md#8-qué-cambia-para-el-front-checklist-antes-de-tocarlo); lo que quedó diferido está en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
-> **Convención:** ✅ verificado leyendo código/docs · ⚠️ no verificado todavía.
-> **Fuente de verdad de contratos:** [technical_guide.md](technical_guide.md) §5 e [implementation_guide.md](implementation_guide.md). Si algo de acá las contradice, mandan las guías (y se actualizan junto con el código).
+> **Objetivo:** que el front muestre **datos reales del API en la mayor parte de sus pantallas**, **sin eliminar componentes ni cambiar cómo se ven**, y que todo el API se pueda probar desde Postman sin armar datos a mano.
+> **Fuentes de verdad:** el negocio, en el [PDR](../business/pdr.md); el contrato del API, en [technical_guide.md](technical_guide.md) (§5 endpoints, §6 request/response, §5.5 errores); el orden y lo que falta, en [implementation_guide.md](implementation_guide.md). Este plan solo dice **cómo conecta el front** con ellos: si algo de acá los contradice, mandan las guías y esto se corrige.
+> **Principio:** el backend manda y el front renderiza. El front no filtra por seguridad, no calcula precios ni totales y no inventa reglas: muestra lo que devuelve el API.
+> **Convención:** ✅ hecho y verificado · 🔲 pendiente · `MOCK-ONLY` dato que el backend todavía no tiene y el front completa con un complemento falso.
 
 ---
 
-## 1. CRUDs que ya existen y se pueden probar
+## 1. Dónde estamos
 
-Base: `http://localhost:4000/api/v1` · Swagger: `/api/docs` · JSON: `/swagger.json`. El `RolesGuard` deja pasar siempre a `SUPER_ADMIN`, pero varios servicios locales le responden `400` porque no tiene sucursal (columna *Nota*).
+| | Estado |
+|---|---|
+| **Backend** | ✅ Sprint 0 y Sprint 1 completos; del Sprint 2, el CRUD de inventario, el ajuste manual y el dashboard; y la administración de clientes. 🔲 Falta lo de los Sprints 2 a 5 ([§3](#3-qué-falta-en-el-backend)). El contrato vigente de cada endpoint está en [technical_guide §5.1](technical_guide.md#51-endpoints-principales) y [§6](technical_guide.md#6-contratos-por-módulo-requestresponse). |
+| **API** | ✅ Respuestas, errores y alcance por rol y sucursal estandarizados ([technical_guide §5.2 a §5.6](technical_guide.md#52-autenticación-y-autorización)); Swagger y colección de Postman alineados con el seed. |
+| **Front** | 🔲 **Funciona 100 % con mocks**: no hay cliente HTTP, el login infiere el rol del email y el middleware solo entiende tokens demo. Repo `wonderchicken-front`, rama `feature_sprint1_prototype_ui`. |
 
-| Recurso | Endpoints | Roles (`@Roles`) | Alcance | Nota |
+**Ramas.** El backend trabaja en `feature_sprint1_integrate_front`. El front necesita una **rama nueva** desde `feature_sprint1_prototype_ui` (sugerida: `feature-test-cruds`; todavía no existe). La rama local `feature_sprint1_prototype_ui_integration_partial` ya trae cliente API y pantallas reales, pero **eliminó componentes** y por eso no sirve de base: se consulta solo como referencia de cómo mapear endpoints y **no se mergea**.
+
+---
+
+## 2. Lo que el front consume hoy
+
+### 2.1 Cómo conectarse
+
+- **Base del API:** `http://localhost:4000/api/v1`. Swagger en `/api/docs` y el documento crudo en `/swagger.json`.
+- **Datos de prueba:** `pnpm seed` (borra y siembra la base local). Usuarios: `superadmin@gmail.com`, `admin1@gmail.com`, `cajera1@gmail.com`, `despachadora1@gmail.com` y `cocinero1@gmail.com`, **todos con contraseña `password123`**. Los usuarios creados por `POST /users` entran con su CI como contraseña (mínimo 6 caracteres).
+- **Probar el API sin front:** la colección de Postman versionada (`docs/swagger-postman/`; un login por rol y ejemplos con los ids del seed), [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md); el recorrido por rol de [api-testing-guide.md](api-testing-guide.md); y `pnpm api:snapshot`, que ejecuta ~200 pasos y avisa de cualquier cambio de comportamiento.
+
+### 2.2 Contrato que el front debe respetar
+
+El detalle está en [technical_guide §5.3 a §5.6](technical_guide.md#53-estructura-de-respuesta-estándar). Lo que cambia cómo se escribe el front:
+
+- **Sobre de respuesta:** `{ isSuccess, message, data, error }`. El éxito trae `data` con una clave por entidad (`{ order }`) o por colección (`{ users, total }`).
+- **Errores:** `error.code` es un **código estable**, siempre un string del [catálogo](technical_guide.md#55-catálogo-de-códigos-de-error); `error.details` es **siempre un arreglo** `[{ field, message }]` (vacío si no corresponde a un campo; `field` marca el input). Se decide por `code`, nunca por el texto.
+- **Errores genéricos:** `BAD_REQUEST` (id con formato inválido), `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` e `INTERNAL_SERVER_ERROR`. Los mensajes de `BAD_REQUEST` y `NOT_FOUND`, y los de algunas reglas de validación poco comunes, llegan **en inglés**: el front muestra su propio texto en español para esos códigos.
+- **Sesión:** `401` con `TOKEN_REQUIRED`, `TOKEN_INVALID` (vencido o alterado) o `USER_INACTIVE` → volver al login. El token dura 2 h en `development` y `qa`, y 8 h en `production`; **no hay renovación** (aplazada). Rol y sucursal los lee el backend de la base en cada request: un cambio aplica al instante.
+- **Perfil para el header:** `GET /auth/me` (`{ user: { id, firstName, lastName, email, role, branchId, branchName } }`). No hace falta decodificar el JWT ni llamar a `GET /users/{id}`.
+- **Formatos:** enums en MAYÚSCULAS (`PREPARING`, `CASH`); los `Decimal` viajan como **string** (`"45"`) y los importes que el front envía van como número; fechas en ISO UTC; los `POST /orders/{id}/pay` y `/cancel` responden **201**.
+- **Paginación:** solo en la lista de clientes y en el historial de pedidos de un cliente (`?page=&pageSize=`, máximo 100); el resto de las listas no se pagina.
+- **Alcance:** el backend ya impone qué ve y qué hace cada rol ([technical_guide §5.6](technical_guide.md#56-alcance-por-rol-y-sucursal)). El front puede **ocultar** acciones como ayuda visual, pero no necesita filtrar usuarios por sucursal, limitar roles ni esconder toggles para que sea correcto. El `SUPER_ADMIN` no tiene sucursal: en cajas e inventario elige una con un selector (`?branchId=` en las listas, `branchId` en el body al crear).
+
+### 2.3 Swagger y Postman
+
+- `swagger.json` y la colección se **versionan** en `docs/swagger-postman/` y viajan al front por el subtree de `docs/`. El primero lo escribe la API en cada arranque con `APP_ENV=development`; la colección se genera de él con `pnpm postman:sync --no-push`. Son **deterministas** (sin ids, ejemplos fijos): en git solo cambian cuando cambia la API y entonces se commitean juntos.
+- **Por qué un script y no importar el Swagger directo:** un `swagger.json` no puede llevar los scripts de Postman (el conversor `openapi-to-postmanv2` no genera `event`/`prerequest`/`test`). `scripts/postman-sync.ts` convierte el Swagger, inyecta el script que guarda el token (en `bearerToken` y en la variable de su rol) y reemplaza la colección con `PUT /collections/{uid}`. El sync de Spec Hub no aplica: es manual y solo para colecciones generadas desde *Specs*.
+- **🔲 Sin verificar:** la subida real a Postman con una cuenta real, que el plan de Postman permita usar la API con la key, y la ejecución completa de la colección **dentro de Postman** (sin `400` por UUID ni `404` por ids inexistentes). La generación del archivo y el recorrido por la API sí están verificados.
+
+---
+
+## 3. Qué falta en el backend
+
+La lista completa, con su porqué y cuándo entra, es [implementation_guide §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas); el detalle por sprint, sus secciones 4 a 7. Para el front:
+
+| Sprint | Entrega del backend | Cambio en el front |
+|---|---|---|
+| **2 — Inventario + venta custom** | Descuento de inventario al pagar y su reversión; `POST /orders/custom`; consumos manuales y ciclo crudo; `piecePrices` en `GET /pos/context` | Venta custom con precio sugerido calculado en el cliente (`CustomItemModal`); formulario de consumos manuales y ciclo crudo del cocinero; el stock y el dashboard reflejan las ventas; anulación de pedidos pagados. |
+| **3 — Caja completa + descuentos** | `POST /shifts/close`; gastos; vales; descuentos (catálogo y autorización); reportes con CSV; `discounts` en `GET /pos/context` | Cierre de turno con arqueo (`ShiftSummaryScreen`); gastos y vales; catálogo de descuentos y autorización por turno; descuento por ítem en el POS; reportes (`ShiftControlScreen`) con exportación CSV. |
+| **4 — Cliente, vistas públicas, impresión** | `PATCH /orders/{id}/status`; `GET /public/orders/{token}` y `/public/ready-orders`; impresión de factura y PDF; auditoría de clientes | Estados `READY` y `DELIVERED` reales en el panel de despacho (`KitchenScreen`); `PublicOrderScreen` y pantalla de turnos de banco; impresión de ticket y factura. |
+| **5 — Auditoría + hardening** | `POST /audit-logs/shift` y `/month`; sesión única por turno | Pantalla de auditoría por turno y mes; manejo del error de sesión duplicada en el login; retirar los últimos `MOCK-ONLY` que ya tengan campo en el backend. |
+| **Al final** | `GET /reports/branches-summary` (KPIs globales del `SUPER_ADMIN`) y token de renovación | KPIs del dashboard global (hasta entonces siguen locales). El **dashboard con datos resumen es lo último que se hace en la aplicación**. |
+
+**Regla transversal:** cuando el backend incorpora un campo que hoy es `MOCK-ONLY`, se reemplaza el complemento falso por el dato real en el mapper de ese feature; los componentes no se tocan.
+
+---
+
+## 4. Plan del front
+
+### 4.1 Decisiones
+
+1. Incluir una **base real mínima**: cliente HTTP, login real y middleware con JWT.
+2. El `SUPER_ADMIN` gestiona Sucursales, Usuarios, Catálogo y Períodos; el `ADMIN`, además, cajas, inventario y clientes de su sucursal.
+3. **Convertir** las pantallas mock existentes; crear pantallas nuevas solo para cajas, períodos de turno e inventario.
+4. Editor de variantes simplificado sobre `components`, sin precio de sustitución (la sustitución nunca cambia el precio) y sin temperatura de bebida (es un comentario del pedido).
+5. **Restricción que prevalece sobre el resto:** cubrir con el API real todo lo posible y completar con datos falsos lo que el backend no tiene. **No eliminar componentes ni cambiar su aspecto**: columnas, campos, botones y modales actuales se conservan.
+
+Sin tests hasta cerrar V1 ([AGENTS.md](../../AGENTS.md)): se verifica a mano con el recorrido de [§4.7](#47-verificación).
+
+### 4.2 Estrategia híbrida (API real + complemento falso)
+
+- Los tipos de dominio (`lib/domain/types.ts`: `Branch`, `Operator`, `Product`, `Customer`…) y los componentes que los consumen **no cambian**. Cada `features/<x>/api/` suma un **mapper** `ApiX → X`: toma los campos reales y completa los faltantes desde un **complemento local** (`features/<x>/mock-extras.ts`).
+- El complemento se genera de forma determinista a partir del `id` (código de sede `S-01`, ciudad, SKU `P-001`, turno asignado, último acceso…) y se persiste en `localStorage` por `id` (Zustand `persist`) para que sea estable y editable en los formularios existentes.
+- Al guardar, el store separa el payload: lo que el backend soporta va por API; el resto queda solo en el complemento.
+- Todo campo falso lleva el comentario `// MOCK-ONLY` y se lista en `lib/mock-only-fields.ts` (registro único) para reemplazarlo cuando el backend lo soporte.
+- Los botones sin endpoint (p. ej. resetear la clave) siguen visibles y muestran un `toast.info` "Disponible próximamente".
+- Las pantallas **nuevas** sin componente previo (cajas, inventario) solo hacen lo que el backend permite; no se inventan acciones.
+
+**Lo que sigue siendo `MOCK-ONLY`** (no hay campo ni endpoint, ni se planifican para V1): código y ciudad de la sucursal; último acceso y turno asignado de un usuario; SKU e imagen del producto y las reglas extra de variante (`ProductRulesModal`: piezas permitidas); y los KPIs de los dashboards (hasta `branches-summary`, ver [§3](#3-qué-falta-en-el-backend)).
+
+### 4.3 Paso 1 — Base de API (`src/lib/http/`, `src/config/api.ts`, `next.config.ts`)
+
+- **`config/api.ts`:** `API_PREFIX = process.env.NEXT_PUBLIC_API_PREFIX ?? '/api/v1'`.
+- **`next.config.ts`:** `rewrites()` de `/api/v1/:path*` hacia `${API_PROXY_TARGET ?? 'http://localhost:4000'}/api/v1/:path*`. El navegador llama al mismo origen (sin CORS) y en `qa` o `production` no hace falta definir `CORS_ORIGINS` en el backend.
+- **`lib/http/api-error.ts`:** `ApiError { status, code, message, details }` y `getErrorMessage(err)` con un mapa `error.code` → español para **todo el catálogo** ([technical_guide §5.5](technical_guide.md#55-catálogo-de-códigos-de-error)), más los códigos genéricos. Es la **única** fuente de textos de error: con un `code` desconocido cae al `message` del backend. `details` (`[{ field, message }]`) se usa para marcar el input de cada formulario, además de la validación Zod previa.
+- **`lib/http/http-client.ts`:** `apiRequest<T>(method, path, { body, query })` con `Authorization: Bearer` desde `useAuthStore.getState().user?.token`; desempaqueta `{ isSuccess, message, data, error }` y lanza `ApiError`; ante `TOKEN_REQUIRED`, `TOKEN_INVALID` o `USER_INACTIVE` → `logout()` y redirección a `/login`.
+- **Login real** (`features/auth/api/auth.api.ts`, `LoginScreen.tsx`): `POST /auth/login` → `accessToken`; luego `GET /auth/me` para el nombre, el rol, la sucursal y `branchName` del header. Mapeo de roles: `CASHIER → CAJERA`, `DISPATCHER → DESPACHADORA`; `COOK` → mensaje "rol sin pantallas todavía" hasta el Sprint 2.
+- **`middleware.ts`:** reemplazar `getRoleFromToken` (sufijos demo) por la decodificación del JWT (`atob`, **solo para ruteo**, validando `exp`) con el mismo mapeo de roles; mantener `rolePrefixFor`. El rol que cuenta para la seguridad es el del backend, no el del token.
+
+### 4.4 Paso 2 — Patrón común por feature
+
+`features/<x>/{types.ts, schemas/<x>.schemas.ts, api/<x>.api.ts, stores/<x>.store.ts, components/<X>Screen.tsx, <X>FormModal.tsx}` según [frontend_code_style.md](../frontend/frontend_code_style.md):
+
+- **`types.ts`:** tipos que reflejan el DTO real (los decimales llegan como string: `Number()` al mostrar, números JSON al enviar).
+- **`schemas`:** Zod 4 espejo de las restricciones del DTO ([technical_guide §6](technical_guide.md#6-contratos-por-módulo-requestresponse)); mapear `issues[].path[0]` → `error`/`helperText` por campo.
+- **`api`:** una función por endpoint. **`store`:** `items`, `isLoading`, `isSaving`, `error`, `load/create/update/toggle` asíncronos; selectores por slice.
+- **Screens:** `PageHeader` + `SectionCard` + `CommonTable` (hasta 4 columnas) o `MuiDataGridTable` (más de 4); `AppModal` para formularios con `confirmLoading`; `ConfirmDialog` solo al desactivar; toasts solo en éxito crítico y error; estados de carga (Skeleton), error y vacío.
+- **Formularios:** el patrón correcto de `CustomerFormModal` (reset al abrir o `key={selected?.id ?? 'new'}`), filas `{ xs: 'column', sm: 'row' }`. **No** copiar los problemas de `BranchFormModal` (form obsoleto, sin Zod, sin async, línea muerta `Switch`).
+- **Común:** `commonComponents/ActiveChip.tsx` (Activo/Inactivo; `StatusBadge` es solo de órdenes). Solo tokens del theme, sin hex; `size="small"`, íconos `@mui/icons-material/*Rounded`, textos de UI en español y código en inglés.
+- **PATCH:** enviar solo los campos que cambian. `null` solo donde el contrato lo documenta (`phone`, `branchId` de un `SUPER_ADMIN`, `description`, `salePrice`, `birthDate`, `email` de cliente y los horarios de un período); en el resto es un `400`.
+
+### 4.5 Paso 3 — Pantallas
+
+| Ruta | Rol | Feature | Endpoints | Notas |
 |---|---|---|---|---|
-| **Auth** | `POST /auth/login` · `POST /auth/logout` | público / autenticado | — | Login por email + contraseña. `LoginDto` exige mínimo 6 caracteres. |
-| **Sucursales** | `POST/GET /branches` · `PATCH /branches/:id` · `PATCH /branches/:id/toggle-active` | SUPER_ADMIN | global | Campos: `name`, `address`, `phone?`. |
-| **Usuarios** | `POST/GET /users` · `GET/PATCH /users/:id` · `PATCH /users/:id/toggle-active` | ADMIN (+SA) | ⚠️ hoy **sin** alcance por sucursal (§4, cambio 2) | `branchId` va en el body. |
-| **Productos** | `POST/GET /products` · `GET/PATCH /products/:id` · `PATCH /products/:id/toggle-active` | ADMIN (+SA); `GET` también CASHIER | global | CASHIER solo ve activos y vendibles. |
-| **Variantes** | `POST/GET /variants` · `PATCH /variants/:id` · `PATCH /variants/:id/toggle-active` | ADMIN (+SA) | global | `components: [{type,name?,count}]`. |
-| **Cajas** | `GET/POST /cash-registers` · `PATCH /cash-registers/:id` · `PATCH …/toggle-active` | `GET` CASHIER+ADMIN; resto ADMIN | sucursal del actor | SA → 400. |
-| **Períodos de turno** | `GET/POST /shifts/shift-periods` · `PATCH /shifts/shift-periods/:id` | `GET` CASHIER+ADMIN; resto ADMIN | global | `GET` devuelve **solo activos**. |
-| **Turnos** | `POST /shifts/open` · `GET /shifts/active` | CASHIER | sucursal | El cierre llega en Sprint 3. |
-| **Inventario (ítems)** | `GET/POST /inventory/items` · `PATCH /inventory/items/:id` | `GET` ADMIN+COOK; resto ADMIN | sucursal del actor | SA → 400. `initialStock` crea la transacción `RECEPTION`. |
-| **Clientes** | `GET /customers/by-ci/:ci` · `GET /customers/by-nit/:nit` · `POST /customers` | CASHIER+ADMIN | global | No hay listado (Sprint 4). |
-| **Operativos** | `POST/GET /orders` · `GET /orders/:id` · `POST /orders/:id/pay` · `POST /orders/:id/cancel` · `GET /pos/context` | ver [§5.2](technical_guide.md#52-autenticación-y-autorización) | sucursal | Fuera del alcance de los CRUDs de maestros. |
+| `/super-admin/branches` | SA | `branches` (convertir) | `GET/POST/PATCH /branches`, `toggle-active` | Reales: `name`, `address`, `phone?`, `active`, `cashRegistersCount` y `admin` (el ADMIN de la sede). El `PATCH` exige al menos un campo y un nombre repetido da `409 CONFLICT`. **Se conservan** código y ciudad como `MOCK-ONLY`. |
+| `/super-admin/users` y `/branch-admin/users` | SA / ADMIN | `users` (convertir `PersonnelScreen`) | `GET /users?role=`, `POST`, `PATCH /users/{id}`, `toggle-active`, `GET /branches` (SA) | **El backend impone el alcance**: el ADMIN recibe solo el personal de su sede y solo puede crear `CASHIER`, `DISPATCHER` y `COOK`; el SA elige sucursal y rol. `branchId` es obligatorio salvo para el SA. La CI es **editable** y cambiarla cambia también la contraseña de login (avisarlo). Nadie se desactiva a sí mismo salvo el SA (`CANNOT_TOGGLE_SELF`). Cambiar rol o sucursal con un turno abierto da `USER_HAS_OPEN_SHIFT`. Turno asignado y último acceso: `MOCK-ONLY`; el botón de clave: `toast.info`. |
+| `/super-admin/products` y `/branch-admin/products` | SA / ADMIN | `catalog` (convertir `CatalogScreen`) | `GET/POST /products`, `GET/PATCH /products/{id}`, `toggle-active`; `GET/POST /variants`, `PATCH /variants/{id}`, `toggle-active` | Producto: `name` 3–80, `basePrice` ≥ 0.01 (2 decimales), `category` (Autocomplete libre con las existentes), `description` ≤ 500, `isSellable`, `isInventoryItem`. El listado del ADMIN trae todo (con variantes inactivas, para reactivarlas); filtros de categoría, estado y búsqueda en el cliente (el backend no filtra). Variantes: `name`, `isDefault`, `components` (`{ type: presa \| acompanamiento \| bebida \| extra, name?, count ≥ 1 }`, mínimo 1) y toggle. **Se conservan** SKU, imagen y `ProductRulesModal`: lo que cabe en `components` va al backend; el resto, `MOCK-ONLY`. |
+| `/super-admin/shift-periods` y `/branch-admin/shift-periods` | SA / ADMIN | `shifts` (nuevo `ShiftPeriodsScreen`) | `GET/POST/PATCH /shifts/shift-periods` | `name`, `displayOrder` ≥ 1, `referenceStart/End` (horarios informativos). Se lista con **`?includeInactive=true`** para poder reactivar con `PATCH { active: true }`. Es un catálogo **global**: avisar que afecta a todas las sucursales. |
+| `/branch-admin/cash-registers` | ADMIN | `cash-registers` (nuevo) | `GET/POST /cash-registers`, `PATCH /{id}`, `toggle-active` | Solo `name` (1–100). `CASH_REGISTER_ALREADY_EXISTS` junto al campo. El nombre es único por sucursal. El SA ve todas o elige con `?branchId=`. |
+| `/branch-admin/inventory` | ADMIN | `inventory` (nuevo, `MuiDataGridTable`) | `GET/POST /inventory/items`, `PATCH /{id}`, `toggle-active`, `POST /inventory/adjust`, `GET /inventory/dashboard` | Filtros `type`, `active` y `search` al servidor. Alta: `productCode` (`A-Z a-z 0-9 _ -`), `name`, `unit`, `type`, `unitMeasure?`, `salePrice?` (solo `PECHO`/`ALA`/`PIERNA`/`ENTREPIERNA`; deshabilitado en el resto), `initialStock?` (entero ≥ 0). Edición: solo `name`, `unit`, `unitMeasure`, `salePrice`. `currentStock` es de **solo lectura**: se mueve únicamente con el alta o con el **ajuste** (`delta` entero ≠ 0, `reason` `ADJUSTMENT` o `RECEPTION`, `note` obligatoria). El dashboard de stock cocido es para `ADMIN` y `COOK`. El SA elige sucursal. |
+| `/branch-admin/customers` | ADMIN | `customers` (convertir `ClientsScreen` y `CustomerFormModal`) | `GET /customers`, `GET/PATCH /customers/{id}`, `toggle-active`, `GET /customers/{id}/orders`, `POST /customers` | **100 % real**: lista paginada con `search`, `status` y rango de alta; edición de nombres, sexo, nacimiento y contacto (**`ci` y `nit` no se editan**); activar/desactivar; historial de pedidos de todas las sucursales en el modal "Ver historial". Validación: CI `^\d{4,20}$`, NIT `^\d{3,20}$`, nombres ≤ 80, sexo `HOMBRE`/`MUJER`, `birthDate` `YYYY-MM-DD`, teléfono ≤ 30, email válido. El flujo de la cajera (lookups por CI/NIT y alta con F9) no se toca. |
+| `/cashier/*`, `/dispatcher`, `/order/[token]` | CAJERA, DESPACHADORA, público | `shifts`, `pos`, `orders`, `public-order` | ver [§3](#3-qué-falta-en-el-backend) | Fuera de esta etapa: se convierten a medida que el backend entrega su Sprint. Ya existen `POST /shifts/open`, `GET /shifts/active`, `GET /pos/context`, `POST /orders`, `/pay`, `/cancel`, `GET /orders` y los lookups de clientes. |
 
-**Cómo probarlos:** con datos de prueba, `pnpm seed` + [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md); sin seed, [api-testing-guide.md](api-testing-guide.md) (Fases A→E). Faltan en el API: `DELETE` (por diseño), `POST /inventory/adjust`, listado de clientes, `GET /shifts` (lista), reportes y cierre de turno.
+### 4.6 Paso 4 — Navegación y rutas
 
----
+- `super-admin/layout.tsx`: Dashboard, Sucursales, Personal y Roles, Catálogo y Períodos de turno, todo bajo `/super-admin/*` (hoy hay 4 links a `/branch-admin/*` que el middleware bloquea). Las páginas son finas: solo renderizan el Screen.
+- `branch-admin/layout.tsx`: agregar Cajas, Períodos de turno e Inventario; Clientes apunta a la pantalla convertida.
+- **Antes de convertir cada store, buscar con `rg` sus consumidores** (conteo de sedes en dashboards y layouts, POS, órdenes mock): los ids pasan de mock (`p-1`) a UUID; si algo no convertido depende de la forma mock, mantener esos selectores compatibles o separar el store.
 
-## 2. Swagger ↔ datos del seed ✅ implementado
+### 4.7 Verificación
 
-Los ejemplos de Swagger coinciden con lo que crea `pnpm seed`, así que lo que se exporta a Postman se puede ejecutar sin editar valores.
-
-**Qué se hizo**
-- **Fuente única versionada:** `src/common/swagger/example-data.ts` exporta `SEED_IDS` (UUID v7 válidos y **fijos**: los `uuid(7)` por defecto no son deterministas), `SEED_PASSWORD`, `SEED_LOGINS` y `SEED_CUSTOMER`. La usan los DTOs/controllers **y** los seeders, así no hay dos copias que se desfasen.
-- **Seeders** (`seeders/domains/*`): crean sucursal, usuarios, cajas, períodos, productos, variantes e ítems con esos ids. Se agregó el cocinero `cocinero1@gmail.com` y un **cliente fijo** (MARCO ORTEGA, CI `8351427`, NIT `120558027`) para `by-ci`/`by-nit`.
-- **Ejemplos de DTOs:** los de **lectura/edición/ruta** apuntan a filas sembradas; los de **alta** (`POST`) usan valores **nuevos** para no chocar con la unicidad del seed (`cajera2@gmail.com`, `Sucursal Sur`, `Caja 3`, `PRESA-PECHO-2`, cliente `LUCIA FERNANDEZ`, variante `1/2 con arroz`).
-- **`@ApiIdParam(id, descripción)`** (`src/common/swagger/api-id-param.decorator.ts`) en las 14 rutas con `:id`. `orders/:id` queda sin ejemplo: los pedidos no se siembran con id fijo.
-- **`POST /auth/login`** documenta un ejemplo de body **por rol** y la tabla de usuarios sembrados.
-
-**Datos del seed:** sucursal "Sucursal Principal"; usuarios `admin1@`, `cajera1@`, `despachadora1@`, `cocinero1@gmail.com` (más `superadmin@gmail.com` de `bootstrap:admin`), **todos con contraseña `password123`, no con su CI** (solo los creados por `POST /users` entran con su CI); cajas "Caja 1"/"Caja 2"; períodos Mañana y Noche; 8 productos con 5 variantes; 12 ítems de inventario; 10 clientes (9 aleatorios + el fijo).
-
-**A tener en cuenta:** `seeders/` **está versionado** (decisión en §7) junto con `example-data.ts`: cualquier clon puede correr `pnpm seed` y los ejemplos de Swagger apuntan a ids que ese seed crea. `pnpm seed` se **niega** a correr si `APP_ENV` no es `development` o si `DATABASE_URL` no apunta a `localhost` (borra datos); `--force` lo permite. Con `--no-reset` los ids fijos chocan al re-sembrar (usar `pnpm seed` completo, que limpia antes). `swagger.json` lo escribe `main.ts` en `docs/swagger-postman/swagger.json` (versionado y compartido con el front).
-
-### 2.3 Verificación (parcial)
-BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta los ids explícitos) → `pnpm start:dev` → ejecutar la colección de Postman por rol **sin editar valores**: sin `400` por UUID/ejemplo inválido ni `404` por ids inexistentes, y con un duplicado (p. ej. `POST /cash-registers` repetido) devolviendo `error.code` como **string**.
-
-**Estado (2026-10-05):** verificado por API: `pnpm seed` aceptó los ids explícitos y `pnpm api:snapshot` recorre 200 requests por rol sobre esos mismos datos sin errores de ids ([plan-mejoras-backend.md §4](plan-mejoras-backend.md#4-red-de-seguridad-foto-de-la-api)). **Falta** ejecutar la colección **dentro de Postman** (la subida real a Postman nunca se probó con una cuenta real).
+1. Backend: `pnpm seed` y `pnpm start:dev` (puerto 4000). Front: `pnpm dev` con `API_PROXY_TARGET` apuntando al backend.
+2. Login real con el SUPER_ADMIN → `/super-admin`; `/branch-admin/*` redirige y no quedan links muertos.
+3. SA: crear sucursal → crear su ADMIN → editar y desactivar; probar duplicados (mensaje en español junto al campo).
+4. ADMIN (`admin1@gmail.com`): períodos (crear, editar, desactivar y reactivar), cajas (duplicado → `CASH_REGISTER_ALREADY_EXISTS`), producto + variante con `components`, ítems de inventario (presa con `salePrice` e `initialStock`; `salePrice` en un insumo bloqueado) y un ajuste de stock, personal de su sede, clientes (CI duplicado, edición, historial).
+5. `401` con el token vencido o el usuario desactivado → vuelve a `/login`. Comprobar en la red que ningún `PATCH` envía `null` donde el contrato no lo permite.
+6. Revisión visual en claro y oscuro y a ancho móvil; `pnpm lint` solo sobre los archivos tocados, sin sumar errores a los que ya tenía el front. Sin build.
 
 ---
 
-## 3. Postman ✅ implementado
+## 5. Decisiones vigentes
 
-**Cómo se usa y qué trae:** ver [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md) (pasos, comandos `pnpm postman:sync` / `postman:watch`, variables de `.env`, `start:dev` con sincronización).
-
-**Por qué un script y no importar el Swagger directo (verificado):** `swagger.json` **no puede llevar los scripts de Postman**. Se revisó el código de `openapi-to-postmanv2` v6.3.3 (el conversor de código abierto que usa Postman): no genera ningún `event`/`listen`/`prerequest`/`test`, y la única extensión `x-` que lee en un request, `x-postman-meta`, solo configura el helper de autenticación. Por eso `scripts/postman-sync.ts` convierte el Swagger por código, inyecta el script que guarda el token (en `bearerToken` y en la variable de su rol) y **reemplaza la colección** con `PUT /collections/{uid}`. *Salvedad: no se verificó la versión interna de la app de Postman.*
-
-**Por qué no el sync de Spec Hub:** solo aplica a colecciones generadas desde *Specs*; esta se importó con *Resources → Import*. El sync nativo es además manual (botón *Update*).
-
-**Pendiente de verificar (⚠️):** la subida real (`PUT`) y que el plan de Postman permita usar la API con la key; que `atob` exista en el sandbox de scripts (el script está en `try/catch`: si falla, igual guarda `bearerToken`); `pnpm start:dev` completo. Riesgo conocido: un usuario creado con un CI de menos de 6 caracteres **no puede loguearse** (`LoginDto` exige ≥6).
-
----
-
-## 4. Cambios en el backend para maximizar datos reales en el front
-
-**Criterio:** cada cambio se contrastó con `implementation_guide.md`, `technical_guide.md` y el PDR. Los ya previstos en la guía son **adelantos**; los no previstos pero compatibles son **complementarios** (hay que documentarlos); los que se solapan o violan YAGNI se **difieren** y el front los mantiene como datos falsos `MOCK-ONLY`.
-
-### 4.1 Grupo A — ya previstos en la guía (adelantos o brechas doc ↔ código)
-
-| # | Cambio | Evidencia en la doc | Efecto en el front |
-|---|---|---|---|
-| 2 | ✅ **HECHO**. **Alcance de `/users` por sucursal** + ADMIN no asigna roles superiores. Corregir además: `PATCH ci` no actualiza `ci`; `phone:null`/`branchId:null` fallan. | PDR §2.7: ADMIN crea usuarios "en su sucursal"; el backend valida rol **y sucursal**. DoD Sprint 0. **Hoy el código incumple la doc** (un ADMIN puede crear un SUPER_ADMIN). | Sin filtros ni restricciones de seguridad en el cliente. |
-| 5 | ✅ **HECHO**. **`?branchId=` opcional solo para SUPER_ADMIN** en cajas e inventario | `implementation_guide` (inventario: "SUPER_ADMIN filtra por sucursal"; cajas: "puede crear en cualquiera"); `technical_guide` §5.2: "el SUPER_ADMIN opera global". **El código no lo hace.** | SA puede usar las pantallas de cajas e inventario. |
-| 7 | ✅ **HECHO** (plan-mejoras-backend, paso 2). **Códigos de error estables** en users, branches, alta de producto y de variante, y errores planos → `NOT_FOUND`/`FORBIDDEN`. *(El filtro global ya desanida `error.code` y los 404 de cajas, períodos, productos, variantes e inventario ya tienen código estable.)* | `technical_guide` §5.4: `code` será string estable. Hoy en esos módulos salen `"Not Found"`, `"Bad Request"`. | Un solo mapa de mensajes en español. |
-| 4 | ✅ **HECHO**. `?includeInactive=true` en `GET /shifts/shift-periods` (default sin cambios) | La doc prevé "editar/**desactivar** período (admin)"; reactivar exige verlo. | Reactivar períodos sin caché local. |
-| 12 | ✅ **HECHO**. **Clientes admin:** `GET /customers?search=&page=&pageSize=&status=&from=&to=`, `GET /:id`, `PATCH /:id` (`ci`/`nit` no editables), `PATCH /:id/toggle-active`, `GET /:id/orders` | Sprint 4 paso 1, contrato exacto en §6.2a. Precedente: `POST /customers` ya se adelantó del Sprint 4 al 1. | La pantalla de clientes pasa a ser 100% real. |
-| 15 | ✅ **HECHO** (`adjust` y `dashboard`; `sale-price` ya lo cubre `PATCH /inventory/items/:id`). **Inventario:** `POST /inventory/adjust`, `PATCH /inventory/:id/sale-price`, `GET /inventory/dashboard` | Sprint 2, `implementation_guide` línea 158. Falta implementarlos. | Ajuste de stock y dashboard de cocina reales. |
-| 16 | ⏸️ **POSTERGADO**. `GET /reports/branches-summary` (solo SA) | `technical_guide` §5.1 (línea 505). Es mayor (agregaciones). **Decidido: el dashboard (datos resumen) es lo último que se hace en la aplicación**; hasta entonces el front mantiene esos KPIs como complemento local. | KPIs del dashboard global. |
-
-### 4.2 Grupo B — complementarios (no previstos, compatibles; documentar en `technical_guide` §5.1)
-
-| # | Cambio | Nota |
-|---|---|---|
-| 1 | ✅ **HECHO**. `GET /auth/me` → `{ id, firstName, lastName, email, role, branchId, branchName }` | Hoy el nombre solo sale de `GET /users/:id` (ADMIN) y el ADMIN no puede leer su sucursal (`GET /branches` es solo SA). Cumple §9.7 ("ningún listado que la UI no consuma"): el header lo usa. |
-| 3 | ✅ **HECHO** (expuesto como `cashRegistersCount` y `admin`). `GET /branches` + `_count.cashRegisters` (terminales) y ADMIN de la sede | Campos derivados, **sin tocar el schema**. |
-| 6 | ✅ **HECHO**. `PATCH /inventory/items/:id/toggle-active` | Sigue el patrón "el negocio no borra, desactiva" (§9.7). Decidido: sí. |
-
-### 4.3 Grupo C — se solapan o violan YAGNI: **diferir**
-
-| # | Cambio | Por qué se difiere | En el front |
-|---|---|---|---|
-| 8 | `User.lastLoginAt` | Toca el schema, sin FR; el Sprint 5 ya planifica el registro de sesión activa (FR-008b) → duplicaría. | "Último acceso" falso |
-| 9 | `Branch.code` / `city` | Sin FR; §9.7: "no se toca el schema", lo nuevo entra "con un caso real". | Código y ciudad falsos |
-| 10 | `Product.code` (SKU) / `imageUrl` | Ídem. | SKU e imagen falsos |
-| 11 | `PATCH /users/:id/reset-password` | Sin FR; `PATCH /users/:id {ci}` ya re-hashea la clave (= CI). | Botón con aviso "próximamente" |
-| 13 | `GET /shifts` (lista) | Se solapa con Sprint 3 (`/reports/cash-audit`) y Sprint 5 (`/audit-logs/shift`); §9.7 pide 1 endpoint por operación. | Estado de cajas con mock |
-| 14 | `components.options` (piezas permitidas) | La doc no define reglas de composición más allá de `{type,name,count}`; riesgo de contradecir la lógica del POS. | Reglas extra solo locales |
-
-### 4.4 Orden de implementación y actualización de docs
-
-1. **Orden:** **#2** ✅ → **#7** ✅ → **#1** ✅ → **#5** ✅ → **#4** ✅ → **#3** ✅ → **#12** ✅ → **#15** ✅. **#6** ✅ hecho; **#16** postergado al final (§7).
-2. **Dónde:** en **esta misma rama** (`feature_sprint1_integrate_front`), como un nuevo change de openspec (mismo flujo que `add-master-data-cruds`).
-3. **Docs:** en el mismo cambio, actualizar `implementation_guide` (mover #12 del Sprint 4 y, si aplica, #16 al sprint actual, como ya hace la guía con sus "Ajuste sobre PDR"), `technical_guide` §5.1/§5.2/§6.x, y agregar casos E2E en §8.
-4. **Ejemplos de Swagger:** cada endpoint nuevo debe sumar sus ids/ejemplos a `src/common/swagger/example-data.ts` (§2) para que la colección de Postman siga ejecutándose sin editar valores.
-
----
-
-## 5. Front: estado y plan
-
-- **Estado:** `main` y `feature_sprint1_prototype_ui` (rama actual) funcionan **100% con mocks**: no hay cliente HTTP, el login infiere el rol del email y el middleware solo entiende tokens demo (✅ verificado leyendo `src/`). No hay ninguna sección con datos reales.
-- **Rama descartada:** `feature_sprint1_prototype_ui_integration_partial` (local, sin subir) ya trae cliente API, login real y turnos/POS/órdenes/clientes reales, pero **eliminó componentes del front**, y por eso se dejó de lado. Sirve solo como **referencia** de cómo mapear los endpoints; no se mergea ni es base.
-- **Plan:** [../frontend/plan-front-cruds-feature-test-cruds.md](../frontend/plan-front-cruds-feature-test-cruds.md): base de API (cliente HTTP, login real, middleware con JWT), conversión de las pantallas mock existentes a datos reales y pantallas nuevas de cajas, períodos, inventario y alta de cliente, **sin eliminar ni cambiar el aspecto de los componentes**. Los datos que el backend no tiene se completan con un complemento falso `MOCK-ONLY`.
-
----
-
-## 6. Cambios futuros del front alineados con los sprints del backend
-
-| Sprint backend | Entrega del backend | Cambio en el front |
-|---|---|---|
-| **2 — Inventario + venta custom** | `adjust`, `sale-price`, `dashboard`; `POST /orders/custom`; `manual-consumption`; `shift-chicken-log`; `pos/context.piecePrices` | Dashboard de stock de cocina (COOK/ADMIN); formulario de consumos manuales (FR-017); ciclo crudo; venta custom con precio sugerido calculado en el cliente (`CustomItemModal`); ajuste de stock con motivo en la pantalla de inventario. |
-| **3 — Caja completa + descuentos** | `POST /shifts/close`; `expenses`; `vouchers`; `discounts` (CRUD + autorizar); `reports/*` (+CSV); `pos/context.discounts` | Cierre de turno con arqueo (`ShiftSummaryScreen`); gastos; vales; catálogo de descuentos y autorización por turno; descuento por ítem en el POS; reportes (`ShiftControlScreen`) con export CSV; KPIs del dashboard global si se adelanta `branches-summary`. |
-| **4 — Cliente, vistas públicas, impresión** | Clientes admin (si no se adelantó); `PATCH /orders/:id/status`; `GET /public/orders/:token`, `/public/ready-orders`; `POST /print/invoice` y PDF | `ClientsScreen` admin 100% real; KDS con `ready`/`delivered` reales (`KitchenScreen`); `PublicOrderScreen` y pantalla de turnos de banco; impresión de ticket/factura. |
-| **5 — Auditoría + hardening** | `POST /audit-logs/shift` y `/month`; sesión única por turno; E2E; Swagger final | Pantalla de auditoría por turno/mes; manejo del error de sesión duplicada en el login; retirar los últimos datos `MOCK-ONLY` que ya tengan campo en el backend. |
-
-**Regla transversal:** cada vez que el backend incorpore un campo que hoy es `MOCK-ONLY`, se reemplaza el complemento falso por el dato real en el mapper de ese feature; los componentes no se tocan.
-
----
-
-## 7. Decisiones pendientes
-
-1. ✅ **Decidido — `seeders/` se versiona** (se quitó de `.gitignore` el 2026-10-05; antes se había decidido ignorarlo). Motivo: Swagger y los seeders cambian juntos, y versionados viajan en el mismo commit, donde un desfase se ve en la revisión; ignorados, el desfase es invisible. Además cualquier clon puede correr `pnpm seed`. No contienen secretos (solo el hash de `password123`). Se agregó una **guarda** (`seeders/guard.ts`): `pnpm seed` se niega si `APP_ENV` no es `development` o si la base no es `localhost`; `--force` la omite.
-2. ✅ **Decidido — ADMIN no crea ADMIN.** SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; la cajera solo registra clientes (entidad `Customer`, `POST /customers`). `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN y el traslado es solo de SUPER_ADMIN.
-3. ✅ **Decidido — alcance de §4:** se hace **#6**; **#16** (`branches-summary`) se posterga: el dashboard con datos resumen es lo último de la aplicación.
-4. ✅ **Decidido — `swagger.json` y la colección de Postman en `docs/swagger-postman/`.** `main.ts` escribe `swagger.json` ahí en cada arranque y `scripts/postman-sync.ts` genera `wonder-chicken.postman_collection.json` a partir de él; ambos están versionados y se comparten con el front por el subtree de `docs/`. Para que la colección no ensucie el historial se hizo **determinista**: se escribe sin ids y los valores que el conversor elegía al azar (filtro `role` de usuarios, `status` y `date` de pedidos, `birthDate` de clientes) ahora tienen un `example` fijo en los DTOs (verificado: 3 corridas idénticas). Cuando cambie la API hay que commitear ambos archivos y subir el subtree. Se quitaron del `.gitignore` las entradas de `swagger.json` y `postman/`.
-5. ✅ **Decidido — `docs/` es un subtree compartido con el front y ya no se sincroniza en `start:dev`** (ni en backend ni en frontend): `git subtree pull` exige todo el árbol limpio y crea un commit de merge. Ahora `start:dev` **avisa** si el repo de docs tiene novedades (`pnpm docs:check`); se sincroniza a mano con `pnpm docs:pull` (traer) y `pnpm docs:push` (subir), con mensajes claros. El aviso es **no bloqueante** por defecto; se cambia a bloqueante con `DEFAULT_CHECK_MODE` en `scripts/docs-subtree.js` o `DOCS_CHECK_MODE=block`. Detalle en [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md) §5. 🔲 A futuro: modo `ask` (preguntar si sincronizar al arrancar).
-6. **Sin tests** por regla del proyecto hasta cerrar V1: la verificación es manual (recorrido por rol) y la corrida de §2.3.
+1. **`seeders/` está versionado.** Swagger y seeders cambian juntos y, versionados, viajan en el mismo commit. No contienen secretos (solo el hash de `password123`). `pnpm seed` se niega a correr si `APP_ENV` no es `development` o si la base no es `localhost` (`--force` lo permite); con `--no-reset` los ids fijos chocan, por eso se usa siempre el seed completo.
+2. **Usuarios por rol:** el SUPER_ADMIN crea cualquier rol; el ADMIN solo `CASHIER`, `DISPATCHER` y `COOK` de su sucursal; el traslado de personal es solo del SUPER_ADMIN; `branchId` es obligatorio salvo para el SUPER_ADMIN (no hay repositorio global de empleados). Los clientes son la entidad `Customer`, no un rol.
+3. **Alcance por sucursal:** el ADMIN no ve otras sucursales, ni en usuarios ni en pedidos. La única excepción deliberada es el historial de pedidos de un cliente ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
+4. **`docs/` es un subtree compartido con el front.** No se sincroniza en `start:dev`: este solo **avisa** si hay novedades (`pnpm docs:check`, no bloqueante); se trae con `pnpm docs:pull` y se sube con `pnpm docs:push`. Detalle en [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md).
+5. **Aplazado:** `GET /reports/branches-summary` y el dashboard con datos resumen (lo último de la aplicación), el token de renovación y `CORS_ORIGINS` (al pasar a QA o producción).
+6. **Sin tests** por regla del proyecto hasta cerrar V1.
