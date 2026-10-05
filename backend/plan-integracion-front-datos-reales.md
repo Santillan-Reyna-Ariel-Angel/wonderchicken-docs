@@ -3,7 +3,7 @@
 > **Actualizado:** 2026-10-05
 > **Objetivo:** que el front muestre **datos reales del API en la mayor parte de sus pantallas**, **sin modificar los componentes ni estilos ya definidos**, y que todo el API se pueda probar desde Postman sin armar datos a mano.
 > **Dónde se trabaja:** todos los cambios de backend de este plan van en **esta misma rama** (`feature_sprint1_integrate_front`), sin rama aparte. El front, en `feature-test-cruds` (repo `wonderchicken-front`), creada desde `feature_sprint1_prototype_ui`; su plan está en [../frontend/plan-front-cruds-feature-test-cruds.md](../frontend/plan-front-cruds-feature-test-cruds.md).
-> **Estado:** ✅ hecho: CRUDs de maestros, ejemplos de Swagger alineados con el seed, login por rol y sincronización con Postman · 🔲 pendiente: verificación en ejecución (§2.3), cambios de backend de §4 y el front (§5–6).
+> **Estado (2026-10-05):** ✅ hecho: CRUDs de maestros, ejemplos de Swagger alineados con el seed, login por rol, sincronización con Postman y **todos los cambios de backend de §4 (#1 a #15; #16 postergado al final)**, más la mejora transversal del backend ([plan-mejoras-backend.md](plan-mejoras-backend.md)) · 🔲 pendiente: ejecutar la colección dentro de Postman (§2.3) y **el front (§5–6)**. Antes de tocar el front, leer [plan-mejoras-backend.md §8](plan-mejoras-backend.md#8-qué-cambia-para-el-front-checklist-antes-de-tocarlo); lo que quedó diferido está en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
 > **Convención:** ✅ verificado leyendo código/docs · ⚠️ no verificado todavía.
 > **Fuente de verdad de contratos:** [technical_guide.md](technical_guide.md) §5 e [implementation_guide.md](implementation_guide.md). Si algo de acá las contradice, mandan las guías (y se actualizan junto con el código).
 
@@ -46,8 +46,10 @@ Los ejemplos de Swagger coinciden con lo que crea `pnpm seed`, así que lo que s
 
 **A tener en cuenta:** `seeders/` **está versionado** (decisión en §7) junto con `example-data.ts`: cualquier clon puede correr `pnpm seed` y los ejemplos de Swagger apuntan a ids que ese seed crea. `pnpm seed` se **niega** a correr si `APP_ENV` no es `development` o si `DATABASE_URL` no apunta a `localhost` (borra datos); `--force` lo permite. Con `--no-reset` los ids fijos chocan al re-sembrar (usar `pnpm seed` completo, que limpia antes). `swagger.json` lo escribe `main.ts` en `docs/swagger-postman/swagger.json` (versionado y compartido con el front).
 
-### 2.3 Verificación pendiente (en ejecución)
+### 2.3 Verificación (parcial)
 BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta los ids explícitos) → `pnpm start:dev` → ejecutar la colección de Postman por rol **sin editar valores**: sin `400` por UUID/ejemplo inválido ni `404` por ids inexistentes, y con un duplicado (p. ej. `POST /cash-registers` repetido) devolviendo `error.code` como **string**.
+
+**Estado (2026-10-05):** verificado por API: `pnpm seed` aceptó los ids explícitos y `pnpm api:snapshot` recorre 200 requests por rol sobre esos mismos datos sin errores de ids ([plan-mejoras-backend.md §4](plan-mejoras-backend.md#4-red-de-seguridad-foto-de-la-api)). **Falta** ejecutar la colección **dentro de Postman** (la subida real a Postman nunca se probó con una cuenta real).
 
 ---
 
