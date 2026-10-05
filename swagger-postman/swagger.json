@@ -148,6 +148,113 @@
         ]
       }
     },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Perfil obtenido correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Perfil obtenido correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/MeEntity"
+                        }
+                      },
+                      "required": [
+                        "user"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil del usuario autenticado (nombre, rol, sucursal) para el header. Cualquier rol.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
@@ -7880,6 +7987,197 @@
           "inventory"
         ]
       }
+    },
+    "/api/v1/inventory/items/{id}/toggle-active": {
+      "patch": {
+        "operationId": "InventoryController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del ítem (PRESA-ALA del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000602",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ítem de inventario desactivado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Ítem de inventario desactivado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "inventoryItem": {
+                          "$ref": "#/components/schemas/InventoryItemEntity"
+                        }
+                      },
+                      "required": [
+                        "inventoryItem"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ítem de inventario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "INVENTORY_ITEM_NOT_FOUND": {
+                    "summary": "INVENTORY_ITEM_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ítem de inventario no encontrado",
+                      "data": null,
+                      "error": {
+                        "code": "INVENTORY_ITEM_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar ítem de inventario (toggle) (ADMIN)",
+        "tags": [
+          "inventory"
+        ]
+      }
     }
   },
   "info": {
@@ -7985,6 +8283,61 @@
         "required": [
           "email",
           "password"
+        ]
+      },
+      "MeEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000102",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Mariela"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Sanchez Sanchez"
+          },
+          "email": {
+            "type": "string",
+            "example": "cajera1@gmail.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "CASHIER",
+              "DISPATCHER",
+              "COOK"
+            ],
+            "example": "CASHIER"
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": "01900000-0000-7000-8000-000000000001",
+            "description": "null for SUPER_ADMIN"
+          },
+          "branchName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Sucursal Principal",
+            "description": "null for SUPER_ADMIN"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "role",
+          "branchId",
+          "branchName"
         ]
       },
       "UserEntity": {
