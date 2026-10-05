@@ -1,0 +1,2409 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Devuelve `data.accessToken`. Enviarlo como `Authorization: Bearer <token>` en el resto de endpoints.\n\n**Usuarios del seed (`pnpm seed`) — contraseña `password123` para todos:**\n\n| Rol | Email |\n|---|---|\n| SUPER_ADMIN | `superadmin@gmail.com` |\n| ADMIN | `admin1@gmail.com` |\n| CASHIER | `cajera1@gmail.com` |\n| DISPATCHER | `despachadora1@gmail.com` |\n| COOK | `cocinero1@gmail.com` |\n\nLos usuarios creados con `POST /users` entran con su **CI** como contraseña (mínimo 6 caracteres).\n\n**Cambiar de rol = volver a loguearse con otro usuario y usar el nuevo token.** En Swagger UI: botón *Authorize* → pegar el token. En Postman: pegar el token en la variable `bearerToken` de la colección.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              },
+              "examples": {
+                "superAdmin": {
+                  "summary": "SUPER_ADMIN — superadmin@gmail.com",
+                  "value": {
+                    "email": "superadmin@gmail.com",
+                    "password": "password123"
+                  }
+                },
+                "admin": {
+                  "summary": "ADMIN — admin1@gmail.com",
+                  "value": {
+                    "email": "admin1@gmail.com",
+                    "password": "password123"
+                  }
+                },
+                "cashier": {
+                  "summary": "CASHIER — cajera1@gmail.com",
+                  "value": {
+                    "email": "cajera1@gmail.com",
+                    "password": "password123"
+                  }
+                },
+                "dispatcher": {
+                  "summary": "DISPATCHER — despachadora1@gmail.com",
+                  "value": {
+                    "email": "despachadora1@gmail.com",
+                    "password": "password123"
+                  }
+                },
+                "cook": {
+                  "summary": "COOK — cocinero1@gmail.com",
+                  "value": {
+                    "email": "cocinero1@gmail.com",
+                    "password": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "isSuccess": true,
+                    "message": "Login exitoso",
+                    "data": {
+                      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    },
+                    "error": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas"
+          }
+        },
+        "summary": "Iniciar sesión y obtener token JWT (un ejemplo por rol)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Logout exitoso"
+          },
+          "401": {
+            "description": "Token inválido o expirado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cerrar sesión",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado"
+          },
+          "400": {
+            "description": "Username duplicado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear usuario (admin)",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por rol",
+            "schema": {
+              "example": "CASHIER",
+              "type": "string",
+              "enum": [
+                "SUPER_ADMIN",
+                "ADMIN",
+                "CASHIER",
+                "DISPATCHER",
+                "COOK"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios"
+          },
+          "400": {
+            "description": "Filtro de rol inválido"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar usuarios con filtro por rol (admin)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del usuario (admin1@gmail.com del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000101",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario obtenido"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener usuario por id (admin)",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del usuario (admin1@gmail.com del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000101",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado"
+          },
+          "400": {
+            "description": "Datos inválidos o active en payload"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar usuario (admin). NO permite cambiar active; usar PATCH /users/:id/toggle-active",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/toggle-active": {
+      "patch": {
+        "operationId": "UsersController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del usuario (cajera1@gmail.com del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000102",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado activo/inactivo actualizado"
+          },
+          "400": {
+            "description": "Auto-toggle no permitido"
+          },
+          "403": {
+            "description": "Sin permisos sobre ese rol"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar usuario (toggle) (ADMIN | SUPER_ADMIN)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/branches": {
+      "post": {
+        "operationId": "BranchesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBranchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sucursal creada"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear sucursal (SUPER_ADMIN)",
+        "tags": [
+          "branches"
+        ]
+      },
+      "get": {
+        "operationId": "BranchesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de sucursales"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar sucursales (SUPER_ADMIN)",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/api/v1/branches/{id}": {
+      "patch": {
+        "operationId": "BranchesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la sucursal",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBranchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucursal actualizada"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar sucursal (SUPER_ADMIN)",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/api/v1/branches/{id}/toggle-active": {
+      "patch": {
+        "operationId": "BranchesController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la sucursal",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado activo/inactivo actualizado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar sucursal (toggle) (SUPER_ADMIN)",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "post": {
+        "operationId": "ProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Producto creado"
+          },
+          "400": {
+            "description": "Nombre duplicado o datos inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear producto (admin)",
+        "tags": [
+          "products"
+        ]
+      },
+      "get": {
+        "operationId": "ProductsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de productos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar productos. ADMIN ve todos; CASHIER solo activos e isSellable.",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "operationId": "ProductsController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del producto (Pollo Broaster 1/4 del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000401",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener producto con sus variantes (ADMIN)",
+        "tags": [
+          "products"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del producto (Pollo Broaster 1/4 del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000401",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Producto actualizado"
+          },
+          "400": {
+            "description": "Nombre duplicado o datos inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar producto (ADMIN)",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{id}/toggle-active": {
+      "patch": {
+        "operationId": "ProductsController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del producto (Salsa Extra del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000408",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado activo/inactivo actualizado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar producto (toggle) (ADMIN)",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/variants": {
+      "post": {
+        "operationId": "VariantsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variante creada"
+          },
+          "400": {
+            "description": "Producto inexistente o datos inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear variante de un producto (admin)",
+        "tags": [
+          "variants"
+        ]
+      },
+      "get": {
+        "operationId": "VariantsController_findAll",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de variantes"
+          },
+          "400": {
+            "description": "productId no es un UUID válido"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar variantes (admin). Filtro opcional por productId.",
+        "tags": [
+          "variants"
+        ]
+      }
+    },
+    "/api/v1/variants/{id}": {
+      "patch": {
+        "operationId": "VariantsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la variante (1/2 mixto del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000503",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Variante actualizada"
+          },
+          "400": {
+            "description": "Componentes inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Variante no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar variante (admin)",
+        "tags": [
+          "variants"
+        ]
+      }
+    },
+    "/api/v1/variants/{id}/toggle-active": {
+      "patch": {
+        "operationId": "VariantsController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la variante (1/4 con arroz del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000502",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado activo/inactivo actualizado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Variante no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar variante (toggle) (admin)",
+        "tags": [
+          "variants"
+        ]
+      }
+    },
+    "/api/v1/shifts/shift-periods": {
+      "get": {
+        "operationId": "ShiftsController_listPeriods",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catálogo de períodos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar períodos de turno activos",
+        "tags": [
+          "shifts"
+        ]
+      },
+      "post": {
+        "operationId": "ShiftsController_createPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShiftPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Período creado"
+          },
+          "400": {
+            "description": "Nombre duplicado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear período de turno (ADMIN)",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/shift-periods/{id}": {
+      "patch": {
+        "operationId": "ShiftsController_updatePeriod",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del período (Mañana del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000301",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShiftPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Período actualizado"
+          },
+          "400": {
+            "description": "Nombre duplicado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Período no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar/desactivar período de turno (ADMIN)",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/open": {
+      "post": {
+        "operationId": "ShiftsController_open",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenShiftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Turno abierto"
+          },
+          "400": {
+            "description": "Período o caja inexistente / usuario sin sucursal"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abrir turno de caja declarando el período (no se infiere del reloj)",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/active": {
+      "get": {
+        "operationId": "ShiftsController_getActive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Turno activo (o null)"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener el turno activo de la cajera. Devuelve shift: null si no hay.",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "operationId": "OrdersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido creado"
+          },
+          "400": {
+            "description": "Datos inválidos / producto inactivo"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "409": {
+            "description": "Sin turno activo"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear pedido estándar MESA/LLEVAR con N ítems. Total calculado en backend.",
+        "tags": [
+          "orders"
+        ]
+      },
+      "get": {
+        "operationId": "OrdersController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "PENDING_PAYMENT",
+              "type": "string",
+              "enum": [
+                "CREATED",
+                "CONFIRMED",
+                "PREPARING",
+                "READY",
+                "DELIVERED",
+                "CLOSED",
+                "PENDING_PAYMENT",
+                "CANCELLED",
+                "ON_HOLD"
+              ]
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "Fecha del día (ISO)",
+            "schema": {
+              "format": "date",
+              "example": "2026-05-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000102",
+              "type": "string"
+            }
+          },
+          {
+            "name": "table",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "70",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000701",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de pedidos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar pedidos con filtros (panel despacho + historial). Restringido por sucursal.",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/pay": {
+      "post": {
+        "operationId": "OrdersController_pay",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago confirmado"
+          },
+          "403": {
+            "description": "Pedido de otra sucursal"
+          },
+          "404": {
+            "description": "Pedido no encontrado"
+          },
+          "409": {
+            "description": "Ya pagado o cancelado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar pago de un pedido pendiente. Descuenta inventario (Sprint 2).",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/cancel": {
+      "post": {
+        "operationId": "OrdersController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pedido cancelado"
+          },
+          "403": {
+            "description": "Pedido de otra sucursal"
+          },
+          "404": {
+            "description": "Pedido no encontrado"
+          },
+          "409": {
+            "description": "Pedido ya pagado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar pedido pendiente (manual, sin motivo). Pagados llegan en Sprint 2.",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "operationId": "OrdersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pedido"
+          },
+          "403": {
+            "description": "Pedido de otra sucursal"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener pedido por id",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/pos/context": {
+      "get": {
+        "operationId": "PosController_getContext",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Contexto del POS"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Carga única del POS: productos + variantes + períodos + turno activo.",
+        "tags": [
+          "pos"
+        ]
+      }
+    },
+    "/api/v1/customers/by-ci/{ci}": {
+      "get": {
+        "operationId": "CustomersController_findByCi",
+        "parameters": [
+          {
+            "name": "ci",
+            "required": true,
+            "in": "path",
+            "description": "Cédula de identidad del cliente (sin separadores).",
+            "schema": {
+              "example": "8351427",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente encontrado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No existe un cliente activo con ese CI"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lookup exacto de cliente activo por CI (cédula).",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/customers/by-nit/{nit}": {
+      "get": {
+        "operationId": "CustomersController_findByNit",
+        "parameters": [
+          {
+            "name": "nit",
+            "required": true,
+            "in": "path",
+            "description": "NIT del cliente.",
+            "schema": {
+              "example": "120558027",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente encontrado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No existe un cliente activo con ese NIT"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lookup exacto de cliente activo por NIT (factura razón social).",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "post": {
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cliente registrado"
+          },
+          "400": {
+            "description": "CI o NIT ya registrados, o datos de identidad inválidos"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar cliente (POS, atajo F9) — CASHIER | ADMIN",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/cash-registers": {
+      "get": {
+        "operationId": "CashRegistersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cajas de la sucursal"
+          },
+          "400": {
+            "description": "Usuario sin sucursal asignada"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+        "tags": [
+          "cash-registers"
+        ]
+      },
+      "post": {
+        "operationId": "CashRegistersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCashRegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Caja creada"
+          },
+          "400": {
+            "description": "Nombre duplicado en la sucursal o usuario sin sucursal"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear caja registradora (ADMIN)",
+        "tags": [
+          "cash-registers"
+        ]
+      }
+    },
+    "/api/v1/cash-registers/{id}": {
+      "patch": {
+        "operationId": "CashRegistersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la caja (Caja 1 del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000201",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCashRegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Caja actualizada"
+          },
+          "400": {
+            "description": "Nombre duplicado en la sucursal"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrada en la sucursal"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar nombre de caja (ADMIN)",
+        "tags": [
+          "cash-registers"
+        ]
+      }
+    },
+    "/api/v1/cash-registers/{id}/toggle-active": {
+      "patch": {
+        "operationId": "CashRegistersController_toggleActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la caja (Caja 2 del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000202",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado activo/inactivo actualizado"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "No encontrada en la sucursal"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar caja registradora (toggle) (ADMIN)",
+        "tags": [
+          "cash-registers"
+        ]
+      }
+    },
+    "/api/v1/inventory/items": {
+      "get": {
+        "operationId": "InventoryController_findAll",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por tipo de ítem",
+            "schema": {
+              "example": "PECHO",
+              "type": "string",
+              "enum": [
+                "PECHO",
+                "ALA",
+                "PIERNA",
+                "ENTREPIERNA",
+                "BEBIDA",
+                "INSUMO"
+              ]
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado activo/inactivo",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda parcial por nombre o código (case-insensitive)",
+            "schema": {
+              "example": "papa",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de ítems"
+          },
+          "400": {
+            "description": "Filtro inválido o usuario sin sucursal"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+        "tags": [
+          "inventory"
+        ]
+      },
+      "post": {
+        "operationId": "InventoryController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInventoryItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ítem creado"
+          },
+          "400": {
+            "description": "Código duplicado en la sucursal, stock negativo o precio de venta en un tipo no válido"
+          },
+          "403": {
+            "description": "Sin permisos"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear ítem de inventario (ADMIN)",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}": {
+      "patch": {
+        "operationId": "InventoryController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del ítem (PRESA-PECHO del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000601",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInventoryItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ítem actualizado"
+          },
+          "400": {
+            "description": "Precio de venta en un tipo no válido"
+          },
+          "403": {
+            "description": "Sin permisos"
+          },
+          "404": {
+            "description": "Ítem no encontrado en la sucursal"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar ítem de inventario (ADMIN)",
+        "tags": [
+          "inventory"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Wonder Chicken API",
+    "description": "Backend del sistema de ventas Wonder Chicken V1.\n\n**Cómo probar:** `pnpm seed` → `POST /auth/login` con el usuario del rol que quieras probar (ver ese endpoint: hay un ejemplo por rol, contraseña `password123`) → copiar `data.accessToken` en *Authorize* (Swagger UI) o en la variable `bearerToken` (Postman). Los ids de ruta y de body de los ejemplos coinciden con los datos del seed.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "superadmin@gmail.com",
+            "description": "Email del usuario para login"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123",
+            "minLength": 6,
+            "description": "Contraseña. Usuarios del seed (superadmin@, admin1@, cajera1@, despachadora1@, cocinero1@gmail.com): \"password123\". Usuarios creados por POST /users: su CI."
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Carlos"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Mamani Quispe"
+          },
+          "email": {
+            "type": "string",
+            "example": "cajera2@gmail.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+591 70000000"
+          },
+          "ci": {
+            "type": "string",
+            "example": "CASHIER-002",
+            "description": "CI del usuario. Es también su contraseña de login (mínimo 6 caracteres para poder iniciar sesión)."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "CASHIER",
+              "DISPATCHER",
+              "COOK"
+            ],
+            "example": "CASHIER"
+          },
+          "branchId": {
+            "type": "string",
+            "description": "Sucursal asignada (null para SUPER_ADMIN)",
+            "example": "01900000-0000-7000-8000-000000000001"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "ci",
+          "role"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Jhonny"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Hurtado Zardan"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin1@gmail.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+591 70000000"
+          },
+          "ci": {
+            "type": "string",
+            "example": "ADMIN-001"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "CASHIER",
+              "DISPATCHER",
+              "COOK"
+            ],
+            "example": "ADMIN"
+          },
+          "branchId": {
+            "type": "string",
+            "description": "Sucursal asignada (null para SUPER_ADMIN)",
+            "example": "01900000-0000-7000-8000-000000000001"
+          }
+        }
+      },
+      "CreateBranchDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Sucursal Sur"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. Busch #456, Ciudad"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+591 2 2223344",
+            "description": "Teléfono de contacto de la sucursal (opcional)"
+          }
+        },
+        "required": [
+          "name",
+          "address"
+        ]
+      },
+      "UpdateBranchDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Sucursal Principal"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. Principal #123, Ciudad"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+591 2 2223344",
+            "description": "Teléfono de contacto de la sucursal (opcional)"
+          }
+        }
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Porción Media",
+            "minLength": 3,
+            "maxLength": 80
+          },
+          "basePrice": {
+            "type": "number",
+            "example": 30,
+            "minimum": 0.01
+          },
+          "category": {
+            "type": "string",
+            "example": "Plato principal"
+          },
+          "description": {
+            "type": "string",
+            "example": "2 presas + porción mixto"
+          },
+          "isSellable": {
+            "type": "boolean",
+            "example": true,
+            "default": true
+          },
+          "isInventoryItem": {
+            "type": "boolean",
+            "example": true,
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "basePrice",
+          "category"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Porción Media",
+            "minLength": 3
+          },
+          "basePrice": {
+            "type": "number",
+            "example": 32,
+            "minimum": 0.01
+          },
+          "category": {
+            "type": "string",
+            "example": "Plato principal"
+          },
+          "description": {
+            "type": "string",
+            "example": "2 presas + porción mixto"
+          },
+          "isSellable": {
+            "type": "boolean",
+            "example": true
+          },
+          "isInventoryItem": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "VariantComponentDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "presa",
+            "enum": [
+              "presa",
+              "acompanamiento",
+              "bebida",
+              "extra"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "example": "mixto"
+          },
+          "count": {
+            "type": "number",
+            "example": 2,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "type",
+          "count"
+        ]
+      },
+      "CreateVariantDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000402",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "1/2 con arroz"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantComponentDto"
+            }
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": true,
+            "default": false
+          }
+        },
+        "required": [
+          "productId",
+          "name",
+          "components"
+        ]
+      },
+      "UpdateVariantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Porción Media - Mixto"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantComponentDto"
+            }
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "CreateShiftPeriodDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Tarde"
+          },
+          "displayOrder": {
+            "type": "number",
+            "example": 3,
+            "description": "Orden dentro del día (1 = primero)"
+          },
+          "referenceStart": {
+            "type": "string",
+            "example": "13:00",
+            "description": "Horario de REFERENCIA informativo. No clasifica nada."
+          },
+          "referenceEnd": {
+            "type": "string",
+            "example": "17:00",
+            "description": "Horario de REFERENCIA informativo. No clasifica nada."
+          }
+        },
+        "required": [
+          "name",
+          "displayOrder"
+        ]
+      },
+      "UpdateShiftPeriodDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Tarde extendida"
+          },
+          "displayOrder": {
+            "type": "number",
+            "example": 3
+          },
+          "referenceStart": {
+            "type": "string",
+            "example": "13:00",
+            "description": "Horario de REFERENCIA informativo. No reclasifica turnos."
+          },
+          "referenceEnd": {
+            "type": "string",
+            "example": "17:00",
+            "description": "Horario de REFERENCIA informativo. No reclasifica turnos."
+          },
+          "active": {
+            "type": "boolean",
+            "example": false,
+            "description": "Desactivar retira el período de las opciones de apertura."
+          }
+        }
+      },
+      "OpenShiftDto": {
+        "type": "object",
+        "properties": {
+          "openingAmount": {
+            "type": "number",
+            "example": 200,
+            "minimum": 0,
+            "maximum": 999999.99
+          },
+          "cashRegisterId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000201",
+            "format": "uuid"
+          },
+          "periodId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000301",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "openingAmount",
+          "cashRegisterId",
+          "periodId"
+        ]
+      },
+      "OrderItemSelectedPieceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "pecho",
+            "enum": [
+              "pecho",
+              "ala",
+              "pierna",
+              "entrepierna"
+            ]
+          },
+          "qty": {
+            "type": "number",
+            "example": 2,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "type",
+          "qty"
+        ]
+      },
+      "OrderItemSubstitutionDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "mixto",
+            "enum": [
+              "mixto"
+            ]
+          },
+          "to": {
+            "type": "string",
+            "example": "arroz",
+            "enum": [
+              "arroz",
+              "papa",
+              "smiles",
+              "mixto"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "OrderItemExtraDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "papa"
+          },
+          "qty": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "type",
+          "qty"
+        ]
+      },
+      "OrderItemDrinkDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000405",
+            "format": "uuid"
+          },
+          "qty": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "productId",
+          "qty"
+        ]
+      },
+      "CreateOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000402",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000503",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 2,
+            "minimum": 1
+          },
+          "selectedPieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemSelectedPieceDto"
+            }
+          },
+          "substitutions": {
+            "maxItems": 1,
+            "description": "Máximo 1 por ítem. NO afecta el precio (PDR §2.1).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemSubstitutionDto"
+            }
+          },
+          "extras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemExtraDto"
+            }
+          },
+          "drinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDrinkDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "example": "Sin sal"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "MESA",
+              "LLEVAR"
+            ],
+            "example": "MESA"
+          },
+          "tableNumber": {
+            "type": "string",
+            "example": "70",
+            "description": "Número de mesa (opcional, solo informativo para type=MESA)"
+          },
+          "customerId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000701",
+            "format": "uuid"
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PAID",
+              "PARTIAL"
+            ],
+            "example": "PAID"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "CARD",
+              "VALE"
+            ],
+            "example": "CASH",
+            "description": "Requerido si paymentStatus=PAID"
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "paymentStatus",
+          "items"
+        ]
+      },
+      "PayOrderDto": {
+        "type": "object",
+        "properties": {
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "CARD",
+              "VALE"
+            ],
+            "example": "CASH"
+          }
+        },
+        "required": [
+          "paymentMethod"
+        ]
+      },
+      "CreateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "ci": {
+            "type": "string",
+            "example": "9012345",
+            "description": "Cédula de identidad, sin separadores. Única en toda la base."
+          },
+          "nit": {
+            "type": "string",
+            "example": "1020304050",
+            "description": "NIT para factura a nombre de empresa (opcional)"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "LUCIA"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "FERNANDEZ ROJAS"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "HOMBRE",
+              "MUJER"
+            ],
+            "example": "MUJER"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "example": "1995-07-22",
+            "description": "Fecha de nacimiento (opcional, sin hora)"
+          },
+          "phone": {
+            "type": "string",
+            "example": "72345678"
+          },
+          "email": {
+            "type": "string",
+            "example": "lucia.fernandez@example.com"
+          }
+        },
+        "required": [
+          "ci",
+          "firstName",
+          "lastName",
+          "sex"
+        ]
+      },
+      "CreateCashRegisterDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Caja 3"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCashRegisterDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Caja Principal"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateInventoryItemDto": {
+        "type": "object",
+        "properties": {
+          "productCode": {
+            "type": "string",
+            "example": "PRESA-PECHO-2",
+            "description": "Código único del ítem dentro de la sucursal"
+          },
+          "name": {
+            "type": "string",
+            "example": "Pechos cocidos"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "PRESA",
+              "BOLSA",
+              "PAQUETE",
+              "UNIDAD",
+              "VASO",
+              "DOYPACK"
+            ],
+            "example": "UNIDAD"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PECHO",
+              "ALA",
+              "PIERNA",
+              "ENTREPIERNA",
+              "BEBIDA",
+              "INSUMO"
+            ],
+            "example": "PECHO"
+          },
+          "unitMeasure": {
+            "type": "string",
+            "example": "1 presa"
+          },
+          "salePrice": {
+            "type": "number",
+            "example": 12,
+            "minimum": 0,
+            "description": "Precio de VENTA unitario. Solo válido en tipos de presa (PECHO/ALA/PIERNA/ENTREPIERNA); se rechaza en INSUMO."
+          },
+          "initialStock": {
+            "type": "number",
+            "example": 40,
+            "minimum": 0,
+            "description": "Stock inicial. Si es mayor que 0, genera una InventoryTransaction RECEPTION en la misma transacción del alta."
+          }
+        },
+        "required": [
+          "productCode",
+          "name",
+          "unit",
+          "type"
+        ]
+      },
+      "UpdateInventoryItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Pechos cocidos (turno día)"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "PRESA",
+              "BOLSA",
+              "PAQUETE",
+              "UNIDAD",
+              "VASO",
+              "DOYPACK"
+            ],
+            "example": "UNIDAD"
+          },
+          "unitMeasure": {
+            "type": "string",
+            "example": "1 presa"
+          },
+          "salePrice": {
+            "type": "object",
+            "example": 13,
+            "minimum": 0,
+            "description": "Precio de VENTA unitario. Solo válido en tipos de presa; el service lo rechaza en INSUMO. Enviar `null` borra el precio.",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

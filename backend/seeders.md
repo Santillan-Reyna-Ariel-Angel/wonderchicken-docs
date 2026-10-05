@@ -13,6 +13,15 @@ pnpm seed:reset           # solo vacía la base (no puebla)
 pnpm seed -- --no-reset   # seed completo SIN borrar antes (modo append)
 ```
 
+## Guarda de seguridad
+
+`pnpm seed` **borra** la base a la que apunte `DATABASE_URL`, así que se niega a correr (en cualquier modo, incluido `seed:reset`, el puntual y `--no-reset`) si:
+
+- `NODE_ENV` es `production`, o
+- el host de `DATABASE_URL` no es `localhost` / `127.0.0.1` / `::1`, o no se puede leer.
+
+Si es intencional: `pnpm seed -- --force`. La lógica está en [`seeders/guard.ts`](../../seeders/guard.ts).
+
 ## Requisitos previos (una sola vez)
 
 1. **Base de datos levantada** y `DATABASE_URL` configurada en `.env`.
