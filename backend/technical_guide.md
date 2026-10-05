@@ -652,9 +652,12 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 {
   "isSuccess": true,
   "message": "Operacion exitosa",
-  "data": {}
+  "data": {},
+  "error": null
 }
 ```
+
+> En el código, las respuestas de éxito se arman siempre con el helper `ok(message, data)` (`src/common/http/api-result.ts`): nadie escribe el literal a mano.
 
 **Error:**
 ```json
@@ -678,7 +681,9 @@ Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 r
 
 - Frontend valida flujo con `isSuccess`.
 - `error` será singular.
-- `details` será array.
+- `details` será **siempre** un array (vacío si no hay detalle por campo). Cada elemento es `{ field, message }`; `field` es la ruta del campo en el body (`items[0].quantity`).
+- El `status` HTTP lo decide el **catálogo** `src/common/errors/error-codes.ts` (cada `code` tiene un único status y un mensaje por defecto). Los services lanzan `new BusinessException({ code })`; el `message` puede sobrescribirse para incluir el valor involucrado. Convención de nombres: `X_NOT_FOUND` = recurso de la URL (404); `X_REFERENCE_NOT_FOUND` = recurso referenciado desde el body (400).
+- Los errores que lanza Nest por sí mismo (id con formato inválido, ruta inexistente) salen con un código genérico: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`.
 - `code` será string estable: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `INSUFFICIENT_STOCK`, `DISCOUNT_NOT_AVAILABLE` (descuento inactivo o fuera de su ventana de disponibilidad — rechaza la creación de la orden completa), `DISCOUNT_NOT_AUTHORIZED` (la sesión de cajera no tiene autorización vigente para ese descuento), etc. *Nota: no existe `DISCOUNT_ALREADY_APPLIED` — con un único campo `discountId` por ítem en el payload de creación, el apilamiento es **irrepresentable por construcción** (no hay estado inválido que validar).*
 - En NestJS se implementará con `ValidationPipe` + excepciones HTTP + `ExceptionFilter` global para mantener este contrato en todos los endpoints.
 
