@@ -182,6 +182,6 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 
 - **Reglas de negocio que originan cada FR/NFR:** [docs/pdr.md §2](pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables) (reglas definitivas) y [§13](pdr.md#13-alcance-v1-mvp-vs-v2-futuro) (alcance V1 vs V2).
 - **Traducción técnica (modelo de datos, endpoints, payloads, casos E2E):** [../backend/technical_guide.md](../backend/technical_guide.md).
-- **Máquina de estados de pedidos:** [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos) (negocio) y [technical guide §4](../backend/technical_guide.md#4-reglas-transaccionales-y-auditoría-v1) (transaccional).
+- **Máquina de estados de pedidos:** [PDR §4](pdr.md#4-máquina-de-estados-de-pedidos) (negocio) y [technical guide §4](../backend/technical_guide.md#4-máquina-de-estados-de-pedidos-transaccional) (transaccional).
 
 
