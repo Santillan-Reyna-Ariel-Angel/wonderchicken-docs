@@ -199,9 +199,9 @@ El formato de `error.details` cambia (de objeto `{ fields: string[] }` a array `
 ## 7. Decisiones que siguen pendientes
 
 1. ~~Si un ADMIN puede crear otro ADMIN~~ — **resuelto**: no. SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN (sin repositorio global de empleados) y el traslado es solo de SUPER_ADMIN.
-2. Si se hacen `branches-summary` (#16) y el toggle de inventario (#6).
-3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. A futuro: token corto más token de renovación.
-4. Cuando se despliegue QA o producción: definir `CORS_ORIGINS` si el front llama directo al API (si pasa por el proxy de Next no hace falta).
+2. ~~Si se hacen `branches-summary` (#16) y el toggle de inventario (#6)~~ — **resuelto**: #6 hecho; #16 postergado, el dashboard (datos resumen) es lo último que se hace en la aplicación.
+3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. **Decidido: más adelante se hará un token de renovación** (token de acceso corto + token de renovación, que además emite el nuevo token con los datos frescos). Mientras tanto, para trabajar sin cortes en local alcanza con `JWT_EXPIRES_IN=8h` en el `.env`. Pendiente de diseñar: dónde se guarda el token de renovación, su vida útil y cómo se revoca.
+4. **Decidido: se define cuando se cambie a QA o producción.** Si el front llama directo al API hay que fijar `CORS_ORIGINS` (sin eso, `qa` y `production` no aceptan ningún origen externo); si pasa por el proxy de Next no hace falta.
 5. `PrismaService` todavía lee `DATABASE_URL` de `process.env` directamente; migrarlo a la configuración validada.
 
 ---
@@ -256,3 +256,8 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 - Arreglados: `PATCH ci` ahora actualiza la CI (y la contraseña, que es la CI); `phone: null` borra el teléfono; `branchId: null` ya no da 500; `null` en campos obligatorios da 400.
 - Se quitó el código `USER_TOGGLE_NOT_ALLOWED`: un ADMIN que apunta a un ADMIN o SUPER_ADMIN ahora recibe `USER_NOT_FOUND`.
 - `GET /orders` y `GET /orders/:id` ya no dejan al ADMIN ver otras sucursales (solo SUPER_ADMIN).
+
+### Después de la ejecución: `GET /auth/me` e inventario (cambios #1 y #6)
+
+- `GET /auth/me` devuelve el perfil fresco desde la base (`branchName` incluido) para cualquier rol.
+- `PATCH /inventory/items/:id/toggle-active` (ADMIN, de su sucursal): el negocio no borra, desactiva.
