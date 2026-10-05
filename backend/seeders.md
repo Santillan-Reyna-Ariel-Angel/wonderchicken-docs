@@ -1,7 +1,7 @@
 # Guía de Seeders — Poblar la base con datos de prueba
 
 Funciones que llenan la base con datos de prueba realistas y coherentes con las
-reglas de negocio. Viven en [`/seeders`](../seeders).
+reglas de negocio. Viven en [`/seeders`](../../seeders).
 
 ## Comandos
 
@@ -40,7 +40,7 @@ Si es intencional: `pnpm seed -- --force`. La lógica está en [`seeders/guard.t
 
 ## Ajustar el volumen de datos
 
-Editá la constante `VOLUME` en [`seeders/helpers.ts`](../seeders/helpers.ts)
+Editá la constante `VOLUME` en [`seeders/helpers.ts`](../../seeders/helpers.ts)
 (cantidad de cajeras, clientes, órdenes por turno, etc.). Solo las órdenes por turno también se pueden
 cambiar sin tocar código, con la variable `ORDERS_PER_SHIFT` en el `.env`.
 
@@ -52,13 +52,13 @@ los mismos datos**. Para datos distintos en cada corrida, quitá esa línea en `
 ## Agregar un seeder nuevo
 
 1. Creá `seeders/domains/<dominio>.seeder.ts` exportando una función `seedX(prisma, ctx)`.
-2. Registralo en [`seeders/index.ts`](../seeders/index.ts) en el orden de dependencias correcto.
+2. Registralo en [`seeders/index.ts`](../../seeders/index.ts) en el orden de dependencias correcto.
 3. Si otros seeders dependen de lo que creás, guardalo en el `SeedContext` con `apply`.
 
 ## Notas
 
 - **Prisma 7**: el cliente exige un driver adapter (`@prisma/adapter-pg`). Ver
-  [`seeders/prisma.ts`](../seeders/prisma.ts).
-- El `wipe` borra en orden inverso de foreign keys (ver [`seeders/reset.ts`](../seeders/reset.ts)).
+  [`seeders/prisma.ts`](../../seeders/prisma.ts).
+- El `wipe` borra en orden inverso de foreign keys (ver [`seeders/reset.ts`](../../seeders/reset.ts)).
 - Los datos respetan las reglas de negocio del schema: totales derivados, `orderNumber`
   por turno, `publicToken` único, transacciones de inventario al pagar, etc.
