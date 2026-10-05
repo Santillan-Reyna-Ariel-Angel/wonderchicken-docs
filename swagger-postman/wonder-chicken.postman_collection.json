@@ -9550,6 +9550,357 @@
           }
         },
         {
+          "name": "Listar clientes (ADMIN): búsqueda libre, estado, fechas de alta y paginación.",
+          "request": {
+            "name": "Listar clientes (ADMIN): búsqueda libre, estado, fechas de alta y paginación.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "disabled": true,
+                  "key": "search",
+                  "value": "marco ortega",
+                  "description": "Texto libre: cada palabra debe aparecer en el nombre, apellido, CI o NIT (sin distinguir mayúsculas)"
+                },
+                {
+                  "disabled": true,
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "disabled": true,
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "description": "Registrados desde este día (inclusive)"
+                },
+                {
+                  "disabled": true,
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "description": "Registrados hasta este día (inclusive)"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Clientes obtenidos correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Clientes obtenidos correctamente\",\n  \"data\": {\n    \"customers\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Registrar cliente (POS, atajo F9) — CASHIER | ADMIN",
           "request": {
             "name": "Registrar cliente (POS, atajo F9) — CASHIER | ADMIN",
@@ -9802,6 +10153,1280 @@
                 }
               ],
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Obtener cliente por id. La cajera solo ve los activos; ADMIN ve también los desactivados.",
+          "request": {
+            "name": "Obtener cliente por id. La cajera solo ve los activos; ADMIN ve también los desactivados.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Cliente obtenido correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente obtenido correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Editar datos personales del cliente. ci y nit no se editan. La cajera solo edita los activos.",
+          "request": {
+            "name": "Editar datos personales del cliente. ci y nit no se editan. La cajera solo edita los activos.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Cliente actualizado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente actualizado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · Debe enviar al menos un campo para actualizar",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Historial de pedidos del cliente, de todas las sucursales (ADMIN).",
+          "request": {
+            "name": "Historial de pedidos del cliente, de todas las sucursales (ADMIN).",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id",
+                "orders"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Pedidos del cliente obtenidos correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Pedidos del cliente obtenidos correctamente\",\n  \"data\": {\n    \"orders\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000901\",\n        \"orderNumber\": 5,\n        \"type\": \"MESA\",\n        \"tableNumber\": \"70\",\n        \"customerId\": \"01900000-0000-7000-8000-000000000701\",\n        \"customerName\": \"MARCO ORTEGA GUTIERREZ\",\n        \"status\": \"PREPARING\",\n        \"paymentStatus\": \"PAID\",\n        \"paymentMethod\": \"CASH\",\n        \"originalAmount\": \"45\",\n        \"total\": \"45\",\n        \"isCustom\": false,\n        \"createdById\": \"01900000-0000-7000-8000-000000000102\",\n        \"shiftId\": \"01900000-0000-7000-8000-000000000801\",\n        \"paidAt\": null,\n        \"readyAt\": null,\n        \"deliveredAt\": null,\n        \"deliveredById\": null,\n        \"cancelledAt\": null,\n        \"cancelReason\": null,\n        \"cancelDetails\": null,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"createdBy\": {\n          \"id\": \"01900000-0000-7000-8000-000000000102\",\n          \"firstName\": \"Mariela\",\n          \"lastName\": \"Sanchez Sanchez\"\n        },\n        \"items\": [\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          },\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          }\n        ],\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n        \"branchName\": \"Sucursal Principal\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000901\",\n        \"orderNumber\": 5,\n        \"type\": \"MESA\",\n        \"tableNumber\": \"70\",\n        \"customerId\": \"01900000-0000-7000-8000-000000000701\",\n        \"customerName\": \"MARCO ORTEGA GUTIERREZ\",\n        \"status\": \"PREPARING\",\n        \"paymentStatus\": \"PAID\",\n        \"paymentMethod\": \"CASH\",\n        \"originalAmount\": \"45\",\n        \"total\": \"45\",\n        \"isCustom\": false,\n        \"createdById\": \"01900000-0000-7000-8000-000000000102\",\n        \"shiftId\": \"01900000-0000-7000-8000-000000000801\",\n        \"paidAt\": null,\n        \"readyAt\": null,\n        \"deliveredAt\": null,\n        \"deliveredById\": null,\n        \"cancelledAt\": null,\n        \"cancelReason\": null,\n        \"cancelDetails\": null,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"createdBy\": {\n          \"id\": \"01900000-0000-7000-8000-000000000102\",\n          \"firstName\": \"Mariela\",\n          \"lastName\": \"Sanchez Sanchez\"\n        },\n        \"items\": [\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          },\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          }\n        ],\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n        \"branchName\": \"Sucursal Principal\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Activar/desactivar cliente (toggle) (ADMIN)",
+          "request": {
+            "name": "Activar/desactivar cliente (toggle) (ADMIN)",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id",
+                "toggle-active"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Cliente desactivado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente desactivado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
