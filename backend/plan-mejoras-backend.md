@@ -198,7 +198,7 @@ El formato de `error.details` cambia (de objeto `{ fields: string[] }` a array `
 
 ## 7. Decisiones que siguen pendientes
 
-1. Si un ADMIN puede crear otro ADMIN (plan de integración, cambio #2).
+1. ~~Si un ADMIN puede crear otro ADMIN~~ — **resuelto**: no. SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN (sin repositorio global de empleados) y el traslado es solo de SUPER_ADMIN.
 2. Si se hacen `branches-summary` (#16) y el toggle de inventario (#6).
 3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. A futuro: token corto más token de renovación.
 4. Cuando se despliegue QA o producción: definir `CORS_ORIGINS` si el front llama directo al API (si pasa por el proxy de Next no hace falta).
@@ -248,3 +248,11 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 3. **`POST /orders/:id/pay` y `/cancel` responden 201** en vez de 200 (falta `@HttpCode(200)`; el Swagger anterior decía 200). Corregirlo cambia el status que ve el front.
 4. `AuditService.log` lanza `BadRequestException` ante una acción desconocida: es un error de programación, no del cliente; debería ser un `Error` (500).
 5. El ejemplo de `pnpm api:snapshot` necesita `pnpm seed` antes de cada corrida (los pasos crean y modifican filas).
+
+### Después de la ejecución: alcance de usuarios y pedidos (cambio #2)
+
+- `POST/GET/PATCH /users` y `toggle-active` respetan el rol y la sucursal de quien llama. Fuera de alcance responde **404** (no se revela que existe); asignar un rol o sucursal no permitido responde **403** (`ROLE_NOT_ALLOWED`, `BRANCH_OUT_OF_SCOPE`).
+- Traslado o cambio de rol con un turno abierto: **409** `USER_HAS_OPEN_SHIFT`.
+- Arreglados: `PATCH ci` ahora actualiza la CI (y la contraseña, que es la CI); `phone: null` borra el teléfono; `branchId: null` ya no da 500; `null` en campos obligatorios da 400.
+- Se quitó el código `USER_TOGGLE_NOT_ALLOWED`: un ADMIN que apunta a un ADMIN o SUPER_ADMIN ahora recibe `USER_NOT_FOUND`.
+- `GET /orders` y `GET /orders/:id` ya no dejan al ADMIN ver otras sucursales (solo SUPER_ADMIN).

@@ -607,7 +607,7 @@ Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio 
 |----------|------------------|
 | `POST /auth/login` | **público** (`@Public()`) |
 | `POST /auth/logout` | cualquier rol autenticado |
-| `POST /users`, `GET /users`, `PATCH /users/{id}`, `PATCH /users/{id}/toggle-active` | `ADMIN` |
+| `POST /users`, `GET /users`, `PATCH /users/{id}`, `PATCH /users/{id}/toggle-active` | `ADMIN` (solo el personal — `CASHIER`, `DISPATCHER`, `COOK` — **de su sucursal**; lo demás responde 404/403). `SUPER_ADMIN`: cualquier rol y sucursal; **cambiar la sucursal de alguien (traslado) es solo de `SUPER_ADMIN`** y se rechaza si el usuario tiene un turno abierto |
 | `POST /branches`, `GET /branches`, `PATCH /branches/{id}`, `PATCH /branches/{id}/toggle-active` | **`SUPER_ADMIN`** *(gestión de sucursales — FR-000; el `RolesGuard` deja pasar siempre al SUPER_ADMIN)* |
 | `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `PATCH /products/{id}/toggle-active` | `ADMIN` |
 | `POST /variants`, `GET /variants`, `PATCH /variants/{id}`, `PATCH /variants/{id}/toggle-active` | `ADMIN` |
