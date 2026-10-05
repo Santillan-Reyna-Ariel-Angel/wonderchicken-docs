@@ -35,7 +35,7 @@ Lo que YA existe (no rehacer):
 | Pieza | Estado | Nota |
 |---|---|---|
 | `prisma/schema.prisma` | ✅ completo y validado | Fuente de verdad del modelo. Todas las entidades de [technical guide §3.1](technical_guide.md#31-entidades-principales). Incluye `OrderItem.snapshot` (Json, para impresión/auditoría) y `OrderItemComponent` (filas normalizadas por presa/bebida/extra que son la fuente de verdad para el decremento de inventario al pagar). `Product` lleva `isSellable` e `isInventoryItem`. |
-| `seeders/` | ✅ funcional y **versionado** | `pnpm seed` puebla los 16 dominios, es **reproducible** (`faker.seed(42)`) y se niega a correr si `APP_ENV` no es `development` o si la base no es local ([seeders.md](seeders.md)). El patrón de conexión **Prisma 7 + driver adapter** (`@prisma/adapter-pg`) ya está resuelto en `seeders/prisma.ts` — **reutilizarlo** para el `PrismaService`. El seeder es **datos de demo, no prerrequisito**: todos los maestros que el operador necesita para vender tienen endpoint de alta (§9) — ver la [Fase B](#9-flujo-funcional-de-prueba-orden-usuario-real). |
+| `seeders/` | ✅ funcional y **versionado** | `pnpm seed` puebla los 16 dominios, es **reproducible** (`faker.seed(42)`) y se niega a correr si `APP_ENV` no es `development` o si la base no es local ([seeders.md](seeders.md)). El patrón de conexión **Prisma 7 + driver adapter** (`@prisma/adapter-pg`) ya está resuelto en `seeders/prisma.ts` — **reutilizarlo** para el `PrismaService`. El seed carga los **datos reales del restaurante** (Casa Matriz, menú de 15 productos con sus precios e inventario real de 45 ítems; detalle en [business_context.md](../business/business_context.md#datos-del-negocio)). El seeder es **datos de demo, no prerrequisito**: todos los maestros que el operador necesita para vender tienen endpoint de alta (§9) — ver la [Fase B](#9-flujo-funcional-de-prueba-orden-usuario-real). |
 | `src/` | Sprint 0 y Sprint 1 **completos**; Sprint 2 **parcial** | Módulos: `prisma/`, `config/`, `common/`, `auth/`, `users/`, `branches/`, `cash-registers/`, `products/` (+ `variants/`), `shifts/`, `orders/`, `pos/`, `customers/`, `inventory/`, `audit/`. Los CRUDs de maestros están **completos**, más los endpoints administrativos de clientes (Sprint 4, paso 1) y el ajuste y el dashboard de inventario (Sprint 2, paso 1). Faltan los Sprints 3 a 5 y, del Sprint 2, el descuento de inventario al pagar, la venta custom, los consumos manuales y el ciclo crudo ([§10](#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)). |
 | Deps | ✅ | NestJS 11, Prisma 7.8 + adapter-pg, `@nestjs/config`, `@nestjs/swagger`, TypeScript (stack: [technical guide §1](technical_guide.md#1-stack-tecnológico-obligatorio)) |
 | Herramientas | ✅ | `pnpm api:snapshot` (foto de la API: la red de seguridad mientras no hay tests), `pnpm postman:sync` / `postman:watch` (colección de Postman desde el Swagger), `pnpm docs:pull` / `docs:push` / `docs:check` (subtree de `docs/`). Ver [plan-mejoras-backend.md §4](plan-mejoras-backend.md#4-red-de-seguridad-foto-de-la-api) y [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md). |
@@ -305,6 +305,8 @@ Branch ──► User ──► CashRegister ──► ShiftPeriod
 | A5 | Crear `CASHIER` / `DISPATCHER` / `COOK` | `POST /users` (×3) | SUPER_ADMIN | 0 ✅ |
 | A6 | Ver el equipo | `GET /users` | ADMIN | 0 ✅ |
 
+> **Datos reales para este recorrido** ([business_context.md](../business/business_context.md#datos-del-negocio)): el restaurante es **Wonder Chicken**, de **Erick Antonio Hurtado Zardan** (el `SUPER_ADMIN`); la casa matriz está en *Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)*, teléfonos `64-64864` y `64333477`. El NIT (`5640971015`) todavía no tiene dónde guardarse en el modelo (decisión 27 de la [§10.6](#106-decisiones-abiertas-de-contrato-cerrar-antes-de-su-sprint)).
+>
 > **Guardar los ids** de `branchId`, `adminId`, `cashierId`, `dispatcherId`, `cookId` — los referencian todas las fases siguientes.
 
 ### 9.3 Fase B — Configuración del negocio (todo maestro, vía ADMIN)
@@ -323,6 +325,8 @@ Branch ──► User ──► CashRegister ──► ShiftPeriod
 | B8 | **Descuentos** del catálogo (Descuento personal / Compensación al cliente) | `POST /discounts` | ADMIN | 3 |
 | B9 | Registrar un cliente (facturación nominada) | `POST /customers` | CASHIER, ADMIN | 1 ✅ |
 
+> **Menú e inventario reales** (los que carga `pnpm seed`): B3 y B4 siguen el menú 2026 — 7 platos (Cuarto de Pollo 23 Bs, Porción Media 30, Wonder 36, Medio Pollo 46, Porción Completa 54, Super Wonder 58, Wonder Pop 33), 3 bebidas (6, 8 y 16 Bs) y 5 extras (8 a 12 Bs); cada plato lleva una variante con su composición. B6 sigue la tabla de inventario real (bebidas `B1`–`B19`, insumos `P1`–`P18`, `S1`–`S3`, `C1`, `C4` y las 4 presas).
+>
 > **B6 en detalle (el ajuste clave):** el alta del ítem acepta `initialStock` y **crea la `InventoryTransaction` de `RECEPTION` en la misma transacción**. Razón: `currentStock` es un cache del libro de transacciones; el stock no se escribe directo sin rastro. Cargar el stock inicial por `/adjust` aparte obligaría a dos llamadas y dejaría una ventana con el ítem en 0 sin constar el ingreso.
 
 ### 9.4 Fase C — Operación de venta (caja abierta → vender)

@@ -26,12 +26,22 @@ Punto de partida, **en este orden**:
 
 1. `docs/backend/plan-integracion-front-datos-reales.md` — el plan de integración vigente (estado, contrato que debe respetar el front, pasos 1 a 4, pantallas, verificación, decisiones).
 2. `docs/backend/technical_guide.md` — contrato del API: §5.1 endpoints, §5.2 auth y roles, §5.3 a §5.5 sobre de respuesta y errores, §5.6 alcance por rol y sucursal, §6 request/response por módulo.
-3. `docs/business/pdr.md` y `docs/business/requirements.md` — reglas de negocio y requerimientos.
+3. `docs/business/pdr.md`, `docs/business/requirements.md` y `docs/business/business_context.md` (sección "Datos del negocio", menú 2026 e inventario real) — reglas de negocio, requerimientos y datos reales.
 4. `docs/backend/implementation_guide.md` — qué está hecho, qué falta por sprint y la deuda técnica (§10).
 5. `docs/frontend/frontend_code_style.md` y `docs/frontend/frontend_interfaces_sprint1.md` — convenciones y estructura del frontend.
 6. Apoyo: `docs/swagger-postman/swagger.json` y la colección de Postman (versionados; pueden diferir del código).
 
-Estos documentos se actualizaron y contrastaron con el código el 2026-10-05, pero **siguen siendo secundarios**: si algo contradice al código, gana el código y hay que reportarlo.
+Estos documentos se actualizaron y contrastaron con el código (y con los datos reales del seed) el 2026-10-05, pero **siguen siendo secundarios**: si algo contradice al código, gana el código y hay que reportarlo.
+
+## Datos reales del negocio (ya cargados en el seed)
+
+El seed y los ejemplos de Swagger usan los datos reales de Wonder Chicken; el análisis debe contrastar con ellos los **mocks del frontend** (`src/lib/mocks`) y reportar las diferencias como discrepancias. Detalle en `plan-integracion-front-datos-reales.md §2.4` y `business_context.md`.
+
+- **Restaurante:** Wonder Chicken. **Propietario y `SUPER_ADMIN`:** Erick Antonio Hurtado Zardan. **NIT:** 5640971015 (todavía sin campo en el API: decisión abierta 27 de `implementation_guide.md §10.6`).
+- **Casa Matriz** (única sucursal sembrada): Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero); teléfonos `64-64864` y `64333477` (en el campo `phone`).
+- **Menú 2026 (15 productos):** platos Cuarto de Pollo 23 Bs, Porción Media 30, Wonder 36, Medio Pollo 46, Porción Completa 54, Super Wonder 58 y Wonder Pop 33; bebidas Mocochinchi 500 ml 6, Bebida 500 ml 8 y Bebida 2 litros 16; extras Arroz 8, Smiles McCain 12, Plátano 8, Papas 12 y Mixto 10. Un plato = un producto con una variante.
+- **Inventario real (45 ítems):** 4 presas, bebidas `B1`–`B19`, insumos `P1`–`P18`, `S1`–`S3`, `C1` y `C4` (tabla de `business_context.md`).
+- **Usuarios de prueba:** `superadmin@`, `admin1@`, `cajera1@`, `despachadora1@` y `cocinero1@gmail.com`, contraseña `password123`.
 
 ## Prioridad de fuentes (si hay conflicto)
 
