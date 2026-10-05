@@ -9935,7 +9935,7 @@
           "branchName": {
             "type": "string",
             "nullable": true,
-            "example": "Sucursal Principal",
+            "example": "Casa Matriz",
             "description": "null for SUPER_ADMIN"
           }
         },
@@ -10130,16 +10130,16 @@
           },
           "name": {
             "type": "string",
-            "example": "Sucursal Principal"
+            "example": "Casa Matriz"
           },
           "address": {
             "type": "string",
-            "example": "Av. Principal #123, Ciudad"
+            "example": "Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)"
           },
           "phone": {
             "type": "string",
             "nullable": true,
-            "example": "+591 2 2223344"
+            "example": "64-64864 / 64333477"
           },
           "active": {
             "type": "boolean",
@@ -10221,16 +10221,16 @@
           },
           "name": {
             "type": "string",
-            "example": "Sucursal Principal"
+            "example": "Casa Matriz"
           },
           "address": {
             "type": "string",
-            "example": "Av. Principal #123, Ciudad"
+            "example": "Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)"
           },
           "phone": {
             "type": "string",
             "nullable": true,
-            "example": "+591 2 2223344"
+            "example": "64-64864 / 64333477"
           },
           "active": {
             "type": "boolean",
@@ -10279,15 +10279,15 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Sucursal Principal"
+            "example": "Casa Matriz"
           },
           "address": {
             "type": "string",
-            "example": "Av. Principal #123, Ciudad"
+            "example": "Av. de las Américas #317, Edificio Las Américas (Zona: Barrio Petrolero)"
           },
           "phone": {
             "type": "string",
-            "example": "+591 2 2223344",
+            "example": "64-64864 / 64333477",
             "description": "Teléfono de contacto de la sucursal (opcional)"
           }
         }
@@ -11995,7 +11995,7 @@
           },
           "branchName": {
             "type": "string",
-            "example": "Sucursal Principal"
+            "example": "Casa Matriz"
           }
         },
         "required": [
