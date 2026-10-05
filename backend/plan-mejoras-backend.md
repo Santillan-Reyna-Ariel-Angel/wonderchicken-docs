@@ -243,7 +243,7 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 
 ### Hallazgos que NO se tocaron (fuera del alcance del plan)
 
-1. **`POST /shifts/open` no valida que la cajera ya tenga un turno abierto**: la foto lo muestra abriendo uno segundo y `GET /shifts/active` devuelve cualquiera de los dos.
+1. ~~`POST /shifts/open` no valida que la cajera ya tenga un turno abierto~~ — **corregido después**: ahora responde `409 SHIFT_ALREADY_OPEN` (una cajera, un turno abierto a la vez).
 2. **Un pedido creado ya pagado queda con `paidAt: null`**; solo `/pay` lo completa.
 3. **`POST /orders/:id/pay` y `/cancel` responden 201** en vez de 200 (falta `@HttpCode(200)`; el Swagger anterior decía 200). Corregirlo cambia el status que ve el front.
 4. `AuditService.log` lanza `BadRequestException` ante una acción desconocida: es un error de programación, no del cliente; debería ser un `Error` (500).
