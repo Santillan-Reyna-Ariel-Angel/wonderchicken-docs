@@ -71,21 +71,21 @@ BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta 
 
 | # | Cambio | Evidencia en la doc | Efecto en el front |
 |---|---|---|---|
-| 2 | **Alcance de `/users` por sucursal** + ADMIN no asigna roles superiores. Corregir además: `PATCH ci` no actualiza `ci`; `phone:null`/`branchId:null` fallan. | PDR §2.7: ADMIN crea usuarios "en su sucursal"; el backend valida rol **y sucursal**. DoD Sprint 0. **Hoy el código incumple la doc** (un ADMIN puede crear un SUPER_ADMIN). | Sin filtros ni restricciones de seguridad en el cliente. |
-| 5 | **`?branchId=` opcional solo para SUPER_ADMIN** en cajas e inventario | `implementation_guide` (inventario: "SUPER_ADMIN filtra por sucursal"; cajas: "puede crear en cualquiera"); `technical_guide` §5.2: "el SUPER_ADMIN opera global". **El código no lo hace.** | SA puede usar las pantallas de cajas e inventario. |
+| 2 | ✅ **HECHO**. **Alcance de `/users` por sucursal** + ADMIN no asigna roles superiores. Corregir además: `PATCH ci` no actualiza `ci`; `phone:null`/`branchId:null` fallan. | PDR §2.7: ADMIN crea usuarios "en su sucursal"; el backend valida rol **y sucursal**. DoD Sprint 0. **Hoy el código incumple la doc** (un ADMIN puede crear un SUPER_ADMIN). | Sin filtros ni restricciones de seguridad en el cliente. |
+| 5 | ✅ **HECHO**. **`?branchId=` opcional solo para SUPER_ADMIN** en cajas e inventario | `implementation_guide` (inventario: "SUPER_ADMIN filtra por sucursal"; cajas: "puede crear en cualquiera"); `technical_guide` §5.2: "el SUPER_ADMIN opera global". **El código no lo hace.** | SA puede usar las pantallas de cajas e inventario. |
 | 7 | ✅ **HECHO** (plan-mejoras-backend, paso 2). **Códigos de error estables** en users, branches, alta de producto y de variante, y errores planos → `NOT_FOUND`/`FORBIDDEN`. *(El filtro global ya desanida `error.code` y los 404 de cajas, períodos, productos, variantes e inventario ya tienen código estable.)* | `technical_guide` §5.4: `code` será string estable. Hoy en esos módulos salen `"Not Found"`, `"Bad Request"`. | Un solo mapa de mensajes en español. |
-| 4 | `?includeInactive=true` en `GET /shifts/shift-periods` (default sin cambios) | La doc prevé "editar/**desactivar** período (admin)"; reactivar exige verlo. | Reactivar períodos sin caché local. |
-| 12 | **Clientes admin:** `GET /customers?search=&page=&pageSize=&status=&from=&to=`, `GET /:id`, `PATCH /:id` (`ci`/`nit` no editables), `PATCH /:id/toggle-active`, `GET /:id/orders` | Sprint 4 paso 1, contrato exacto en §6.2a. Precedente: `POST /customers` ya se adelantó del Sprint 4 al 1. | La pantalla de clientes pasa a ser 100% real. |
-| 15 | **Inventario:** `POST /inventory/adjust`, `PATCH /inventory/:id/sale-price`, `GET /inventory/dashboard` | Sprint 2, `implementation_guide` línea 158. Falta implementarlos. | Ajuste de stock y dashboard de cocina reales. |
-| 16 | `GET /reports/branches-summary` (solo SA) | `technical_guide` §5.1 (línea 505). Candidato a adelantar; es mayor (agregaciones). 🔲 decisión | KPIs del dashboard global. |
+| 4 | ✅ **HECHO**. `?includeInactive=true` en `GET /shifts/shift-periods` (default sin cambios) | La doc prevé "editar/**desactivar** período (admin)"; reactivar exige verlo. | Reactivar períodos sin caché local. |
+| 12 | ✅ **HECHO**. **Clientes admin:** `GET /customers?search=&page=&pageSize=&status=&from=&to=`, `GET /:id`, `PATCH /:id` (`ci`/`nit` no editables), `PATCH /:id/toggle-active`, `GET /:id/orders` | Sprint 4 paso 1, contrato exacto en §6.2a. Precedente: `POST /customers` ya se adelantó del Sprint 4 al 1. | La pantalla de clientes pasa a ser 100% real. |
+| 15 | ✅ **HECHO** (`adjust` y `dashboard`; `sale-price` ya lo cubre `PATCH /inventory/items/:id`). **Inventario:** `POST /inventory/adjust`, `PATCH /inventory/:id/sale-price`, `GET /inventory/dashboard` | Sprint 2, `implementation_guide` línea 158. Falta implementarlos. | Ajuste de stock y dashboard de cocina reales. |
+| 16 | ⏸️ **POSTERGADO**. `GET /reports/branches-summary` (solo SA) | `technical_guide` §5.1 (línea 505). Es mayor (agregaciones). **Decidido: el dashboard (datos resumen) es lo último que se hace en la aplicación**; hasta entonces el front mantiene esos KPIs como complemento local. | KPIs del dashboard global. |
 
 ### 4.2 Grupo B — complementarios (no previstos, compatibles; documentar en `technical_guide` §5.1)
 
 | # | Cambio | Nota |
 |---|---|---|
-| 1 | `GET /auth/me` → `{ id, firstName, lastName, email, role, branchId, branchName }` | Hoy el nombre solo sale de `GET /users/:id` (ADMIN) y el ADMIN no puede leer su sucursal (`GET /branches` es solo SA). Cumple §9.7 ("ningún listado que la UI no consuma"): el header lo usa. |
-| 3 | `GET /branches` + `_count.cashRegisters` (terminales) y ADMIN de la sede | Campos derivados, **sin tocar el schema**. |
-| 6 | `PATCH /inventory/items/:id/toggle-active` | Sigue el patrón "el negocio no borra, desactiva" (§9.7). 🔲 decisión |
+| 1 | ✅ **HECHO**. `GET /auth/me` → `{ id, firstName, lastName, email, role, branchId, branchName }` | Hoy el nombre solo sale de `GET /users/:id` (ADMIN) y el ADMIN no puede leer su sucursal (`GET /branches` es solo SA). Cumple §9.7 ("ningún listado que la UI no consuma"): el header lo usa. |
+| 3 | ✅ **HECHO** (expuesto como `cashRegistersCount` y `admin`). `GET /branches` + `_count.cashRegisters` (terminales) y ADMIN de la sede | Campos derivados, **sin tocar el schema**. |
+| 6 | ✅ **HECHO**. `PATCH /inventory/items/:id/toggle-active` | Sigue el patrón "el negocio no borra, desactiva" (§9.7). Decidido: sí. |
 
 ### 4.3 Grupo C — se solapan o violan YAGNI: **diferir**
 
@@ -100,7 +100,7 @@ BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta 
 
 ### 4.4 Orden de implementación y actualización de docs
 
-1. **Orden:** **#2** (corrige una brecha de seguridad) → **#7** → **#1** → **#5** → **#4** → **#3** → **#12** → **#15**. Opcionales según decisión (§7): **#16**, **#6**.
+1. **Orden:** **#2** ✅ → **#7** ✅ → **#1** ✅ → **#5** ✅ → **#4** ✅ → **#3** ✅ → **#12** ✅ → **#15** ✅. **#6** ✅ hecho; **#16** postergado al final (§7).
 2. **Dónde:** en **esta misma rama** (`feature_sprint1_integrate_front`), como un nuevo change de openspec (mismo flujo que `add-master-data-cruds`).
 3. **Docs:** en el mismo cambio, actualizar `implementation_guide` (mover #12 del Sprint 4 y, si aplica, #16 al sprint actual, como ya hace la guía con sus "Ajuste sobre PDR"), `technical_guide` §5.1/§5.2/§6.x, y agregar casos E2E en §8.
 4. **Ejemplos de Swagger:** cada endpoint nuevo debe sumar sus ids/ejemplos a `src/common/swagger/example-data.ts` (§2) para que la colección de Postman siga ejecutándose sin editar valores.
@@ -131,8 +131,8 @@ BD limpia → `pnpm prisma db push` → `pnpm seed` (confirma que Prisma acepta 
 ## 7. Decisiones pendientes
 
 1. ✅ **Decidido — `seeders/` se versiona** (se quitó de `.gitignore` el 2026-10-05; antes se había decidido ignorarlo). Motivo: Swagger y los seeders cambian juntos, y versionados viajan en el mismo commit, donde un desfase se ve en la revisión; ignorados, el desfase es invisible. Además cualquier clon puede correr `pnpm seed`. No contienen secretos (solo el hash de `password123`). Se agregó una **guarda** (`seeders/guard.ts`): `pnpm seed` se niega si `APP_ENV` no es `development` o si la base no es `localhost`; `--force` la omite.
-2. **¿Puede un ADMIN crear otro ADMIN?** La doc no lo define. Propuesta: ADMIN solo crea CASHIER, DISPATCHER y COOK de su sucursal; SA crea ADMIN (coherente con §9 Fase A).
-3. **Alcance de §4:** aprobar los Grupos A y B; decidir **#16** (`branches-summary`) y **#6** (toggle de inventario).
+2. ✅ **Decidido — ADMIN no crea ADMIN.** SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; la cajera solo registra clientes (entidad `Customer`, `POST /customers`). `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN y el traslado es solo de SUPER_ADMIN.
+3. ✅ **Decidido — alcance de §4:** se hace **#6**; **#16** (`branches-summary`) se posterga: el dashboard con datos resumen es lo último de la aplicación.
 4. ✅ **Decidido — `swagger.json` y la colección de Postman en `docs/swagger-postman/`.** `main.ts` escribe `swagger.json` ahí en cada arranque y `scripts/postman-sync.ts` genera `wonder-chicken.postman_collection.json` a partir de él; ambos están versionados y se comparten con el front por el subtree de `docs/`. Para que la colección no ensucie el historial se hizo **determinista**: se escribe sin ids y los valores que el conversor elegía al azar (filtro `role` de usuarios, `status` y `date` de pedidos, `birthDate` de clientes) ahora tienen un `example` fijo en los DTOs (verificado: 3 corridas idénticas). Cuando cambie la API hay que commitear ambos archivos y subir el subtree. Se quitaron del `.gitignore` las entradas de `swagger.json` y `postman/`.
 5. ✅ **Decidido — `docs/` es un subtree compartido con el front y ya no se sincroniza en `start:dev`** (ni en backend ni en frontend): `git subtree pull` exige todo el árbol limpio y crea un commit de merge. Ahora `start:dev` **avisa** si el repo de docs tiene novedades (`pnpm docs:check`); se sincroniza a mano con `pnpm docs:pull` (traer) y `pnpm docs:push` (subir), con mensajes claros. El aviso es **no bloqueante** por defecto; se cambia a bloqueante con `DEFAULT_CHECK_MODE` en `scripts/docs-subtree.js` o `DOCS_CHECK_MODE=block`. Detalle en [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md) §5. 🔲 A futuro: modo `ask` (preguntar si sincronizar al arrancar).
 6. **Sin tests** por regla del proyecto hasta cerrar V1: la verificación es manual (recorrido por rol) y la corrida de §2.3.

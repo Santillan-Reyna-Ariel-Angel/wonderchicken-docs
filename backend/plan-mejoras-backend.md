@@ -198,10 +198,10 @@ El formato de `error.details` cambia (de objeto `{ fields: string[] }` a array `
 
 ## 7. Decisiones que siguen pendientes
 
-1. Si un ADMIN puede crear otro ADMIN (plan de integración, cambio #2).
-2. Si se hacen `branches-summary` (#16) y el toggle de inventario (#6).
-3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. A futuro: token corto más token de renovación.
-4. Cuando se despliegue QA o producción: definir `CORS_ORIGINS` si el front llama directo al API (si pasa por el proxy de Next no hace falta).
+1. ~~Si un ADMIN puede crear otro ADMIN~~ — **resuelto**: no. SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN (sin repositorio global de empleados) y el traslado es solo de SUPER_ADMIN.
+2. ~~Si se hacen `branches-summary` (#16) y el toggle de inventario (#6)~~ — **resuelto**: #6 hecho; #16 postergado, el dashboard (datos resumen) es lo último que se hace en la aplicación.
+3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. **Decidido: más adelante se hará un token de renovación** (token de acceso corto + token de renovación, que además emite el nuevo token con los datos frescos). Mientras tanto, para trabajar sin cortes en local alcanza con `JWT_EXPIRES_IN=8h` en el `.env`. Pendiente de diseñar: dónde se guarda el token de renovación, su vida útil y cómo se revoca.
+4. **Decidido: se define cuando se cambie a QA o producción.** Si el front llama directo al API hay que fijar `CORS_ORIGINS` (sin eso, `qa` y `production` no aceptan ningún origen externo); si pasa por el proxy de Next no hace falta.
 5. `PrismaService` todavía lee `DATABASE_URL` de `process.env` directamente; migrarlo a la configuración validada.
 
 ---
@@ -248,3 +248,38 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 3. **`POST /orders/:id/pay` y `/cancel` responden 201** en vez de 200 (falta `@HttpCode(200)`; el Swagger anterior decía 200). Corregirlo cambia el status que ve el front.
 4. `AuditService.log` lanza `BadRequestException` ante una acción desconocida: es un error de programación, no del cliente; debería ser un `Error` (500).
 5. El ejemplo de `pnpm api:snapshot` necesita `pnpm seed` antes de cada corrida (los pasos crean y modifican filas).
+
+### Después de la ejecución: alcance de usuarios y pedidos (cambio #2)
+
+- `POST/GET/PATCH /users` y `toggle-active` respetan el rol y la sucursal de quien llama. Fuera de alcance responde **404** (no se revela que existe); asignar un rol o sucursal no permitido responde **403** (`ROLE_NOT_ALLOWED`, `BRANCH_OUT_OF_SCOPE`).
+- Traslado o cambio de rol con un turno abierto: **409** `USER_HAS_OPEN_SHIFT`.
+- Arreglados: `PATCH ci` ahora actualiza la CI (y la contraseña, que es la CI); `phone: null` borra el teléfono; `branchId: null` ya no da 500; `null` en campos obligatorios da 400.
+- Se quitó el código `USER_TOGGLE_NOT_ALLOWED`: un ADMIN que apunta a un ADMIN o SUPER_ADMIN ahora recibe `USER_NOT_FOUND`.
+- `GET /orders` y `GET /orders/:id` ya no dejan al ADMIN ver otras sucursales (solo SUPER_ADMIN).
+
+### Después de la ejecución: `GET /auth/me` e inventario (cambios #1 y #6)
+
+- `GET /auth/me` devuelve el perfil fresco desde la base (`branchName` incluido) para cualquier rol.
+- `PATCH /inventory/items/:id/toggle-active` (ADMIN, de su sucursal): el negocio no borra, desactiva.
+
+### Después de la ejecución: alcance de SUPER_ADMIN, períodos y sucursales (cambios #5, #4 y #3)
+
+- **#5.** Cajas e inventario: el SUPER_ADMIN usa `?branchId=` (opcional; sin él ve todas las sucursales) y manda `branchId` en el body al crear (obligatorio: `BRANCH_REQUIRED`; sucursal inexistente: `BRANCH_REFERENCE_NOT_FOUND`). Edita y activa/desactiva en cualquier sucursal. Un rol de sucursal que nombre otra recibe 403 `BRANCH_OUT_OF_SCOPE`. La lógica vive en `src/common/auth/branch-scope.ts` (`readableBranchId`, `resolveWriteBranchId`, `assertBranchExists`).
+- **#4.** `GET /shifts/shift-periods?includeInactive=true` (default sin cambios; la cajera nunca ve inactivos). Un valor que no sea `true`/`false` da 400; lo mismo vale ahora para `?active=` en inventario (antes `?active=abc` se leía como `false`).
+- **#3.** `GET /branches` agrega `cashRegistersCount` y `admin` por sucursal. Se expone como `cashRegistersCount` y no como el `_count` de Prisma, para no filtrar detalles del ORM al contrato.
+
+### Después de la ejecución: clientes administrativos (cambio #12)
+
+- `GET /customers` (ADMIN) con búsqueda libre, estado, fechas de alta y paginación; `GET /customers/:id`, `PATCH /customers/:id` (sin `ci` ni `nit`), `PATCH /customers/:id/toggle-active` y `GET /customers/:id/orders`.
+- La cajera nunca ve ni edita un cliente desactivado; el ADMIN sí.
+- **Excepción deliberada al alcance por sucursal:** el historial de pedidos de un cliente (`/customers/:id/orders`) trae los de **todas** las sucursales y es solo para ADMIN, porque el PDR §2.12 define la vista del administrador sobre el cliente como cross-sucursal. Cada pedido indica su sucursal.
+- Paginación común en `src/common/http/pagination-query.dto.ts` (`?page=&pageSize=`, máximo 100), reutilizable por las listas que vengan.
+- Los rechazos de `forbidNonWhitelisted` ("property x should not exist") ahora salen en español.
+
+### Después de la ejecución: ajuste y dashboard de inventario (cambio #15)
+
+- `POST /inventory/adjust`: movimiento manual con motivo (`ADJUSTMENT` o `RECEPTION`) y nota obligatoria; no deja el stock en negativo; stock, libro y auditoría en una transacción.
+- `GET /inventory/dashboard`: stock cocido por tipo de presa y variación desde la apertura del turno.
+- **Decisión de diseño tomada sin consulta y fácil de cambiar:** la ventana del delta empieza en el turno **abierto más antiguo** de la sucursal (no por cajera). Es una regla de lectura, así que cambiarla no toca datos.
+- **`PATCH /inventory/:id/sale-price` no se creó:** `PATCH /inventory/items/:id` ya acepta `salePrice`. Si el front prefiere una ruta propia, es un alias de una línea.
+- **Sigue pendiente (Sprint 2, fuera de #15):** que pagar un pedido descuente el inventario (`decrementForOrder`, la línea que la receta de `orders.create()` ya deja prevista), los consumos manuales y el ciclo crudo. Hasta entonces, `sold` del dashboard solo refleja lo que ya está en el libro.

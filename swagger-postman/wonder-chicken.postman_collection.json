@@ -381,6 +381,138 @@
           }
         },
         {
+          "name": "Perfil del usuario autenticado (nombre, rol, sucursal) para el header. Cualquier rol.",
+          "request": {
+            "name": "Perfil del usuario autenticado (nombre, rol, sucursal) para el header. Cualquier rol.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Perfil obtenido correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Perfil obtenido correctamente\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"01900000-0000-7000-8000-000000000102\",\n      \"firstName\": \"Mariela\",\n      \"lastName\": \"Sanchez Sanchez\",\n      \"email\": \"cajera1@gmail.com\",\n      \"role\": \"CASHIER\",\n      \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n      \"branchName\": \"Sucursal Principal\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Cerrar sesión",
           "request": {
             "name": "Cerrar sesión",
@@ -523,9 +655,9 @@
       },
       "item": [
         {
-          "name": "Crear usuario (admin)",
+          "name": "Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal.",
           "request": {
-            "name": "Crear usuario (admin)",
+            "name": "Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal.",
             "description": {},
             "url": {
               "path": [
@@ -623,7 +755,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal",
+              "name": "Error de validación · El email ya está registrado · El CI ya está registrado · El teléfono ya está registrado · El branchId es obligatorio para los roles de sucursal · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -727,7 +859,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -785,9 +917,9 @@
           }
         },
         {
-          "name": "Listar usuarios con filtro por rol (admin)",
+          "name": "Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal.",
           "request": {
-            "name": "Listar usuarios con filtro por rol (admin)",
+            "name": "Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal.",
             "description": {},
             "url": {
               "path": [
@@ -1531,7 +1663,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para asignar ese rol · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1649,6 +1781,67 @@
                 }
               ],
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Usuario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "users",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000101",
+                      "key": "id",
+                      "description": "(Required) UUID del usuario (admin1@gmail.com del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Jhonny\",\n  \"lastName\": \"Hurtado Zardan\",\n  \"email\": \"admin1@gmail.com\",\n  \"phone\": \"+591 70000000\",\n  \"ci\": \"ADMIN-001\",\n  \"role\": \"ADMIN\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_HAS_OPEN_SHIFT\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -1866,7 +2059,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos para cambiar el estado de un usuario con ese rol",
+              "name": "Acceso denegado: privilegios insuficientes",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -2252,9 +2445,9 @@
           }
         },
         {
-          "name": "Listar sucursales (SUPER_ADMIN)",
+          "name": "Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN)",
           "request": {
-            "name": "Listar sucursales (SUPER_ADMIN)",
+            "name": "Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN)",
             "description": {},
             "url": {
               "path": [
@@ -2326,7 +2519,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Sucursales obtenidas correctamente\",\n  \"data\": {\n    \"branches\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n      }\n    ],\n    \"total\": 1\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Sucursales obtenidas correctamente\",\n  \"data\": {\n    \"branches\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"cashRegistersCount\": 2,\n        \"admin\": {\n          \"id\": \"01900000-0000-7000-8000-000000000101\",\n          \"firstName\": \"Jhonny\",\n          \"lastName\": \"Hurtado Zardan\"\n        }\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"cashRegistersCount\": 2,\n        \"admin\": {\n          \"id\": \"01900000-0000-7000-8000-000000000101\",\n          \"firstName\": \"Jhonny\",\n          \"lastName\": \"Hurtado Zardan\"\n        }\n      }\n    ],\n    \"total\": 1\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -5514,9 +5707,9 @@
       },
       "item": [
         {
-          "name": "Listar períodos de turno activos",
+          "name": "Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados.",
           "request": {
-            "name": "Listar períodos de turno activos",
+            "name": "Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados.",
             "description": {},
             "url": {
               "path": [
@@ -5528,7 +5721,14 @@
               "host": [
                 "{{baseUrl}}"
               ],
-              "query": [],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "includeInactive",
+                  "value": "true",
+                  "description": "Incluye los períodos desactivados (para poder reactivarlos). Solo lo respetan ADMIN y SUPER_ADMIN; la cajera siempre recibe solo los activos."
+                }
+              ],
               "variable": []
             },
             "header": [
@@ -5562,7 +5762,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -5595,6 +5800,56 @@
               "_postman_previewlanguage": "json"
             },
             {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shifts",
+                    "shift-periods"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
               "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
               "originalRequest": {
                 "url": {
@@ -5607,7 +5862,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -5652,7 +5912,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -6593,7 +6858,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+              "name": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro. · La caja ya está abierta por otra cajera",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9285,6 +9550,357 @@
           }
         },
         {
+          "name": "Listar clientes (ADMIN): búsqueda libre, estado, fechas de alta y paginación.",
+          "request": {
+            "name": "Listar clientes (ADMIN): búsqueda libre, estado, fechas de alta y paginación.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "disabled": true,
+                  "key": "search",
+                  "value": "marco ortega",
+                  "description": "Texto libre: cada palabra debe aparecer en el nombre, apellido, CI o NIT (sin distinguir mayúsculas)"
+                },
+                {
+                  "disabled": true,
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "disabled": true,
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "description": "Registrados desde este día (inclusive)"
+                },
+                {
+                  "disabled": true,
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "description": "Registrados hasta este día (inclusive)"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Clientes obtenidos correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Clientes obtenidos correctamente\",\n  \"data\": {\n    \"customers\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "marco ortega"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "name": "Registrar cliente (POS, atajo F9) — CASHIER | ADMIN",
           "request": {
             "name": "Registrar cliente (POS, atajo F9) — CASHIER | ADMIN",
@@ -9545,33 +10161,32 @@
           "protocolProfileBehavior": {
             "disableBodyPruning": true
           }
-        }
-      ],
-      "event": []
-    },
-    {
-      "name": "cash-registers",
-      "description": {
-        "content": "",
-        "type": "text/plain"
-      },
-      "item": [
+        },
         {
-          "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+          "name": "Obtener cliente por id. La cajera solo ve los activos; ADMIN ve también los desactivados.",
           "request": {
-            "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+            "name": "Obtener cliente por id. La cajera solo ve los activos; ADMIN ve también los desactivados.",
             "description": {},
             "url": {
               "path": [
                 "api",
                 "v1",
-                "cash-registers"
+                "customers",
+                ":id"
               ],
               "host": [
                 "{{baseUrl}}"
               ],
               "query": [],
-              "variable": []
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
             },
             "header": [
               {
@@ -9592,19 +10207,28 @@
           },
           "response": [
             {
-              "name": "Cajas registradoras obtenidas correctamente",
+              "name": "Cliente obtenido correctamente",
               "originalRequest": {
                 "url": {
                   "path": [
                     "api",
                     "v1",
-                    "cash-registers"
+                    "customers",
+                    ":id"
                   ],
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "query": [],
-                  "variable": []
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
                 },
                 "header": [
                   {
@@ -9631,51 +10255,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cajas registradoras obtenidas correctamente\",\n  \"data\": {\n    \"cashRegisters\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000201\",\n        \"name\": \"Caja 1\",\n        \"active\": true,\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000201\",\n        \"name\": \"Caja 1\",\n        \"active\": true,\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n      }\n    ]\n  },\n  \"error\": null\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "name": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "api",
-                    "v1",
-                    "cash-registers"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": []
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: bearer",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "Bearer <token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "GET",
-                "body": {}
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"El usuario no tiene una sucursal asignada. Contacte al administrador.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_WITHOUT_BRANCH\",\n    \"details\": []\n  }\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente obtenido correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -9686,13 +10266,22 @@
                   "path": [
                     "api",
                     "v1",
-                    "cash-registers"
+                    "customers",
+                    ":id"
                   ],
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "query": [],
-                  "variable": []
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
                 },
                 "header": [
                   {
@@ -9730,13 +10319,22 @@
                   "path": [
                     "api",
                     "v1",
-                    "cash-registers"
+                    "customers",
+                    ":id"
                   ],
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "query": [],
-                  "variable": []
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
                 },
                 "header": [
                   {
@@ -9766,6 +10364,59 @@
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
             }
           ],
           "event": [],
@@ -9774,9 +10425,1275 @@
           }
         },
         {
-          "name": "Crear caja registradora (ADMIN)",
+          "name": "Editar datos personales del cliente. ci y nit no se editan. La cajera solo edita los activos.",
           "request": {
-            "name": "Crear caja registradora (ADMIN)",
+            "name": "Editar datos personales del cliente. ci y nit no se editan. La cajera solo edita los activos.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Cliente actualizado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente actualizado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · Debe enviar al menos un campo para actualizar",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"LUCIA\",\n  \"lastName\": \"FERNANDEZ ROJAS\",\n  \"sex\": \"MUJER\",\n  \"birthDate\": \"1995-07-22\",\n  \"phone\": \"72345678\",\n  \"email\": \"lucia.fernandez@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Historial de pedidos del cliente, de todas las sucursales (ADMIN).",
+          "request": {
+            "name": "Historial de pedidos del cliente, de todas las sucursales (ADMIN).",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id",
+                "orders"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Pedidos del cliente obtenidos correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Pedidos del cliente obtenidos correctamente\",\n  \"data\": {\n    \"orders\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000901\",\n        \"orderNumber\": 5,\n        \"type\": \"MESA\",\n        \"tableNumber\": \"70\",\n        \"customerId\": \"01900000-0000-7000-8000-000000000701\",\n        \"customerName\": \"MARCO ORTEGA GUTIERREZ\",\n        \"status\": \"PREPARING\",\n        \"paymentStatus\": \"PAID\",\n        \"paymentMethod\": \"CASH\",\n        \"originalAmount\": \"45\",\n        \"total\": \"45\",\n        \"isCustom\": false,\n        \"createdById\": \"01900000-0000-7000-8000-000000000102\",\n        \"shiftId\": \"01900000-0000-7000-8000-000000000801\",\n        \"paidAt\": null,\n        \"readyAt\": null,\n        \"deliveredAt\": null,\n        \"deliveredById\": null,\n        \"cancelledAt\": null,\n        \"cancelReason\": null,\n        \"cancelDetails\": null,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"createdBy\": {\n          \"id\": \"01900000-0000-7000-8000-000000000102\",\n          \"firstName\": \"Mariela\",\n          \"lastName\": \"Sanchez Sanchez\"\n        },\n        \"items\": [\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          },\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          }\n        ],\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n        \"branchName\": \"Sucursal Principal\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000901\",\n        \"orderNumber\": 5,\n        \"type\": \"MESA\",\n        \"tableNumber\": \"70\",\n        \"customerId\": \"01900000-0000-7000-8000-000000000701\",\n        \"customerName\": \"MARCO ORTEGA GUTIERREZ\",\n        \"status\": \"PREPARING\",\n        \"paymentStatus\": \"PAID\",\n        \"paymentMethod\": \"CASH\",\n        \"originalAmount\": \"45\",\n        \"total\": \"45\",\n        \"isCustom\": false,\n        \"createdById\": \"01900000-0000-7000-8000-000000000102\",\n        \"shiftId\": \"01900000-0000-7000-8000-000000000801\",\n        \"paidAt\": null,\n        \"readyAt\": null,\n        \"deliveredAt\": null,\n        \"deliveredById\": null,\n        \"cancelledAt\": null,\n        \"cancelReason\": null,\n        \"cancelDetails\": null,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"createdBy\": {\n          \"id\": \"01900000-0000-7000-8000-000000000102\",\n          \"firstName\": \"Mariela\",\n          \"lastName\": \"Sanchez Sanchez\"\n        },\n        \"items\": [\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          },\n          {\n            \"id\": \"01900000-0000-7000-8000-000000000902\",\n            \"quantity\": 1,\n            \"unitPrice\": \"45\",\n            \"totalPrice\": \"45\"\n          }\n        ],\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n        \"branchName\": \"Sucursal Principal\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "orders"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Activar/desactivar cliente (toggle) (ADMIN)",
+          "request": {
+            "name": "Activar/desactivar cliente (toggle) (ADMIN)",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                ":id",
+                "toggle-active"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000701",
+                  "key": "id",
+                  "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Cliente desactivado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente desactivado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Cliente no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000701",
+                      "key": "id",
+                      "description": "(Required) UUID del cliente (MARCO ORTEGA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Cliente no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"CUSTOMER_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ],
+      "event": []
+    },
+    {
+      "name": "cash-registers",
+      "description": {
+        "content": "",
+        "type": "text/plain"
+      },
+      "item": [
+        {
+          "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN). SUPER_ADMIN: ?branchId= opcional.",
+          "request": {
+            "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN). SUPER_ADMIN: ?branchId= opcional.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "cash-registers"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Cajas registradoras obtenidas correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "cash-registers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cajas registradoras obtenidas correctamente\",\n  \"data\": {\n    \"cashRegisters\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000201\",\n        \"name\": \"Caja 1\",\n        \"active\": true,\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000201\",\n        \"name\": \"Caja 1\",\n        \"active\": true,\n        \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n      }\n    ]\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "cash-registers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "cash-registers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "No tiene permisos sobre esa sucursal",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "cash-registers"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"No tiene permisos sobre esa sucursal\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"BRANCH_OUT_OF_SCOPE\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
+          "request": {
+            "name": "Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
             "description": {},
             "url": {
               "path": [
@@ -9812,7 +11729,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Caja 3\"\n}",
+              "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -9853,7 +11770,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9874,7 +11791,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "name": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9905,7 +11822,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9957,7 +11874,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9978,7 +11895,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -10009,7 +11926,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10735,9 +12652,9 @@
       },
       "item": [
         {
-          "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+          "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional.",
           "request": {
-            "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+            "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional.",
             "description": {},
             "url": {
               "path": [
@@ -10767,6 +12684,12 @@
                   "key": "search",
                   "value": "papa",
                   "description": "Búsqueda parcial por nombre o código (case-insensitive)"
+                },
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
                 }
               ],
               "variable": []
@@ -10814,6 +12737,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -10872,6 +12799,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -10930,6 +12861,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -10964,7 +12899,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -10988,6 +12923,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -11028,9 +12967,9 @@
           }
         },
         {
-          "name": "Crear ítem de inventario (ADMIN)",
+          "name": "Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
           "request": {
-            "name": "Crear ítem de inventario (ADMIN)",
+            "name": "Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
             "description": {},
             "url": {
               "path": [
@@ -11067,7 +13006,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+              "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -11109,7 +13048,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11130,7 +13069,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "name": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11162,7 +13101,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11215,7 +13154,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11236,7 +13175,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11268,7 +13207,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11659,6 +13598,955 @@
                 }
               ],
               "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Ítem de inventario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INVENTORY_ITEM_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Activar/desactivar ítem de inventario (toggle) (ADMIN)",
+          "request": {
+            "name": "Activar/desactivar ítem de inventario (toggle) (ADMIN)",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "items",
+                ":id",
+                "toggle-active"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "01900000-0000-7000-8000-000000000602",
+                  "key": "id",
+                  "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Ítem de inventario desactivado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "items",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000602",
+                      "key": "id",
+                      "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Ítem de inventario desactivado correctamente\",\n  \"data\": {\n    \"inventoryItem\": {\n      \"id\": \"01900000-0000-7000-8000-000000000601\",\n      \"productCode\": \"PRESA-PECHO\",\n      \"name\": \"Presa de pecho\",\n      \"unit\": \"PRESA\",\n      \"type\": \"PECHO\",\n      \"currentStock\": 40,\n      \"unitMeasure\": \"250 g\",\n      \"salePrice\": \"12\",\n      \"active\": true,\n      \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "items",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000602",
+                      "key": "id",
+                      "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"El usuario no tiene una sucursal asignada. Contacte al administrador.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_WITHOUT_BRANCH\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "items",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000602",
+                      "key": "id",
+                      "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "items",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000602",
+                      "key": "id",
+                      "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Ítem de inventario no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "items",
+                    ":id",
+                    "toggle-active"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "01900000-0000-7000-8000-000000000602",
+                      "key": "id",
+                      "description": "(Required) UUID del ítem (PRESA-ALA del seed)"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Ítem de inventario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INVENTORY_ITEM_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría.",
+          "request": {
+            "name": "Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "adjust"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Ajuste de inventario registrado correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Ajuste de inventario registrado correctamente\",\n  \"data\": {\n    \"transaction\": {\n      \"id\": \"01900000-0000-7000-8000-000000000a01\",\n      \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n      \"delta\": 5,\n      \"reason\": \"RECEPTION\",\n      \"note\": \"Compra del día a proveedor\",\n      \"referenceId\": null,\n      \"timestamp\": \"2026-05-01T12:00:00.000Z\",\n      \"user\": {\n        \"id\": \"01900000-0000-7000-8000-000000000101\",\n        \"firstName\": \"Jhonny\",\n        \"lastName\": \"Hurtado Zardan\"\n      }\n    },\n    \"inventoryItem\": {\n      \"id\": \"01900000-0000-7000-8000-000000000601\",\n      \"productCode\": \"PRESA-PECHO\",\n      \"name\": \"Presa de pecho\",\n      \"unit\": \"PRESA\",\n      \"type\": \"PECHO\",\n      \"currentStock\": 40,\n      \"unitMeasure\": \"250 g\",\n      \"salePrice\": \"12\",\n      \"active\": true,\n      \"branchId\": \"01900000-0000-7000-8000-000000000001\",\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Ítem de inventario no encontrado",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Ítem de inventario no encontrado\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INVENTORY_ITEM_NOT_FOUND\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Stock insuficiente: el ajuste dejaría el stock en negativo",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "adjust"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventoryItemId\": \"01900000-0000-7000-8000-000000000601\",\n  \"delta\": 5,\n  \"reason\": \"RECEPTION\",\n  \"note\": \"Compra del día a proveedor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Stock insuficiente: el ajuste dejaría el stock en negativo\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"INSUFFICIENT_STOCK\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN | COOK).",
+          "request": {
+            "name": "Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN | COOK).",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "dashboard"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Dashboard de inventario obtenido correctamente",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Dashboard de inventario obtenido correctamente\",\n  \"data\": {\n    \"shift\": {\n      \"id\": \"01900000-0000-7000-8000-000000000801\",\n      \"startAt\": \"2026-05-01T12:00:00.000Z\"\n    },\n    \"pieces\": [\n      {\n        \"type\": \"PECHO\",\n        \"items\": 1,\n        \"currentStock\": 40,\n        \"delta\": {\n          \"sold\": 12,\n          \"adjusted\": -2,\n          \"received\": 20,\n          \"net\": 6\n        }\n      },\n      {\n        \"type\": \"PECHO\",\n        \"items\": 1,\n        \"currentStock\": 40,\n        \"delta\": {\n          \"sold\": 12,\n          \"adjusted\": -2,\n          \"received\": 20,\n          \"net\": 6\n        }\n      }\n    ]\n  },\n  \"error\": null\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Token de autenticación requerido\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"TOKEN_REQUIRED\",\n    \"details\": []\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "inventory",
+                    "dashboard"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
