@@ -1091,11 +1091,11 @@ Al cerrar, las órdenes `DELIVERED` del turno pasan a `CLOSED`, se extinguen las
 Globales (sin sucursal). Objetos:
 
 ```json
-{ "id": "uuid-product-medio", "name": "Pollo Broaster 1/2", "basePrice": "45", "category": "Plato principal", "description": "2 presas + porción mixto", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…" }
+{ "id": "uuid-product-porcion-media", "name": "Porción Media", "basePrice": "30", "category": "Plato principal", "description": "2 presas + porción mixto de papa y arroz", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…" }
 ```
 
 ```json
-{ "id": "uuid-variant-medio-mixto", "productId": "uuid-product-medio", "name": "1/2 mixto", "components": [ { "type": "presa", "count": 4 }, { "type": "acompanamiento", "name": "mixto", "count": 1 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" }
+{ "id": "uuid-variant-porcion-media", "productId": "uuid-product-porcion-media", "name": "Porción Media", "components": [ { "type": "presa", "count": 2 }, { "type": "acompanamiento", "name": "mixto", "count": 1 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" }
 ```
 
 Una respuesta de **producto** incluye además `variants` (arreglo de variantes), **salvo el alta**, que devuelve el producto sin ellas.
@@ -1341,8 +1341,8 @@ Una discrepancia distinta de 0 se informa; **no bloquea** el cierre. Cierra con 
     "shift": { "id": "uuid-shift-1", "status": "OPEN", "openingAmount": "200", "lastOrderNumber": 4, "startAt": "…", "branchId": "uuid-branch-1", "cashier": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "cashRegister": { "id": "…", "name": "Caja 1" }, "period": { "id": "…", "name": "Mañana", "displayOrder": 1 } },
     "shiftPeriods": [ { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00", "active": true } ],
     "products": [
-      { "id": "uuid-product-medio", "name": "Pollo Broaster 1/2", "basePrice": "45", "category": "Plato principal", "description": "…", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…",
-        "variants": [ { "id": "uuid-variant-medio-mixto", "productId": "uuid-product-medio", "name": "1/2 mixto", "components": [ { "type": "presa", "count": 4 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" } ] }
+      { "id": "uuid-product-porcion-media", "name": "Porción Media", "basePrice": "30", "category": "Plato principal", "description": "…", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…",
+        "variants": [ { "id": "uuid-variant-porcion-media", "productId": "uuid-product-porcion-media", "name": "Porción Media", "components": [ { "type": "presa", "count": 2 }, { "type": "acompanamiento", "name": "mixto", "count": 1 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" } ] }
     ]
   }
 }
@@ -1366,7 +1366,7 @@ Objeto `order` (detalle: crear, pagar, cancelar y `GET /orders/{id}`):
   "id": "uuid-order-1", "orderNumber": 5, "type": "MESA", "tableNumber": "70",
   "customerId": "uuid-customer-1", "customerName": "MARCO ORTEGA GUTIERREZ",
   "status": "PREPARING", "paymentStatus": "PAID", "paymentMethod": "CASH",
-  "originalAmount": "90", "total": "90", "isCustom": false,
+  "originalAmount": "60", "total": "60", "isCustom": false,
   "createdById": "uuid-user-cashier", "shiftId": "uuid-shift-1",
   "publicToken": "a3f9c2e81b4d7f60a9e35c8d2b1f4a7e",
   "paidAt": null, "readyAt": null, "deliveredAt": null, "deliveredById": null,
@@ -1376,9 +1376,9 @@ Objeto `order` (detalle: crear, pagar, cancelar y `GET /orders/{id}`):
   "shift": { "id": "uuid-shift-1", "branchId": "uuid-branch-1", "lastOrderNumber": 5, "cashier": { "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "period": { "id": "uuid-period-manana", "name": "Mañana" } },
   "items": [
     {
-      "id": "uuid-item-1", "productId": "uuid-product-medio", "variantId": "uuid-variant-medio-mixto",
-      "quantity": 2, "unitPrice": "45", "totalPrice": "90",
-      "snapshot": { "productName": "Pollo Broaster 1/2", "productBasePrice": 45, "variantName": "1/2 mixto", "variantComponents": [ { "type": "presa", "count": 4 } ], "quantity": 2, "selectedPieces": [], "substitutions": [ { "from": "mixto", "to": "arroz" } ], "extras": [], "drinks": [] },
+      "id": "uuid-item-1", "productId": "uuid-product-porcion-media", "variantId": "uuid-variant-porcion-media",
+      "quantity": 2, "unitPrice": "30", "totalPrice": "60",
+      "snapshot": { "productName": "Porción Media", "productBasePrice": 30, "variantName": "Porción Media", "variantComponents": [ { "type": "presa", "count": 4 } ], "quantity": 2, "selectedPieces": [], "substitutions": [ { "from": "mixto", "to": "arroz" } ], "extras": [], "drinks": [] },
       "substitutions": [ { "from": "mixto", "to": "arroz" } ], "selectedPieces": null, "customPieces": null, "extras": null, "drinks": null,
       "notes": null, "createdAt": "2026-05-01T12:10:00.000Z"
     }
@@ -1402,7 +1402,7 @@ Objeto `order` (detalle: crear, pagar, cancelar y `GET /orders/{id}`):
   "paymentStatus": "PAID",
   "paymentMethod": "CASH",
   "items": [
-    { "productId": "uuid-product-medio", "variantId": "uuid-variant-medio-mixto", "quantity": 2, "substitutions": [ { "from": "mixto", "to": "arroz" } ] },
+    { "productId": "uuid-product-porcion-media", "variantId": "uuid-variant-porcion-media", "quantity": 2, "substitutions": [ { "from": "mixto", "to": "arroz" } ] },
     { "productId": "uuid-product-coca", "quantity": 1, "notes": "Sin hielo" }
   ]
 }
@@ -1526,7 +1526,7 @@ Una autorización por descuento, cajera y turno; **se extingue al cerrar el turn
 **Descuento en el pedido.** Se aplica **por plato, en la misma llamada que crea el pedido**: no existe una llamada aparte. Cada línea de `POST /orders` y `POST /orders/custom` admite `discountId`:
 
 ```json
-{ "productId": "uuid-product-medio", "quantity": 2, "discountId": "uuid-discount-personal" }
+{ "productId": "uuid-product-porcion-media", "quantity": 2, "discountId": "uuid-discount-personal" }
 ```
 
 El backend valida (activo, ventana `END_OF_SHIFT`, autorización del turno si la exige) y congela el monto **por unidad**. En la línea de la respuesta aparecen `discountId` y `discountAmount` (`"7"`: monto **por unidad**), `totalPrice = (unitPrice − discountAmount) × quantity`, el pedido trae `originalAmount` (suma sin descuento) y `total` (con descuento), y los descuentos aplicados van en el `details` de la auditoría `CREATE_SALE`. Si un `discountId` no se puede aplicar, **se rechaza el pedido entero**, sin crear nada parcial (`DISCOUNT_NOT_AVAILABLE`, `DISCOUNT_NOT_AUTHORIZED`).
@@ -1538,7 +1538,7 @@ El backend valida (activo, ventana `END_OF_SHIFT`, autorización del turno si la
 **`POST /vouchers`** (`CASHIER`) — `201 { voucher }`. Requiere un turno abierto.
 
 ```json
-{ "workerName": "MARIA LOPEZ", "productId": "uuid-product-medio", "discountId": "uuid-discount-personal", "note": "Almuerzo" }
+{ "workerName": "MARIA LOPEZ", "productId": "uuid-product-porcion-media", "discountId": "uuid-discount-personal", "note": "Almuerzo" }
 ```
 
 | Campo | Regla |
@@ -1549,7 +1549,7 @@ El backend valida (activo, ventana `END_OF_SHIFT`, autorización del turno si la
 | `note` | opcional |
 
 ```json
-{ "data": { "voucher": { "id": "uuid-voucher-1", "code": "V-20260501-001", "workerId": null, "workerName": "MARIA LOPEZ", "productId": "uuid-product-medio", "productName": "Pollo Broaster 1/2", "originalAmount": "45", "discountAmount": "7", "amount": "38", "status": "ISSUED", "note": "Almuerzo", "issuedAt": "…", "shiftId": "uuid-shift-1", "issuedBy": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" } } } }
+{ "data": { "voucher": { "id": "uuid-voucher-1", "code": "V-20260501-001", "workerId": null, "workerName": "MARIA LOPEZ", "productId": "uuid-product-porcion-media", "productName": "Porción Media", "originalAmount": "30", "discountAmount": "7", "amount": "23", "status": "ISSUED", "note": "Almuerzo", "issuedAt": "…", "shiftId": "uuid-shift-1", "issuedBy": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" } } } }
 ```
 
 `amount = originalAmount − discountAmount`; el `code` es correlativo diario. Escribe `CREATE_VOUCHER`.
@@ -1601,7 +1601,7 @@ El backend valida (activo, ventana `END_OF_SHIFT`, autorización del turno si la
 **`GET /public/orders/{token}`** — la comanda del cliente, por el `publicToken` del pedido (128 bits, no adivinable: un token desconocido, o el `id` interno, responde `404`).
 
 ```json
-{ "data": { "order": { "orderNumber": 5, "type": "MESA", "status": "PREPARING", "paymentStatus": "PAID", "total": "90", "createdAt": "…", "items": [ { "productName": "Pollo Broaster 1/2", "variantName": "1/2 mixto", "quantity": 2 } ] }, "todayOrders": [ { "orderNumber": 3, "status": "READY", "total": "45" } ] } }
+{ "data": { "order": { "orderNumber": 5, "type": "MESA", "status": "PREPARING", "paymentStatus": "PAID", "total": "60", "createdAt": "…", "items": [ { "productName": "Porción Media", "variantName": "Porción Media", "quantity": 2 } ] }, "todayOrders": [ { "orderNumber": 3, "status": "READY", "total": "30" } ] } }
 ```
 
 Si el pedido tiene `customerId`, `todayOrders` lista **los otros pedidos del mismo cliente del día** (la identidad agrupa; el **token** da el acceso, el NIT nunca es llave); en una venta anónima "S/N" es `[]`.
@@ -1695,7 +1695,7 @@ Escenarios que la V1 debe cumplir de punta a punta. Cada caso indica su estado: 
 5. 🔲 **Orden custom (Sprint 2).** `POST /orders/custom` con `customPieces` (2 pechos + 1 ala), 1 papa y 1 coca → el POS sugiere `2×salePrice(pecho) + salePrice(ala) + papa + coca` con `piecePrices`; la cajera lo **pisa** con otro precio → se persiste el **confirmado**. Al pagar decrementa exactamente 2 pechos, 1 ala y 1 coca. Queda `type: "LLEVAR"` e `isCustom: true`.
 6. 🔲 **Turno completo (Sprint 3).** Abrir caja ✅ → ventas (incluido un vale, una anulación y una orden con descuento) → `POST /shifts/close` → arqueo correcto con desglose por método, vales y descuentos.
 7. 🔲 **Vales (Sprint 3).** `POST /vouchers` con `productId` y sin `amount` → el backend deriva `originalAmount` y `amount`; aparece en el arqueo y en `GET /vouchers`; descuenta inventario con `reason = VALE`.
-   - **7b.** Con `discountId` ("Descuento personal"): `amount = originalAmount − discountAmount` (45 − 7 = 38) con el monto congelado; el inventario descuenta las presas reales; fuera de la ventana `END_OF_SHIFT` el descuento no se ofrece.
+   - **7b.** Con `discountId` ("Descuento personal"): `amount = originalAmount − discountAmount` (30 − 7 = 23) con el monto congelado; el inventario descuenta las presas reales; fuera de la ventana `END_OF_SHIFT` el descuento no se ofrece.
 8. 🔲 **Despacho (Sprint 4).** Pedido `PREPARING` → aparece en el panel (`GET /orders`) → `PATCH /orders/{id}/status` a `READY` → la pantalla pública muestra su número → `DELIVERED`.
 9. 🔲 **Vista pública (Sprint 4).** `GET /public/orders/{token}` con el `publicToken` → ve su comanda; con un token cualquiera o con el `id` interno → `404`.
    - **9b.** Cliente con `customerId`: el `publicToken` de un pedido muestra también **todos sus pedidos del día**; con el NIT crudo en la URL no funciona (el NIT no es llave).
@@ -1706,7 +1706,7 @@ Escenarios que la V1 debe cumplir de punta a punta. Cada caso indica su estado: 
 
 ## Descuentos (Sprint 3)
 
-13. 🔲 **Descuento por plato en una sola llamada.** `POST /orders` con 3 Porciones Media (45 Bs c/u) donde cada línea lleva el `discountId` del "Descuento personal" (7 Bs por plato, `END_OF_SHIFT`) → `originalAmount = "135"`, cada línea con `discountAmount = "7"` y `total = "114"`, todo en la misma transacción; el inventario descuenta las presas reales; `CREATE_SALE` incluye los descuentos en `details`. Con `discountId` solo en 2 de las 3 → `total = "121"`. Fuera de la ventana, se rechaza el pedido completo con `DISCOUNT_NOT_AVAILABLE` (nada parcial).
+13. 🔲 **Descuento por plato en una sola llamada.** `POST /orders` con 3 Porciones Media (30 Bs c/u) donde cada línea lleva el `discountId` del "Descuento personal" (7 Bs por plato, `END_OF_SHIFT`) → `originalAmount = "90"`, cada línea con `discountAmount = "7"` y `total = "69"`, todo en la misma transacción; el inventario descuenta las presas reales; `CREATE_SALE` incluye los descuentos en `details`. Con `discountId` solo en 2 de las 3 → `total = "76"`. Fuera de la ventana, se rechaza el pedido completo con `DISCOUNT_NOT_AVAILABLE` (nada parcial).
    - **13b. Autorización.** Sin `DiscountAuthorization`, un `discountId` de "Compensación al cliente" → `DISCOUNT_NOT_AUTHORIZED`. El admin autoriza con `POST /discounts/{id}/authorize` (queda `AUTHORIZE_DISCOUNT`) → la cajera crea todas las órdenes que quiera del turno sin renovarla; al cerrar el turno deja de valer y **no pasa al siguiente**.
    - **13c. Snapshot.** Editar el descuento de 7 a 10 (`PATCH /discounts/{id}`) → las líneas viejas conservan `discountAmount = "7"`; una orden nueva toma 10.
    - **13d. Contexto POS.** Con la sesión autorizada, `GET /pos/context` trae ambos descuentos; sin autorización "Compensación al cliente" **no aparece** (el backend filtra); fuera de la ventana `END_OF_SHIFT`, "Descuento personal" tampoco. `piecePrices` trae los 4 `salePrice`.
