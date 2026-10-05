@@ -17,7 +17,7 @@ pnpm seed -- --no-reset   # seed completo SIN borrar antes (modo append)
 
 `pnpm seed` **borra** la base a la que apunte `DATABASE_URL`, así que se niega a correr (en cualquier modo, incluido `seed:reset`, el puntual y `--no-reset`) si:
 
-- `NODE_ENV` es `production`, o
+- `APP_ENV` no es `development` (o falta: es obligatoria a propósito, ver el README), o
 - el host de `DATABASE_URL` no es `localhost` / `127.0.0.1` / `::1`, o no se puede leer.
 
 Si es intencional: `pnpm seed -- --force`. La lógica está en [`seeders/guard.ts`](../../seeders/guard.ts).

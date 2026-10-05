@@ -54,7 +54,7 @@ Sin `POSTMAN_API_KEY` / `POSTMAN_COLLECTION_UID` no se sube nada: solo se genera
 - **Dónde viven los archivos:** en `docs/swagger-postman/`: `swagger.json` (lo escribe la API en cada arranque) y `wonder-chicken.postman_collection.json` (lo genera el script a partir de él). Ambos están **versionados** y se comparten con el front por el subtree de `docs/`. La colección se escribe **sin ids y con valores fijos** para que sea estable: en git solo cambian cuando cambia la API, y en ese caso hay que commitearlos (y subir el subtree). El estado local de la última subida a Postman vive en `node_modules/.cache/` (no se versiona).
 - **Ejemplos fijos:** si agregás un parámetro con `enum` o un campo de fecha, dale un `example` (y `format: 'date'` si es solo fecha). Sin eso el conversor de Postman elige un valor al azar en cada generación y el archivo versionado cambia sin que cambie la API.
 - **`pnpm start:dev` ya no sincroniza `docs/`**: solo **avisa** si hay novedades (ver la sección 5).
-- **`pnpm seed` tiene una guarda:** se niega a correr con `NODE_ENV=production` o si `DATABASE_URL` no apunta a `localhost`, porque **borra** la base. `pnpm seed -- --force` la omite.
+- **`pnpm seed` tiene una guarda:** se niega a correr si `APP_ENV` no es `development` (o falta) o si `DATABASE_URL` no apunta a `localhost`, porque **borra** la base. `pnpm seed -- --force` la omite.
 - **La subida real a Postman todavía no se probó con una cuenta real.** Si falla, el error de Postman se imprime en la consola.
 - Detalle técnico y motivos (por qué un `swagger.json` no puede llevar scripts de Postman): [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md), sección 3.
 
