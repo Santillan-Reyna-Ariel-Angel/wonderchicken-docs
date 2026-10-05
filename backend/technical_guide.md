@@ -543,7 +543,7 @@ Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestj
 | `@Roles(UserRole.ADMIN, ...)` | Declara qué roles pueden tocar el handler. Vía `SetMetadata(ROLES_KEY, roles)`. |
 | `AuthGuard` | Verifica el JWT, inyecta `request.user`, respeta `@Public()`. → 401 |
 | `RolesGuard` | Compara `request.user.role` contra `@Roles`. → 403 |
-| `JwtModule` | Firma/verifica el token (secret + expiración). |
+| `JwtModule` | Firma/verifica el token. La clave sale de `JWT_SECRET` (obligatoria, mínimo 32 caracteres) y la expiración es la constante `JWT_EXPIRES_IN` (2 h) de `src/common/config/jwt.config.ts`. No hay renovación: al vencer, vuelve a loguearse. |
 | `bcryptjs` | Hashea/compara contraseñas en el login (`User.passwordHash`). |
 | `ValidationPipe` (global) | Valida el body contra los DTOs (class-validator). |
 
