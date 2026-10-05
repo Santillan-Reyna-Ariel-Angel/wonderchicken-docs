@@ -9683,7 +9683,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Clientes obtenidos correctamente\",\n  \"data\": {\n    \"customers\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Clientes obtenidos correctamente\",\n  \"data\": {\n    \"customers\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000701\",\n        \"ci\": \"8351427\",\n        \"nit\": \"120558027\",\n        \"firstName\": \"MARCO\",\n        \"lastName\": \"ORTEGA GUTIERREZ\",\n        \"sex\": \"HOMBRE\",\n        \"phone\": \"71234567\",\n        \"email\": \"marco.ortega@example.com\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"pageSize\": 1\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -9996,7 +9996,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente registrado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente registrado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -10255,7 +10255,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente obtenido correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente obtenido correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -10538,7 +10538,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente actualizado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente actualizado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -11264,7 +11264,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente desactivado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14\"\n    }\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Cliente desactivado correctamente\",\n  \"data\": {\n    \"customer\": {\n      \"id\": \"01900000-0000-7000-8000-000000000701\",\n      \"ci\": \"8351427\",\n      \"nit\": \"120558027\",\n      \"firstName\": \"MARCO\",\n      \"lastName\": \"ORTEGA GUTIERREZ\",\n      \"sex\": \"HOMBRE\",\n      \"phone\": \"71234567\",\n      \"email\": \"marco.ortega@example.com\",\n      \"active\": true,\n      \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n      \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n      \"birthDate\": \"1990-03-14T00:00:00.000Z\"\n    }\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },

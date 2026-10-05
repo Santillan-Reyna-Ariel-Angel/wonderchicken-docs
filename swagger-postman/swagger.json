@@ -11768,9 +11768,9 @@
           },
           "birthDate": {
             "type": "string",
-            "format": "date",
+            "format": "date-time",
             "nullable": true,
-            "example": "1990-03-14"
+            "example": "1990-03-14T00:00:00.000Z"
           }
         },
         "required": [

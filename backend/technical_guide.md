@@ -1,22 +1,34 @@
 # Technical Guide — Wonder Chicken
-**Sistema Informático de Ventas — Documento Técnico de Implementación**
-**Complementa:** [../business/pdr.md](../business/pdr.md)
-**Material de origen:** [../business/business_context.md](../business/business_context.md) (evidencia del trabajo de titulación que alimenta el PDR — citas, menú, inventario, tickets reales)
-**Audiencia:** LLM generador de código y equipo de desarrollo backend/frontend
-**Versión:** 1.8 (cierra los huecos de contrato detectados al preparar la guía de implementación: listado de órdenes, pantalla pública, dashboard de stock, reporte de arqueo + CSV, CRUD de usuarios, logout, cierre administrativo de órdenes y estados reservados sin uso en V1)
-**Fecha:** 2026-07-10
 
-> Este documento es la **traducción técnica** de las reglas de negocio definidas en el PDR. Contiene modelo de datos, contrato de la API, requerimientos no funcionales técnicos, máquina de estados con detalles transaccionales, payloads, OpenAPI skeleton, casos de prueba E2E y despliegue.
->
-> **Precedencia:** Si una decisión técnica de este documento entra en conflicto con una regla de negocio del PDR, **la regla de negocio del PDR gana**. Este documento se actualiza para reflejar el negocio, no al revés.
->
-> **Altitud de este documento:** el modelo de datos de §3 es el **modelo lógico completo** — todos los campos, snapshots y enums. Es el **contrato del dato**. Los diagramas ER no se dibujan a mano: se **generan** desde [`prisma/schema.prisma`](../prisma/schema.prisma) (ver [§3.3](#33-diagrama-de-relaciones-er)).
+**Sistema Informático de Ventas — Documento técnico de implementación**
+**Complementa:** [../business/pdr.md](../business/pdr.md) (reglas de negocio) · **Material de origen:** [../business/business_context.md](../business/business_context.md)
+**Audiencia:** equipo de desarrollo backend y frontend, y LLM generador de código
+**Versión:** 2.0 · **Fecha:** 2026-10-05 · **Estado del backend:** Sprint 0 y Sprint 1 completos; Sprint 2 parcial (ítems de inventario, ajuste y dashboard); Sprints 3 a 5 pendientes
 
----
+> **Qué es este documento.** La traducción técnica del PDR: modelo de datos, contrato de la API, reglas transaccionales, casos de prueba y despliegue. Junto con el PDR es la **fuente de verdad** del proyecto, y el frontend se construye sobre él. Describe **lo que el backend hace hoy** y **lo que falta construir**; no describe lo que existió antes.
+>
+> **Precedencia.** Si una decisión técnica entra en conflicto con una regla de negocio, **gana el [PDR](../business/pdr.md)** y esta guía se corrige. Para el modelo físico exacto (tipos, índices, restricciones), `prisma/schema.prisma` debe coincidir con [§3](#3-modelo-de-datos-esquema-lógico-para-la-bd). El contrato de lo implementado se genera del código (`swagger.json`): si una sección ✅ de esta guía lo contradice, es un error de la guía y se corrige junto con el código.
+>
+> **Estados.** ✅ implementado y verificado contra el código · 🔲 pendiente (con su sprint): el contrato descrito es el **objetivo** · ⏸️ aplazado por decisión.
+>
+> **Convenciones de los ejemplos.** Los ids se abrevian como `uuid-…` (en la API son UUID v7) · los enums van en MAYÚSCULAS · los importes `Decimal` viajan como **string** (`"45"`) · las fechas, en ISO 8601 UTC (`2026-05-01T12:00:00.000Z`) · los textos para el usuario, en español.
+>
+> **Documentos hermanos.** [implementation_guide.md](implementation_guide.md) (qué construir y en qué orden, sprint por sprint) · [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (plan del front) · [plan-mejoras-backend.md](plan-mejoras-backend.md) (patrones de código y red de seguridad) · [api-testing-guide.md](api-testing-guide.md) · [seeders.md](seeders.md) · [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md).
+
+## Orden de lectura
+
+1. **[§1](#1-stack-tecnológico-obligatorio) y [§2](#2-requerimientos-no-funcionales-nfr):** stack, configuración por entorno y requisitos no funcionales.
+2. **[§3](#3-modelo-de-datos-esquema-lógico-para-la-bd):** qué datos existen.
+3. **[§5](#5-contratos-de-la-api):** cómo se habla con la API — principios, formato de respuesta, errores, autenticación, alcance por rol y sucursal, y el mapa de endpoints.
+4. **[§6](#6-contratos-por-módulo-requestresponse):** el detalle request/response de cada módulo, en el **orden en que se implementan**.
+5. **[§4](#4-máquina-de-estados-de-pedidos-transaccional):** reglas transaccionales de pedidos y auditoría (se necesitan al llegar al Sprint 2).
+6. **[§8](#8-test-cases-e2e-casos-prioritarios) a [§10](#10-mapeo-negocio--técnica):** pruebas, despliegue y mapeo negocio → técnica.
 
 ## Índice
 
+  - [Orden de lectura](#orden-de-lectura)
 - [1. Stack tecnológico (obligatorio)](#1-stack-tecnológico-obligatorio)
+  - [1.1 Configuración por entorno](#11-configuración-por-entorno)
 - [2. Requerimientos no funcionales (NFR)](#2-requerimientos-no-funcionales-nfr)
 - [3. Modelo de datos (esquema lógico para la BD)](#3-modelo-de-datos-esquema-lógico-para-la-bd)
   - [3.1 Entidades principales](#31-entidades-principales)
@@ -27,404 +39,382 @@
   - [4.2 Reglas transaccionales](#42-reglas-transaccionales)
   - [4.3 Auditoría — implementación (V1)](#43-auditoría--implementación-v1)
 - [5. Contratos de la API](#5-contratos-de-la-api)
+  - [5.0 Principios de diseño de la API (el backend manda, el frontend renderiza)](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza)
   - [5.1 Endpoints principales](#51-endpoints-principales)
   - [5.2 Autenticación y autorización](#52-autenticación-y-autorización)
   - [5.3 Estructura de respuesta estándar](#53-estructura-de-respuesta-estándar)
   - [5.4 Reglas del contrato](#54-reglas-del-contrato)
-- [6. JSON payloads de ejemplo (request/response por endpoint)](#6-json-payloads-de-ejemplo-requestresponse-por-endpoint)
-  - [6.0 AuthLoginResponse](#60-authloginresponse)
-  - [6.1 ProductCreateResponse](#61-productcreateresponse-éxito)
-  - [6.2 VariantCreateResponse](#62-variantcreateresponse-éxito) · [6.2a Customer create/search](#62a-customercreateresponse--customersearchresponse)
-  - [6.3 OrderCreateResponse (mesa, pagado, con sustitución)](#63-ordercreateresponse-mesa-pagado-con-sustitución)
-  - [6.4 OrderCreateResponse (llevar, pendingPayment)](#64-ordercreateresponse-llevar-pendingpayment) · [6.4b PayOrderResponse](#64b-payorderresponse-confirmar-pago-de-un-pendiente)
-  - [6.5 CustomOrderCreateResponse (presas surtidas)](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom)
-  - [6.6 OrderCreateWithDiscountResponse (descuento al personal por plato, una sola llamada)](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada)
-  - [6.6b DiscountCreateResponse (catálogo — admin)](#66b-discountcreateresponse-catálogo--admin)
-  - [6.6c DiscountAuthorizationResponse](#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno)
-  - [6.7 VoucherCreateResponse](#67-vouchercreateresponse)
-  - [6.8 InventoryAdjustResponse](#68-inventoryadjustresponse-éxito)
-  - [6.9 ManualConsumptionResponse (cierre turno cocina)](#69-manualconsumptionresponse-cierre-turno-cocina)
-  - [6.10 CashOpenResponse](#610-cashopenresponse-éxito) · [6.10b CashCloseResponse (arqueo)](#610b-cashcloseresponse-arqueo)
-  - [6.11 CancelOrderResponse (anulación)](#611-cancelorderresponse-anulación-de-pedido-pagado) · [6.11b OrderStatusUpdate](#611b-orderstatusupdateresponse-despacho)
-  - [6.12 PosContextResponse (carga del POS en una llamada)](#612-poscontextresponse-carga-del-pos-en-una-llamada)
-  - [6.13 ExpenseCreateResponse (gasto desde caja — FR-009)](#613-expensecreateresponse-gasto-desde-caja--fr-009)
-  - [6.14 AuditLogsByShiftResponse (consulta del rastro por turno — admin)](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
-- [7. OpenAPI skeleton (recomendación)](#7-openapi-skeleton-recomendación)
+  - [5.5 Catálogo de códigos de error](#55-catálogo-de-códigos-de-error)
+  - [5.6 Alcance por rol y sucursal](#56-alcance-por-rol-y-sucursal)
+- [6. Contratos por módulo (request/response)](#6-contratos-por-módulo-requestresponse)
+  - [6.1 Autenticación — Sprint 0](#61-autenticación--sprint-0)
+  - [6.2 Sucursales — Sprint 0](#62-sucursales--sprint-0)
+  - [6.3 Usuarios — Sprint 0](#63-usuarios--sprint-0)
+  - [6.4 Cajas registradoras — Sprint 1](#64-cajas-registradoras--sprint-1)
+  - [6.5 Turnos y períodos de turno — Sprint 1](#65-turnos-y-períodos-de-turno--sprint-1)
+  - [6.6 Productos y variantes — Sprint 1](#66-productos-y-variantes--sprint-1)
+  - [6.7 Clientes — Sprint 1 y Sprint 4](#67-clientes--sprint-1-y-sprint-4)
+  - [6.8 Inventario — Sprint 2](#68-inventario--sprint-2)
+  - [6.9 Consumos manuales y ciclo crudo — Sprint 2](#69-consumos-manuales-y-ciclo-crudo--sprint-2)
+  - [6.10 POS — Sprint 1 a 3](#610-pos--sprint-1-a-3)
+  - [6.11 Pedidos — Sprint 1 a 3](#611-pedidos--sprint-1-a-3)
+  - [6.12 Descuentos — Sprint 3](#612-descuentos--sprint-3)
+  - [6.13 Vales — Sprint 3](#613-vales--sprint-3)
+  - [6.14 Gastos — Sprint 3](#614-gastos--sprint-3)
+  - [6.15 Reportes — Sprint 3](#615-reportes--sprint-3)
+  - [6.16 Vistas públicas e impresión — Sprint 4](#616-vistas-públicas-e-impresión--sprint-4)
+  - [6.17 Auditoría — Sprint 5](#617-auditoría--sprint-5)
+- [7. OpenAPI y Postman (generados)](#7-openapi-y-postman-generados)
 - [8. Test cases E2E (casos prioritarios)](#8-test-cases-e2e-casos-prioritarios)
+  - [Ventas y pedidos](#ventas-y-pedidos)
+  - [Descuentos (Sprint 3)](#descuentos-sprint-3)
+  - [Cocina (Sprint 2)](#cocina-sprint-2)
+  - [Sesión, gastos y auditoría](#sesión-gastos-y-auditoría)
+  - [Maestros y administración](#maestros-y-administración)
+  - [Alcance, sesión y reglas de turno](#alcance-sesión-y-reglas-de-turno)
 - [9. Despliegue, backups y sincronización](#9-despliegue-backups-y-sincronización)
 - [10. Mapeo Negocio → Técnica](#10-mapeo-negocio--técnica)
-- [Notas finales](#notas-finales)
+  - [Notas finales](#notas-finales)
 
 ---
 
 # 1. Stack tecnológico (obligatorio)
 
-- **Backend:** **NestJS**, **TypeScript**, **Prisma** (ORM), **PostgreSQL**.
-- **Frontend:** **Next.js**, **React**, **Zustand** (estado global), **MUI** (Material UI) + MUI Icons.
-- **Autenticación:** **JWT** vía `@nestjs/jwt` (enfoque liviano y explícito, **sin Passport**) + **bcryptjs** para hashing de contraseñas. Autorización por rol con **guards de NestJS** (`AuthGuard` + `RolesGuard`) registrados globales. Validación de entrada con `ValidationPipe` + **class-validator** en los DTOs. Detalle en [§5.2](#52-autenticación-y-autorización).
-- **Impresión/PDF:** `react-to-print` u otro paquete equivalente con buenos resultados personalizables.
-- **Multiplataforma:** El código debe correr en Windows y Linux. Usar `path.join` (nunca strings con `\` o `/` hardcodeados) y manejar fechas en UTC con timezone explícito al presentar.
+- **Backend:** **NestJS 11**, **TypeScript** en ESM (`"type": "module"`), **Prisma 7** sobre **PostgreSQL** (driver adapter `@prisma/adapter-pg`) y **pnpm** como único gestor de paquetes.
+- **Frontend:** **Next.js 16**, **React 19**, **Zustand 5** (estado global), **MUI 9** + MUI Icons y **Zod 4** (validación de formularios).
+- **Autenticación:** **JWT** con `@nestjs/jwt` (firma HS256, **sin Passport**) + **bcryptjs** para el hash de la contraseña. Autorización por rol con **guards de NestJS** (`AuthGuard` + `RolesGuard`) registrados globales. Detalle en [§5.2](#52-autenticación-y-autorización).
+- **Validación de entrada:** `ValidationPipe` global + **class-validator** en los DTOs, con `whitelist`, `transform` y `forbidNonWhitelisted` (una propiedad desconocida es un error 400). Los mensajes salen en español ([§5.4](#54-reglas-del-contrato)).
+- **Documentación de la API:** `@nestjs/swagger` genera `swagger.json`, y de ahí se genera la colección de Postman ([§7](#7-openapi-y-postman-generados)).
+- **Impresión/PDF (Sprint 4):** `react-to-print` u otro paquete equivalente con buenos resultados personalizables.
+- **Multiplataforma:** el código corre en Windows y Linux. Usar `path.join` (nunca separadores hardcodeados) y manejar fechas en UTC con timezone explícito al presentar.
+
+## 1.1 Configuración por entorno
+
+La configuración vive en `src/config/` y **se valida al arrancar**: si falta o es inválida alguna variable, la app no inicia y el mensaje lista todos los problemas juntos. Setup paso a paso y comandos: [README](../../README.md).
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `APP_ENV` | sí | `development` \| `qa` \| `production`. Elige el perfil de la tabla de abajo. No tiene valor por defecto a propósito. |
+| `DATABASE_URL` | sí | Cadena de conexión de PostgreSQL. |
+| `JWT_SECRET` | sí | Clave de firma de los tokens: mínimo 32 caracteres, distinta por entorno. |
+| `PORT` | no | Por defecto `4000`. |
+| `JWT_EXPIRES_IN` | no | Duración del token (`30m`, `2h`, `1d`; mayor que 0 y de 24 h como máximo). Pisa el valor del perfil. |
+| `CORS_ORIGINS` | no | Orígenes permitidos, separados por coma. Pisa el valor del perfil. |
+| `SWAGGER_ENABLED_PRODUCTION` | no | `true` publica Swagger en `production` a propósito. Se ignora fuera de producción. |
+
+| Perfil (`APP_ENV`) | Duración del token | CORS | Swagger (`/api/docs`, `/swagger.json`) | Reescribe `docs/swagger-postman/swagger.json` | `pnpm seed` |
+|---|---|---|---|---|---|
+| `development` | 2 h | cualquier origen | sí | sí | permitido (solo si la base es local) |
+| `qa` | 2 h | solo los de `CORS_ORIGINS` | sí | no | bloqueado |
+| `production` | 8 h | solo los de `CORS_ORIGINS` | **no** (salvo `SWAGGER_ENABLED_PRODUCTION=true`) | no | bloqueado |
+
+- Si `CORS_ORIGINS` está vacío en `qa` o `production`, **no se acepta ningún origen externo** (correcto cuando el front se sirve desde el mismo origen, por ejemplo con el proxy de Next).
+- **Base de la API:** `http://localhost:4000/api/v1` (todos los endpoints bajo el prefijo `/api/v1`).
+- **Superadmin de bootstrap:** `pnpm bootstrap:admin` crea el `SUPER_ADMIN` leyendo `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_FIRSTNAME`, `SUPER_ADMIN_LASTNAME` y `SUPER_ADMIN_CI` (por defecto `superadmin@gmail.com` / `password123`). Con `APP_ENV=production` se niega si `SUPER_ADMIN_CI` falta, es la de por defecto o tiene menos de 12 caracteres.
 
 ---
 
 # 2. Requerimientos no funcionales (NFR)
 
 - **Usabilidad:** POS en 3 pasos máximo; interfaces limpias y reactivas; español por defecto. Soporte para tema claro y oscuro usando `paper` y colores de MUI (evitar fondos sólidos no reactivos).
-- **Rendimiento:** Respuesta objetivo en LAN: **≤300 ms** para operaciones de venta; tolerancia a picos.
-- **Disponibilidad:** Modo local (on-premise) con opción de sincronización a nube en v2; objetivo **99.5% uptime** en horario operativo.
-- **Seguridad:** Autenticación JWT; contraseñas hasheadas con **bcryptjs**; auditoría de acciones críticas. **El control de permisos por rol SÍ se aplica en el backend en V1** ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): cada endpoint valida el rol vía `RolesGuard`. **La UI no es la frontera de seguridad** — oculta pantallas, pero el backend devuelve **401** sin token válido o expirado y **403** si el rol no corresponde. Detalle de arquitectura en [§5.2](#52-autenticación-y-autorización).
-- **Escalabilidad:** Backend modular (NestJS) con Prisma ORM; separación por módulos (productos, pedidos, inventario, notificaciones, reportes). Frontend modular con Next.js, Zustand, MUI.
-- **Mantenibilidad:** TypeScript en todo el stack. Reutilizable, modular (funciones, componentes, hooks, estados globales). Fácil de leer y mantener.
-- **Localización:** Español; formatos de fecha y moneda locales (Bs).
-- **Multiplataforma:** Windows + Linux. Paths con `path.join`. Fechas en UTC + timezone explícito en presentación.
-- **Impresión:** Soporte para impresoras térmicas 7cm; **PDF fallback** automático. Generación de PDF para factura mediante `react-to-print` o equivalente.
-- **Accesibilidad:** Contraste y tamaño de fuente adecuados para uso en ambientes con iluminación variable.
-- **Despliegue V1:** Aplicación web local en Windows 10. **Sin Docker requerido**, pero deseable para portabilidad.
-- **Backup (V2):** Backup automático diario de BD + opción de backup manual on-demand para administrador.
+- **Rendimiento:** respuesta objetivo en LAN **≤ 300 ms** para operaciones de venta; tolerancia a picos. El `AuthGuard` hace una consulta por clave primaria por request; es despreciable con PostgreSQL local.
+- **Disponibilidad:** modo local (on-premise) con opción de sincronización a nube en V2; objetivo **99.5 % de uptime** en horario operativo.
+- **Seguridad:** autenticación JWT; contraseñas hasheadas con **bcryptjs**; auditoría de acciones críticas. **El control de permisos por rol y sucursal se aplica en el backend** ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): la UI oculta pantallas por comodidad, pero la frontera de seguridad es la API (**401** sin token válido o con usuario desactivado, **403** si el rol o la sucursal no corresponden). Detalle en [§5.2](#52-autenticación-y-autorización) y [§5.6](#56-alcance-por-rol-y-sucursal).
+- **Escalabilidad:** backend modular (NestJS) con Prisma; un módulo por dominio. Frontend modular con Next.js, Zustand y MUI.
+- **Mantenibilidad:** TypeScript en todo el stack; código reutilizable y fácil de leer. Los patrones obligatorios para todo endpoint nuevo están en [implementation_guide.md §1](implementation_guide.md#1-convenciones).
+- **Localización:** español; formatos de fecha y moneda locales (Bs).
+- **Impresión (Sprint 4):** impresoras térmicas de 7 cm; **PDF** como alternativa automática.
+- **Accesibilidad:** contraste y tamaño de fuente adecuados para ambientes con iluminación variable.
+- **Despliegue V1:** aplicación web local en Windows 10. Sin Docker requerido, pero deseable para portabilidad.
+- **Backup (V2):** backup automático diario de la BD y backup manual para el administrador.
 
 ---
 
 # 3. Modelo de datos (esquema lógico para la BD)
 
-> Entidades principales y campos mínimos. Diseñado para ORM (**Prisma**) y para que el LLM genere migraciones.
+> Es el **contrato del dato**: todos los campos, enums y restricciones, con los nombres exactos de `prisma/schema.prisma` (que debe coincidir con esta sección). Los diagramas ER no se dibujan a mano: se generan desde el schema ([§3.3](#33-diagrama-de-relaciones-er)). Todas las entidades llevan `id` (UUID v7) y, salvo que se indique lo contrario, `createdAt`; las que se editan llevan además `updatedAt`.
 
 ## 3.1 Entidades principales
 
-Mapa rápido (el detalle campo por campo, abajo):
+Mapa rápido, en el orden en que se implementan:
 
-| Entidad | Para qué sirve |
+| Entidad | Para qué sirve | Estado |
+|---|---|---|
+| `Branch` | Sucursal del restaurante (entidad central del multi-sucursal). | ✅ |
+| `User` | Personal del sistema, con su rol y su sucursal. | ✅ |
+| `CashRegister` | Caja física de una sucursal. | ✅ |
+| `ShiftPeriod` | Catálogo de períodos del día ("Mañana", "Noche"; ampliable sin migración). | ✅ |
+| `Shift` | Turno de trabajo de una cajera en una caja. | ✅ apertura · 🔲 cierre y arqueo (Sprint 3) |
+| `Product` / `Variant` | Catálogo de platos y sus variantes (composición). | ✅ |
+| `Customer` | Cliente registrado (CI/NIT) para factura nominada; opcional por venta. | ✅ |
+| `InventoryItem` / `InventoryTransaction` | Inventario **cocido** transaccional y su libro de movimientos. | ✅ ítems, alta y ajuste · 🔲 descuento por venta (Sprint 2) |
+| `Order` / `OrderItem` / `OrderItemComponent` | Pedido, sus ítems y los componentes operativos de cada ítem. | ✅ estándar · 🔲 custom y descuentos |
+| `AuditLog` | Rastro inmutable de acciones críticas ([PDR §2.9](../business/pdr.md#29-auditoría)). | ✅ parcial (ver [§4.3](#43-auditoría--implementación-v1)) |
+| `DailyManualConsumption` / `ShiftChickenLog` | Consumos manuales y ciclo **crudo** de presas por turno. | 🔲 Sprint 2 |
+| `Expense` | Gasto pagado desde caja. | 🔲 Sprint 3 |
+| `Voucher` | Vale del personal (descuenta nómina, no caja). | 🔲 Sprint 3 |
+| `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno. | 🔲 Sprint 3 |
+| `InventoryBatch` | Lotes de inventario. Existe en el schema, **sin uso en V1** (opcional). | — |
+
+### Enumeraciones
+
+| Enum | Valores |
 |---|---|
-| `Branch` | Sucursal del restaurante (entidad central para multi-sucursal). |
-| `User` | Personal del sistema con su rol (SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK) y sucursal asignada. |
-| `CashRegister` / `Shift` | Caja física y turno de trabajo (apertura/cierre, arqueo). Cada caja y turno pertenece a una sucursal. |
-| `ShiftPeriod` | Catálogo de períodos del día ("Mañana", "Noche"; ampliable sin migración). |
-| `Product` / `Variant` | Catálogo de platos y sus variantes (composición). |
-| `Order` / `OrderItem` | Pedido y sus ítems (estándar o custom; MESA/LLEVAR). |
-| `Customer` | Cliente registrado (CI/NIT) para factura nominada y "pedidos del día"; opcional por venta. |
-| `InventoryItem` / `InventoryTransaction` / `InventoryBatch` | Inventario **cocido** transaccional, sus movimientos y lotes (opcional). Cada ítem de inventario pertenece a una sucursal. |
-| `ShiftChickenLog` | Ciclo **crudo** de presas por turno ([PDR §2.3](../business/pdr.md#23-inventario-por-presas)). |
-| `DailyManualConsumption` | Consumos manuales por turno (bolsas, vasos, etc.). |
-| `Voucher` | Vale del personal (descuenta nómina, no caja). |
-| `Discount` / `DiscountAuthorization` | Catálogo de descuentos por plato y su autorización por turno ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). |
-| `Expense` | Gasto pagado desde caja. |
-| `AuditLog` | Rastro inmutable de acciones críticas ([PDR §2.9](../business/pdr.md#29-auditoría)). |
+| `UserRole` | `SUPER_ADMIN`, `ADMIN`, `CASHIER`, `DISPATCHER`, `COOK` |
+| `OrderType` | `MESA`, `LLEVAR` (**CUSTOM no es un tipo**: es `Order.isCustom`, [PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas)) |
+| `OrderStatus` | `CREATED`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CLOSED`, `PENDING_PAYMENT`, `CANCELLED`, `ON_HOLD` (**reservado, sin uso en V1**: el backend no lo produce ni lo acepta) |
+| `PaymentStatus` | `PENDING`, `PAID`, `PARTIAL` (`PARTIAL` **reservado, sin uso en V1**) |
+| `PaymentMethod` | `CASH`, `CARD`, `VALE` |
+| `InventoryUnit` | `PRESA`, `BOLSA`, `PAQUETE`, `UNIDAD`, `VASO`, `DOYPACK` |
+| `InventoryItemType` | `PECHO`, `ALA`, `PIERNA`, `ENTREPIERNA`, `BEBIDA`, `INSUMO` |
+| `InventoryTxnReason` | `SALE`, `ADJUSTMENT`, `RECEPTION`, `VALE`, `MANUAL_CONSUMPTION`, `CANCELLATION_REVERT` |
+| `VoucherStatus` | `ISSUED` (`REDEEMED` y `CANCELLED` **reservados, sin uso en V1**: el vale solo se emite) |
+| `CustomerSex` | `HOMBRE`, `MUJER` |
+| `DiscountAvailability` | `ALWAYS` (todo el turno), `END_OF_SHIFT` (solo a fin de turno) |
+| `ChickenPieceType` | `PECHO`, `ALA`, `PIERNA`, `ENTREPIERNA` |
+| `ExpensePaidBy` | `CASH`, `REGISTER` |
+| `ShiftStatus` | `OPEN`, `CLOSED` |
 
-- **Branch** *(NUEVO - Multi-sucursal V1)*
-  - `id: UUID`, `name: string`, `address: string`, `phone: string?`, `active: boolean` *(teléfono de contacto opcional; sucursal activa/inactiva)*
-  - `createdAt: datetime`, `updatedAt: datetime`
-  - *Relaciones: `User.branchId` (nullable para SUPER_ADMIN), `Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` (required para entidades locales).*
+> Los tipos que viajan **dentro de campos JSON** (`Variant.components`, `OrderItem.selectedPieces`, `customPieces`, `substitutions`, `extras`, `drinks`) **no son enums**: van en minúscula (`presa`, `pecho`, `mixto`…).
 
-- **Product**
-  - `id: UUID`, `name: string`, `basePrice: decimal`, `category: string`, `active: boolean`, `description: string`
-  - `isSellable: boolean` *(nuevo flag — si el producto debe aparecer en el POS para venta)*
-  - `isInventoryItem: boolean` *(nuevo flag — si las ventas del producto generan movimientos en inventario / `InventoryTransaction`)*
+### Entidades, campo por campo
 
-- **Variant**
-  - `id: UUID`, `productId: UUID`, `name: string`, `components: JSON`, `isDefault: boolean`
-  - *Nota: NO se incluye campo de ajuste de precio. Por regla del negocio ([PDR §2.1](../business/pdr.md#21-precios-y-sustituciones)) las variantes y sustituciones no modifican el precio del producto. Si en V2 alguna variante necesita ajustar el precio base, se introducirá el campo con el nombre `priceAdjustment`.*
+- **Branch** ✅
+  - `name` (único), `address`, `phone?` (texto libre), `active`.
+  - Relaciones: `User.branchId` (nullable), `Shift.branchId`, `CashRegister.branchId` e `InventoryItem.branchId` (obligatorios en las entidades locales).
 
-- **Component** *(opcional)*
-  - `id: UUID`, `name: string`, `type: enum(presa, acompanamiento, bebida, extra)`, `unitPrice: decimal`
+- **User** ✅
+  - `firstName`, `lastName`, `email` (único: credencial de login), `phone?`, `role`, `active`.
+  - `ci` (único): cédula de identidad. **Su hash bcrypt se guarda en `passwordHash` y es la contraseña de login** (login = email + CI). `passwordHash` nunca se expone en la API.
+  - `branchId?`: sucursal asignada. **`null` significa "acceso global" y solo corresponde a `SUPER_ADMIN`**; todo otro rol exige sucursal ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)).
 
-- **Customer (Cliente)** *(cliente registrado para factura nominada y vista de "pedidos del día" — [PDR §2.1](../business/pdr.md#21-precios-y-sustituciones)2 / FR-019)*
-  - `id: UUID`
-  - `ci: string` *(cédula de identidad — **único**, indexado; clave de búsqueda)*
-  - `nit: string?` *(para factura a nombre de empresa; también buscable. El cliente puede dictar **CI o NIT** para su factura)*
-  - `firstName: string` *(nombres)*, `lastName: string` *(apellidos)*
-  - `sex: enum(HOMBRE, MUJER)`
-  - `birthDate: date?` *(opcional — tipo `date`, NO `datetime`: una fecha de nacimiento no lleva hora)*
-  - `phone: string?` *(celular)*, `email: string?` *(la factura electrónica se envía por correo)*
-  - `active: boolean`, `createdAt: datetime`, `updatedAt: datetime`
-  - *Registrar al cliente es **opcional por venta** → `Order.customerId` nullable ("S/N" si anónimo). La regla legal completa (umbral Bs 1.000, RND del SIN, por qué NO usar NIT `99001`) vive en [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada).*
+- **CashRegister** ✅ — `name`, `active`, `branchId`. Restricción: `UNIQUE(branchId, name)` (dos sucursales pueden tener cada una su "Caja 1"). Sin `updatedAt`.
 
-- **Order**
-  - `id: UUID`, `type: enum(MESA, LLEVAR)` *(CUSTOM no es un tipo — es propiedad de la orden vía `isCustom`; ver [PDR §2.8](../business/pdr.md#28-comandas-tickets-factura-y-notificaciones) / §2.10)*
-  - `tableNumber: string?`, `customerName: string?` *(nombre para mostrar en comanda/factura; "S/N" si el cliente no se identifica. Es **snapshot** de visualización: no cambia si luego se edita el `Customer`)*
-  - `customerId: UUID?` *(referencia al `Customer` registrado; null si la venta es anónima/"S/N". **Agrupa** los pedidos del cliente para la vista del día — [PDR §2.1](../business/pdr.md#21-precios-y-sustituciones)2 / FR-019)*
-  - `publicToken: string` *(token aleatorio no adivinable — ej. `crypto.randomBytes(16).toString('hex')`, 128 bits — generado al crear la orden, **único** e indexado. Es la **credencial** de la vista pública del cliente: NO se usa el `id` interno ni un valor secuencial. Espacio 2^128 → no enumerable, FR-015)*
-  - `status: enum(created, confirmed, preparing, ready, delivered, closed, pendingPayment, cancelled, onHold)` *(`onHold` **reservado, SIN uso en V1** — ninguna regla de negocio lo define; el backend no lo produce ni lo acepta. Se activará con un caso real)*
-  - `paymentStatus: enum(pending, paid, partial)` *(`partial` **reservado, SIN uso en V1** — mismo criterio)*, `paymentMethod: enum(cash, card, vale)?`
-  - `originalAmount: decimal` *(precio original de la orden ANTES de cualquier descuento = `Σ(unitPrice × quantity)` de los ítems; [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
-  - `total: decimal` *(total cobrado = `originalAmount − Σ(descuentos de los ítems)`; es el valor **derivado** y lo que entra a caja — [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
-  - `isCustom: boolean` *([PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas) — true si la orden se creó vía endpoint custom; default false)*
-  - *Nota de migración (v1.2): el descuento **ya NO vive en `Order`** — los antiguos `Order.discountId` / `Order.discountAmount` quedan **eliminados**. El descuento se aplica **por plato** y vive en `OrderItem.discountId` / `OrderItem.discountAmount` (ver `OrderItem` abajo). El antiguo `internalDiscount: boolean` sigue eliminado: el "descuento al personal" es una instancia del catálogo `Discount` (availability `endOfShift`, sin autorización). Ver [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal).*
-  - `cancelReason: string?`, `cancelDetails: string?`
-  - `createdBy: userId`, `createdAt: datetime`, `paidAt: datetime?`, `cancelledAt: datetime?`
-  - `readyAt: datetime?` *(timestamp de transición a `ready`; reemplaza una eventual entidad `NotificationLog`)*
-  - `deliveredAt: datetime?`, `deliveredBy: userId?`
-  - `shiftId: UUID`
+- **ShiftPeriod** ✅ — catálogo, **no enum**, para que un tercer turno ("Tarde") no requiera migración.
+  - `name` (único), `displayOrder` (orden dentro del día), `referenceStart?` / `referenceEnd?` (horarios de **referencia informativos**, ej. `"09:00"`, que **jamás clasifican nada**: el reloj puede estar mal y los horarios cambian), `active`.
+  - El período **se declara al abrir el turno**; nunca se infiere del reloj ([PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). La agenda semanal es V2 ([PDR §13.2](../business/pdr.md)).
 
-- **OrderItem**
-  - `id: UUID`, `orderId: UUID`, `productId: UUID?` *(null si custom)*, `variantId: UUID?`
-  - `quantity: int`, `unitPrice: decimal`
-  - `snapshot: Json?` *(nuevo campo — snapshot inmutable del ítem usado para impresión, auditoría y trazabilidad; contiene nombre, price snapshot, discount snapshot y composición que se imprimirá en el ticket)*
-  - `components: OrderItemComponent[]` *(relación inversa: los componentes operacionales del ítem — presas/bebidas/extras — se modelan como filas separadas en `OrderItemComponent` y son la fuente de verdad para el decremento de inventario al pagar)*
-  - `discountId: UUID?` *(el `Discount` aplicado **a este plato**; null sin descuento. Máximo **uno por ítem** — sin apilamiento; la mecánica de negocio vive en [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))*
-  - `discountAmount: decimal?` *(**snapshot por unidad** del `fixedAmount` vigente — NO una resta: se congela para que editar el catálogo no altere ventas pasadas. Aplica a TODAS las unidades del ítem; para descuento parcial el POS parte el ítem en dos líneas)*
-  - `totalPrice: decimal` *(**derivado**: `(unitPrice − (discountAmount ?? 0)) × quantity`)*
-  - `notes: string?`, `substitutions: JSON?`
-  - `customPieces: JSON?` *(ej. `[{type:"pecho",qty:2},{type:"ala",qty:1}]` — composición libre de presas para ítems de órdenes custom; ver [PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas))*
+- **Shift** ✅ apertura · 🔲 cierre
+  - `status` (`OPEN` | `CLOSED`), `openingAmount`, `startAt`, `lastOrderNumber` (contador de tickets del turno: se incrementa atómicamente al crear cada orden).
+  - `cashierId`, `cashRegisterId?`, `branchId`, `periodId`.
+  - 🔲 al cerrar (Sprint 3): `endAt`, `closingAmount`, `expectedAmount`, `discrepancy`.
+  - Reglas vigentes: una cajera tiene **un solo turno `OPEN`** a la vez, y una caja la usa **una sola cajera** a la vez (validado por la aplicación al abrir; ver [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
 
-- **InventoryItem** *(inventario transaccional — para presas representa el plano COCIDO del expositor; ver [PDR §2.3](../business/pdr.md#23-inventario-por-presas))*
-  - `id: UUID`, `productCode: string`, `name: string`
-  - `unit: enum(presa, bolsa, unidad)`, `type: enum(pecho, ala, pierna, entrepierna, bebida, insumo)`
-  - `currentStock: int`, `unitMeasure: string`
-  - `salePrice: decimal?` *(precio de venta unitario configurado por el admin. Para `type ∈ {pecho, ala, pierna, entrepierna}` es el precio de venta por presa que alimenta el **precio sugerido** de la venta custom — **ahora V1**, [PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas). Es solo precio de VENTA: el sistema NO registra costo del pollo ni calcula margen.)*
-  - *Nota: el ciclo CRUDO de presas (reproceso, procesado, sobrante crudo) se modela aparte en `ShiftChickenLog`. `InventoryItem` con `type ∈ {pecho, ala, pierna, entrepierna}` representa siempre el inventario cocido vendible.*
-    - `orderItemComponents: OrderItemComponent[]` *(relación inversa: componentes de ítems que remiten a este `InventoryItem` cuando aplica)*
-### OrderItemComponent (componentes operacionales de un ítem)
+- **Product** ✅ — global (sin `branchId`: el menú es el mismo para todas las sucursales).
+  - `name`, `basePrice` (`Decimal(10,2)`), `category` (texto libre, para no romper si cambia el menú), `description?`, `active`.
+  - `isSellable`: si aparece en el POS para la venta. `isInventoryItem`: si sus ventas generan movimientos de inventario.
 
-Para modelar de forma normalizada los consumos (presas, bebidas, extras) y facilitar las transacciones de inventario, existe la entidad `OrderItemComponent`. Cada fila representa una porción operativa consumida por un `OrderItem` (puede referir a un `InventoryItem` cuando es una presa vendida a granel, o a un `Product` cuando es una bebida/extra del catálogo).
+- **Variant** ✅ — global.
+  - `productId`, `name`, `components` (JSON), `isDefault`, `active`.
+  - `components`: `[{ "type": "presa" | "acompanamiento" | "bebida" | "extra", "name"?: string, "count": int ≥ 1 }]`, mínimo un elemento.
+  - **No existe campo de ajuste de precio**: por regla del negocio las variantes y sustituciones no modifican el precio ([PDR §2.1](../business/pdr.md#21-precios-y-sustituciones)). Si V2 lo necesita se llamará `priceAdjustment`.
+  - No se fuerza un único `isDefault` por producto.
 
-Campos típicos (resumen): `id`, `orderItemId`, `inventoryItemId?`, `productId?`, `quantity`, `unitPrice`, `label`, `createdAt`, `updatedAt`. La regla de integridad aplicable es: cada componente debe referir exactamente a una de `inventoryItemId` o `productId` (pero no a ambas). Se recomienda aplicar un CHECK a nivel de base de datos para garantizar esto, por ejemplo:
+- **Customer** ✅ — global (sin `branchId`; la deduplicación por CI es cross-sucursal, [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
+  - `ci` (único; clave de búsqueda), `nit?` (también buscable: el cliente puede dictar CI o NIT), `firstName`, `lastName`, `sex`, `birthDate?` (**tipo `date`, no `datetime`**), `phone?`, `email?`, `active`.
+  - `passwordHash?` queda `null` en V1 (reservado al login de clientes de V2) y no se expone.
+  - Registrar al cliente es **opcional por venta**: `Order.customerId` es nullable (venta anónima, "S/N"). La regla legal completa (umbral Bs 1.000, RND del SIN, por qué no usar el NIT `99001`) vive en el PDR §2.12.
 
-```sql
-ALTER TABLE order_item_components
-ADD CONSTRAINT order_item_component_one_ref CHECK (
-  (inventory_item_id IS NULL AND product_id IS NOT NULL)
-  OR
-  (inventory_item_id IS NOT NULL AND product_id IS NULL)
-);
-```
+- **InventoryItem** ✅ — plano **cocido** del expositor; el ciclo **crudo** se modela aparte (`ShiftChickenLog`).
+  - `productCode`, `name`, `unit`, `type`, `currentStock` (entero: **es un cache del libro de transacciones y nunca se escribe sin rastro**), `unitMeasure?` (texto libre, ej. `"500 ml"`), `salePrice?`, `active`, `branchId`.
+  - `salePrice` es **solo precio de VENTA** (el sistema no registra costo ni margen) y solo vale para `type ∈ {PECHO, ALA, PIERNA, ENTREPIERNA}`: alimenta el precio sugerido de la venta custom ([PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas)).
+  - Restricción: `UNIQUE(branchId, productCode)`.
 
-Esta estructura permite que el servicio de órdenes y el servicio de inventario consuman una lista clara de componentes por ítem para crear `InventoryTransaction` en la transacción que confirma el pago.
+- **InventoryTransaction** ✅ — libro de movimientos (sin `updatedAt`).
+  - `inventoryItemId`, `delta` (entero; negativo = salida, positivo = ingreso o reversión), `reason`, `referenceId?` (id de `Order`, `Voucher` o `Expense`), `note?`, `timestamp`, `userId`.
+  - **No hay `reason` de descuento**: un descuento es puramente monetario ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)); la venta con descuento descuenta inventario con `SALE` como cualquier otra.
+  - Hoy se escribe en el alta de un ítem con `initialStock` (`RECEPTION`) y en `POST /inventory/adjust` (`ADJUSTMENT` o `RECEPTION`). 🔲 `SALE` y `CANCELLATION_REVERT` (Sprint 2), `MANUAL_CONSUMPTION` (Sprint 2), `VALE` (Sprint 3).
 
+- **Order** ✅
+  - `orderNumber` (entero legible: **se reinicia por turno**; `UNIQUE(shiftId, orderNumber)`; lo asigna la aplicación con `Shift.lastOrderNumber` dentro de una transacción; es lo que muestra la pantalla pública), `type`, `tableNumber?`.
+  - `customerId?` (referencia al `Customer`; agrupa los pedidos del cliente) y `customerName?` (**snapshot de visualización**: no cambia si luego se edita el `Customer`; `null` en una venta anónima, que la UI muestra como "S/N").
+  - `publicToken` (único; aleatorio y no adivinable: 128 bits generados con `crypto.randomBytes(16)`; es la credencial de la vista pública del cliente, que **nunca** usa el `id` interno).
+  - `status`, `paymentStatus`, `paymentMethod?`.
+  - `originalAmount` = `Σ(unitPrice × quantity)` de los ítems, antes de descuentos. `total` = `originalAmount − Σ(descuentos de los ítems)`: es el valor derivado y lo que entra a caja. Hoy no hay descuentos, así que `total = originalAmount`.
+  - `isCustom` ([PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas)): `true` solo si la orden nació de `POST /orders/custom`.
+  - `cancelReason?`, `cancelDetails?`, `cancelledAt?` · `paidAt?`, `readyAt?`, `deliveredAt?` · `createdById`, `deliveredById?`, `shiftId`.
+  - El descuento **no vive en `Order`**: vive por plato en `OrderItem`.
 
-- **InventoryBatch** *(opcional)*
-  - `id: UUID`, `inventoryItemId: UUID`, `batchCode: string`, `processedAt: datetime`, `quantityReceived: int`, `quantityRemaining: int`, `origin: string`
+- **OrderItem** ✅
+  - `orderId`, `productId?` (`null` si la orden es custom), `variantId?`, `quantity`, `unitPrice`, `totalPrice` (derivado: `(unitPrice − (discountAmount ?? 0)) × quantity`), `notes?`.
+  - `snapshot` (JSON inmutable de la línea al crearse, para impresión, auditoría y trazabilidad: nombre del producto, precio base, nombre y componentes de la variante, cantidad, presas, sustituciones, extras y bebidas).
+  - `substitutions` (`[{ "from": "mixto", "to": "arroz" | "papa" | "smiles" | "mixto" }]`, **máximo una por ítem y sin efecto en el precio**), `selectedPieces` (presas elegidas en una orden estándar: `[{ "type": "pecho", "qty": 2 }]`), `customPieces` (presas de una orden custom), `extras` (`[{ "type", "qty" }]`), `drinks` (`[{ "productId", "qty" }]`).
+  - 🔲 Sprint 3: `discountId?` y `discountAmount?`. `discountAmount` es un **snapshot por unidad** del monto fijo (no una resta): se congela para que editar el catálogo no altere ventas pasadas, y aplica a **todas** las unidades del ítem (para un descuento parcial el POS parte el ítem en dos líneas). Máximo **un** descuento por ítem, sin apilamiento.
 
-- **InventoryTransaction**
-  - `id: UUID`, `inventoryItemId: UUID`, `delta: int`
-  - `reason: enum(sale, adjustment, reception, vale, manualConsumption)`
-  - *Nota: NO hay `reason` de descuento. Un descuento es **puramente monetario** ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)): la venta con descuento descuenta inventario con `reason = sale` igual que cualquier otra, sobre el producto real vendido.*
-  - `referenceId: UUID?`, `userId: UUID`, `note: string?`, `timestamp: datetime`
+- **OrderItemComponent** ✅ parcial — filas normalizadas por presa, bebida o extra que consume un ítem; serán la **fuente de verdad del descuento de inventario** al pagar.
+  - Campos: `orderItemId`, `inventoryItemId?`, `productId?`, `quantity`, `unitPrice`, `label?`.
+  - Hoy (Sprint 1) solo se crean filas para los componentes de tipo `presa` de la variante, con `label` y **sin referencia** a `InventoryItem` ni a `Product`: son un registro declarativo.
+  - 🔲 Sprint 2: se vinculan a `InventoryItem` o a `Product` (exactamente a **uno** de los dos) y se agrega la restricción de base de datos:
 
-- **DailyManualConsumption** *(consumos anotados por turno — bolsas de papa, smile, vasos, etc.)*
-  - `id: UUID`, `shiftId: UUID`, `inventoryItemId: UUID`, `quantity: int`, `recordedBy: userId`, `recordedAt: datetime`
+    ```sql
+    ALTER TABLE order_item_components
+    ADD CONSTRAINT order_item_component_one_ref CHECK (
+      (inventory_item_id IS NULL AND product_id IS NOT NULL)
+      OR (inventory_item_id IS NOT NULL AND product_id IS NULL)
+    );
+    ```
 
-- **ShiftChickenLog** *(ciclo CRUDO de presas anotado por el cocinero al cierre de turno — [PDR §2.3](../business/pdr.md#23-inventario-por-presas) / FR-017)*
-  - `id: UUID`, `shiftId: UUID`, `pieceType: enum(pecho, ala, pierna, entrepierna)`
-  - `reprocessRaw: int` *(pollo crudo sobrante del turno anterior — autopoblado con `rawLeftover` del último `ShiftChickenLog` cerrado para el mismo `pieceType`; editable por el cocinero antes de confirmar)*
-  - `processedRaw: int` *(pollo fresco marinado en este turno)*
-  - `rawLeftover: int` *(sobrante procesado crudo al cierre — se convierte en el `reprocessRaw` del turno siguiente)*
-  - `cookedLeftover: int` *(sobrante cocido en expositor al cierre — habilita venta con descuento al personal §2.11)*
-  - `recordedBy: userId`, `recordedAt: datetime`, `closedAt: datetime?`
-  - *Cantidad cocinada en el turno (derivada, NO se almacena): `reprocessRaw + processedRaw − rawLeftover`*
-  - *Constraint: `UNIQUE(shiftId, pieceType)` — un log por turno por tipo de presa*
+- **AuditLog** ✅ parcial (sin `updatedAt`; **append-only**, ver [§4.3](#43-auditoría--implementación-v1))
+  - `entity`, `action`, `details?` (JSON), `timestamp`, `userId`.
+  - `entityId`: **string, no UUID**. Es una referencia polimórfica (apunta a distintas tablas según `entity`), así que no lleva FK. Guarda el UUID cuando la entidad está persistida y una **clave legible** cuando es lógica (`Report` → `"sales:2026-07"`).
+  - `shiftId?`: el turno en que ocurrió la acción (el log **nace sabiendo su turno**, sin ventanas horarias). `null` = acción crítica fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`).
 
-- **Voucher (Vale)**
-  - `id: UUID`, `code: string` *(generado por el backend)*
-  - `workerId: UUID?` *(o `workerName: string` si el trabajador no es usuario del sistema)*
-  - `productId: UUID?`, `productName: string` *(snapshot derivado de `productId`)*
-  - `originalAmount: decimal` *(precio del producto, **derivado** de `productId`; el front NO lo envía)*
-  - `discountId: UUID?` *(opcional — instancia `Discount` "Descuento personal" aplicada al vale; null si el vale no lleva descuento — [PDR §2.4](../business/pdr.md#24-vales-ventas-internas--descuento-por-nómina) / §2.11)*
-  - `discountAmount: decimal?` *(**snapshot** del monto fijo del descuento al aplicarlo, ej. 7.00)*
-  - `amount: decimal` *(monto final que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`; **derivado** por el backend, no lo manda el front)*
-  - `issuedBy: userId`, `issuedAt: datetime`, `shiftId: UUID`
-  - `status: enum(issued, redeemed, cancelled)` *(`redeemed` y `cancelled` **reservados, SIN uso en V1** — el vale solo se emite; [PDR §2.4](../business/pdr.md#24-vales-ventas-internas--descuento-por-nómina) no define redención ni anulación)*, `note: string?`
-  - *El vale no es un descuento (no suma a caja, descuenta nómina — [PDR §2.4](../business/pdr.md#24-vales-ventas-internas--descuento-por-nómina)); puede llevar el "Descuento personal" con el mismo patrón snapshot de los ítems.*
+- **DailyManualConsumption** 🔲 *(consumos anotados por turno: bolsas de papa, smile, vasos…)* — `shiftId`, `inventoryItemId`, `quantity`, `recordedAt`, `recordedById`.
 
-- **Discount** *(catálogo de descuentos creado por el admin — [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal). Catálogo mínimo, NO motor de reglas: monto fijo **por plato**, aplicado a nivel ítem, uno por plato, sin apilamiento.)*
-  - `id: UUID`, `name: string`
-  - `fixedAmount: decimal` *(monto fijo en Bs **por plato** — NO porcentaje en V1)*
-  - `availability: enum(always, endOfShift)` *(`always` = todo el turno; `endOfShift` = solo a fin de turno)*
-  - `requiresAuthorization: boolean` *(si `true`, la cajera solo puede aplicarlo si el admin la autorizó en ese turno — ver `DiscountAuthorization`)*
-  - `active: boolean`
-  - *Las dos instancias principales ("Descuento personal" y "Compensación al cliente") con sus configs, contextos y porqués viven en [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal). Puramente monetario: ver nota de `InventoryTransaction`.*
+- **ShiftChickenLog** 🔲 *(ciclo **crudo** de presas anotado por el cocinero al cierre; [PDR §2.3](../business/pdr.md#23-inventario-por-presas) / FR-017)*
+  - `shiftId`, `pieceType`, `reprocessRaw` (crudo sobrante del turno anterior: se autopuebla con el `rawLeftover` del último log cerrado del mismo tipo; editable), `processedRaw` (pollo fresco marinado en el turno), `rawLeftover` (sobrante crudo al cierre: pasa a ser el `reprocessRaw` del turno siguiente), `cookedLeftover` (sobrante cocido en expositor: habilita el descuento al personal), `recordedAt`, `closedAt?`, `recordedById`.
+  - Cantidad cocinada en el turno (**derivada, no se almacena**): `reprocessRaw + processedRaw − rawLeftover`. Restricción: `UNIQUE(shiftId, pieceType)`.
 
-- **DiscountAuthorization** *(habilitación que el admin otorga a la sesión de cajera de un turno para aplicar un `Discount` con `requiresAuthorization = true` — [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) / FR-016b)*
-  - `id: UUID`, `discountId: UUID`
-  - `shiftId: UUID`, `cashierId: UUID` *(sesión/cajera beneficiada del turno)*
-  - `authorizedBy: UUID` *(admin que la otorgó)*, `authorizedAt: datetime`
-  - *Alcance por turno, extinción al cierre y auditabilidad del acto de autorizar: reglas en [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal) (subsección "Autorización de descuentos por turno").*
-  - *Constraint: `UNIQUE(discountId, shiftId, cashierId)` — una autorización por descuento por sesión de cajera por turno.*
+- **Expense** 🔲 — `description`, `amount`, `paidBy` (`CASH` | `REGISTER`), `shiftId`, `createdById`.
 
-- **User**
-  - `id: UUID`, `firstName: string`, `lastName: string`, `role: enum(SUPER_ADMIN, ADMIN, CASHIER, DISPATCHER, COOK)`
-  - `email: string` *(único — credencial de login)*, `phone: string?` *(opcional — dato de contacto)*
-  - `ci: string` *(único — cédula de identidad; su hash se almacena en `passwordHash` y funciona como contraseña)*
-  - `passwordHash: string` *(hash bcrypt del CI — mecanismo de autenticación)*, `active: boolean`
-  - `branchId: UUID?` *(sucursal asignada; nullable para `SUPER_ADMIN` con acceso global — multi-sucursal)*
+- **Voucher** 🔲 *(vale; [PDR §2.4](../business/pdr.md#24-vales-ventas-internas--descuento-por-nómina))*
+  - `code` (único, generado por el backend, ej. `V-20260501-001`), `workerId?` o `workerName?` (si el trabajador no es usuario del sistema; al menos uno), `productId?`, `productName` (snapshot).
+  - `originalAmount` (precio del producto, **derivado**; el front no lo envía), `discountId?`, `discountAmount?` (snapshot del "Descuento personal"), `amount` (monto que se descuenta de nómina = `originalAmount − (discountAmount ?? 0)`, **derivado** por el backend).
+  - `status` (`ISSUED`), `note?`, `issuedAt`, `issuedById`, `shiftId`.
+  - El vale **no es un descuento**: no suma a caja y descuenta nómina.
 
-- **ShiftPeriod** *(catálogo de períodos de turno — "Mañana", "Noche"; el dueño puede crear "Tarde" sin migración. Por eso es catálogo y NO enum.)*
-  - `id: UUID`, `name: string` *(único)*, `displayOrder: int` *(orden dentro del día)*
-  - `referenceStart: string?`, `referenceEnd: string?` *(horarios de REFERENCIA informativos, ej. "09:00"–"16:00" — **jamás se usan para clasificar**: el reloj puede estar mal configurado y los horarios cambian)*
-  - `active: boolean`
-  - *El período se **declara al abrir el turno** — nunca se infiere del reloj. Quién confirma, por qué NO es atributo del `User` y el descarte de la inferencia por hora: [PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); agenda semanal → V2 ([PDR §13.2](../business/pdr.md#132-versión-2-roadmap-futuro--diferido-explícitamente)).*
+- **Discount** 🔲 *(catálogo mínimo, **no** un motor de reglas; [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal))* — `name`, `fixedAmount` (monto fijo en Bs **por plato**, no porcentaje en V1), `availability`, `requiresAuthorization`, `active`. Las dos instancias principales ("Descuento personal" y "Compensación al cliente") están descritas en el PDR §2.11.
 
-- **Shift / CashRegister**
-  - `id: UUID`, `cashierId: UUID`, `cashRegisterId: UUID?`
-  - `periodId: UUID` *(período del turno, del catálogo `ShiftPeriod` — asignado al abrir, nunca inferido del reloj)*
-  - `startAt: datetime`, `endAt: datetime?`
-  - `openingAmount: decimal`, `closingAmount: decimal?`, `expectedAmount: decimal?`, `discrepancy: decimal?`
-
-- **Expense**
-  - `id: UUID`, `description: string`, `amount: decimal`, `paidBy: enum(cash, register)`, `shiftId: UUID`, `createdBy: userId`, `createdAt: datetime`
-
-- **AuditLog**
-  - `id: UUID`, `entity: string`, `action: string`, `userId: UUID`, `timestamp: datetime`, `details: JSON?`
-  - `entityId: string` *(**no** UUID: es una referencia **polimórfica** — apunta a distintas tablas según `entity`, por lo que **no lleva FK** y el tipo `uuid` no aportaba integridad alguna. Guarda el UUID cuando la entidad está persistida (`Order`, `Shift`, …) y una **clave legible** cuando es lógica (`Report` → `"sales:2026-07"`). Siempre requerido.)*
-  - `shiftId: UUID?` *(turno en el que ocurrió la acción — el log **nace sabiendo su turno**, sin cálculos de ventana horaria. NULL = acción crítica fuera de una sesión de caja: `ADJUST_INVENTORY` / `GENERATE_REPORT` del admin. En `OPEN_SHIFT`/`CLOSE_SHIFT` es el propio turno.)*
+- **DiscountAuthorization** 🔲 *(habilitación que un admin otorga a la sesión de una cajera para un descuento con `requiresAuthorization = true`; FR-016b)* — `discountId`, `shiftId`, `cashierId`, `authorizedById`, `authorizedAt`. Restricción: `UNIQUE(discountId, shiftId, cashierId)`. Alcance por turno; se extingue al cerrarlo.
 
 ## 3.2 Relaciones clave
 
-- **Multi-sucursal:**
-  - `Branch` 1..* `User` (vía `User.branchId`, nullable para SUPER_ADMIN)
-  - `Branch` 1..* `Shift` (vía `Shift.branchId`, required)
-  - `Branch` 1..* `CashRegister` (vía `CashRegister.branchId`, required)
-  - `Branch` 1..* `InventoryItem` (vía `InventoryItem.branchId`, required)
-- `Product` 1..* `Variant`
-- `Customer` 1..* `Order` (vía `Order.customerId`, opcional — null si venta anónima "S/N")
-- `Order` 1..* `OrderItem`
-- `OrderItem` → `Product` / `Variant` (ambos opcionales si pertenece a una orden custom — `Order.isCustom = true` con item poblando `customPieces`)
-- `InventoryTransaction` referencia `Order`, `Voucher` o `Expense` por `referenceId`
-- `Shift` vincula `CashRegister`, `ShiftPeriod` (período del turno), `User` (cajera), `Expense`, `Voucher`, `Order`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization`, `AuditLog` (vía `AuditLog.shiftId`, nullable)
-- `ShiftPeriod` 1..* `Shift` (vía `Shift.periodId` — el turno se autodescribe: caja + período + cajera)
-- `Discount` 1..* `OrderItem` (vía `OrderItem.discountId`, opcional — el descuento se aplica **por plato**; solo uno por ítem)
-- `Discount` 1..* `Voucher` (vía `Voucher.discountId`, opcional — "Descuento personal" sobre el vale)
-- `Discount` 1..* `DiscountAuthorization`
-- `DiscountAuthorization` vincula `Discount`, `Shift` y `User` (cajera) — autorización por turno otorgada por un admin
+- **Multi-sucursal:** `Branch` 1..* `User` (`User.branchId`, nullable solo para `SUPER_ADMIN`) · `Branch` 1..* `Shift`, `CashRegister` e `InventoryItem` (`branchId` obligatorio).
+- `Product` 1..* `Variant` · `Order` 1..* `OrderItem` 1..* `OrderItemComponent`.
+- `Customer` 1..* `Order` (`Order.customerId`, opcional: `null` = venta anónima).
+- `OrderItem` → `Product` / `Variant` (ambos opcionales si pertenece a una orden custom, `Order.isCustom = true`).
+- `Shift` vincula `User` (cajera), `CashRegister`, `ShiftPeriod`, `Order`, `Voucher`, `Expense`, `DailyManualConsumption`, `ShiftChickenLog`, `DiscountAuthorization` y `AuditLog` (nullable).
+- `InventoryTransaction` referencia a `Order`, `Voucher` o `Expense` por `referenceId` (sin FK).
+- `Discount` 1..* `OrderItem` y 1..* `Voucher` (ambos opcionales) · `Discount` 1..* `DiscountAuthorization`.
 
 ## 3.3 Diagrama de relaciones (ER)
 
-> **El ER no se dibuja a mano acá** — el modelo cambia seguido y un diagrama estático queda desactualizado en silencio. La fuente de verdad es [`prisma/schema.prisma`](../prisma/schema.prisma); el diagrama se **genera on-demand** desde el schema con una extensión de VS Code (ej. *Prisma ERD Visualizer*) o una herramienta externa ([`prisma-erd-generator`](https://github.com/keonik/prisma-erd-generator), dbdiagram.io). Las entidades y campos, con sus notas, están en [§3.1](#31-entidades-principales); las relaciones clave en [§3.2](#32-relaciones-clave).
+> **El ER no se dibuja a mano acá**: el modelo cambia seguido y un diagrama estático queda desactualizado en silencio. La fuente es [`prisma/schema.prisma`](../../prisma/schema.prisma); el diagrama se **genera** desde él con una extensión de VS Code (por ejemplo *Prisma ERD Visualizer*) o una herramienta externa (`prisma-erd-generator`, dbdiagram.io). Las entidades y sus notas están en [§3.1](#31-entidades-principales) y las relaciones en [§3.2](#32-relaciones-clave).
 
-> **Tres sutilezas de negocio que el modelo refleja** (y que hay que entender, no solo copiar):
-> - `Order.isCustom` es un **flag**, no un valor de `type`. Una venta custom sigue siendo `MESA` o `LLEVAR` ([PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas)).
-> - El descuento vive en el **ítem**, no en la orden: se aplica **por plato** — la cajera marca qué ítems lo llevan ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)).
-> - `OrderItem.discountAmount` es un **snapshot por unidad** del monto fijo, NO una resta. `OrderItem.totalPrice` y `Order.total` son los derivados ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)).
+> **Tres sutilezas de negocio que el modelo refleja** (hay que entenderlas, no solo copiarlas):
+> - `Order.isCustom` es un **flag**, no un valor de `type`: una venta custom sigue siendo `MESA` o `LLEVAR`.
+> - El descuento vive en el **ítem**, no en la orden: se aplica **por plato**.
+> - `OrderItem.discountAmount` es un **snapshot por unidad**, no una resta. `OrderItem.totalPrice` y `Order.total` son los derivados.
 
 ---
 
 # 4. Máquina de estados de pedidos (transaccional)
 
-**Estados:**
-`created → confirmed → preparing → ready → delivered → closed`
-Estados adicionales: `pendingPayment`, `cancelled`, `onHold` *(reservado — SIN transiciones en V1, ver §3.1)*.
+Los efectos transaccionales de cada transición. La regla de negocio está en el [PDR §4](../business/pdr.md#4-máquina-de-estados-de-pedidos).
 
-El flujo de vida de una orden. Negocio en [PDR §4](../business/pdr.md#4-máquina-de-estados-de-pedidos), efectos transaccionales en [§4.1](#41-transiciones-y-efectos).
+**Estados lógicos del PDR:** `CREATED → CONFIRMED → PREPARING → READY → DELIVERED → CLOSED`, más `PENDING_PAYMENT`, `CANCELLED` y `ON_HOLD` (reservado, sin transiciones en V1).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> created: cajera registra
+    [*] --> PREPARING: la cajera registra el pedido (pagado o pendiente de pago)
 
-    created --> confirmed: pago inmediato 💰
-    created --> pendingPayment: LLEVAR/delivery sin pago
-
-    note right of confirmed
-        Decremento ATÓMICO de inventario
-        + contabiliza ingreso
+    note right of PREPARING
+        Pagado: descuenta inventario (Sprint 2)
+        Pendiente de pago: se prepara igual,
+        sin tocar inventario ni caja
     end note
 
-    pendingPayment --> confirmed: paga 💰 (recién aquí descuenta inventario)
-    pendingPayment --> cancelled: cancelación MANUAL (sin motivo, sin timeout)
+    PREPARING --> PREPARING: pago del pendiente (paymentStatus PENDING a PAID)
+    PREPARING --> CANCELLED: cancelación manual del pendiente (sin motivo)
+    PREPARING --> CANCELLED: anulación del pagado (motivo y detalle, revierte inventario - Sprint 2)
 
-    confirmed --> preparing: comanda en panel despacho
-    pendingPayment --> preparing: se prepara de inmediato
+    PREPARING --> READY: despachadora marca listo (Sprint 4)
+    READY --> DELIVERED: se entrega (Sprint 4)
+    DELIVERED --> CLOSED: cierre de turno (Sprint 3)
 
-    preparing --> ready: despachadora marca listo 🔔 (pantalla pública)
-    ready --> delivered: cliente recoge / delivery retira
-    delivered --> closed: cierre administrativo
-
-    confirmed --> cancelled: anulación (motivo+detalle OBLIGATORIO, revierte inventario)
-
-    cancelled --> [*]
-    closed --> [*]
+    CANCELLED --> [*]
+    CLOSED --> [*]
 ```
 
 > **Reglas clave que el diagrama codifica:**
 > - El inventario se descuenta **al confirmar el pago**, nunca antes ([PDR §2.3](../business/pdr.md#23-inventario-por-presas)).
-> - `pendingPayment` se prepara **igual** que un pedido pagado, pero sin tocar inventario ni caja ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)).
-> - Cancelar pendiente: **manual, sin motivo**. Anular pagado: **motivo + detalle obligatorios** + revierte inventario ([FR-011b](../business/requirements.md#fr-011b--anulación-de-pedido-pagado-alta)).
+> - Un pedido con pago pendiente se prepara **igual** que uno pagado, pero sin tocar inventario ni caja ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)).
+> - Cancelar un pendiente es **manual y sin motivo**; anular un pagado exige **motivo y detalle** y revierte el inventario (FR-011b).
+
+**Cómo está implementado hoy (✅ Sprint 1).** El backend crea el pedido **directamente en `PREPARING`**, pagado o no: el PDR dice que "pasa a preparación" de inmediato. `CREATED`, `CONFIRMED` y `PENDING_PAYMENT` existen en el enum como estados lógicos del PDR, pero **el backend no los produce**: el estado de cobro lo da `paymentStatus` (`PENDING` / `PAID`), no `status`. El front debe usar `paymentStatus` para saber si un pedido está pendiente de pago.
 
 ## 4.1 Transiciones y efectos
 
-- **created → confirmed (con pago)**
-  - Acción: cajera confirma pedido con pago inmediato.
-  - Efecto: `paymentStatus = paid` → **decremento atómico de inventario** → contabiliza ingreso → genera comanda digital → (opcional) imprime factura si cliente la pide.
+- **Registro con pago inmediato** — `POST /orders` con `paymentStatus = PAID` ✅
+  - Efecto: se crea en `PREPARING` con `paymentStatus = PAID` y el `paymentMethod` indicado; se asigna `orderNumber`; se genera la comanda digital; se escribe `CREATE_SALE` en `AuditLog`. 🔲 Sprint 2: **descuento atómico de inventario** en la misma transacción.
+  - Hoy `paidAt` queda `null` en este caso: solo `/pay` lo completa ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
 
-- **created → pendingPayment**
-  - Acción: cajera registra pedido LLEVAR/delivery sin pago aún.
-  - Efecto: `paymentStatus = pending`. **NO decrementa inventario, NO contabiliza ingreso**. Se genera comanda digital y el pedido pasa directamente a preparación. La cancelación, si ocurre, es siempre manual y la realiza la cajera ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)).
+- **Registro con pago pendiente** — `POST /orders` con `paymentStatus = PENDING` ✅
+  - Efecto: se crea en `PREPARING` con `paymentStatus = PENDING` y **sin** método de pago. **No** toca inventario ni caja ni auditoría. La cancelación, si ocurre, es siempre manual ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)).
 
-- **confirmed → preparing / pendingPayment → preparing**
-  - Acción: comanda digital aparece automáticamente en panel de despacho.
-  - Efecto: ningún cambio en inventario (ya se hizo en confirmed con pago, o aún no se hace si es pendingPayment).
+- **Pago del pendiente** — `POST /orders/{id}/pay` ✅
+  - Efecto: `paymentStatus = PAID`, `paymentMethod` y `paidAt = now`; el `status` **no cambia** (sigue `PREPARING`); se escribe `CREATE_SALE`. 🔲 Sprint 2: **descuento atómico de inventario**.
+  - Un pedido ya pagado responde `ORDER_ALREADY_PAID`; uno cancelado, `ORDER_CANCELLED`.
 
-- **pendingPayment → confirmed**
-  - Acción: delivery / cliente paga.
-  - Efecto: `paymentStatus = paid`, `paidAt = now`. **Decremento atómico de inventario**. Contabiliza ingreso.
+- **Cancelación manual del pendiente** — `POST /orders/{id}/cancel` ✅
+  - Efecto: `status = CANCELLED` y `cancelledAt = now`. **No se guarda motivo** (`cancelReason` queda `null`: el PDR no lo pide). Inventario e ingreso nunca se tocaron. **No existe auto-cancelación por tiempo.**
+  - Hoy cancelar un pedido que **ya está cancelado** no da error: vuelve a marcarlo `CANCELLED` y refresca `cancelledAt` ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
+  - Un pedido **pagado** responde `ORDER_ALREADY_PAID_USE_ANULL`: se anula con la anulación de abajo.
 
-- **pendingPayment → cancelled (manual — única forma)**
-  - Acción: cajera cancela manualmente. **No existe auto-cancelación por timeout** ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)).
-  - Efecto: `cancelledAt = now`, `cancelReason = "manual"`. Sin requerir motivo detallado. Inventario no se tocó, ingreso no se contabilizó.
+- **Anulación de un pedido pagado** — `POST /orders/{id}/cancel` 🔲 Sprint 2
+  - Requiere `reason` y `details`. Efecto: `status = CANCELLED`, `cancelReason`, `cancelDetails`, `cancelledAt`; **reversión de inventario** (`CANCELLATION_REVERT`); queda en el arqueo bajo `anulaciones` con su monto; `AuditLog` (`CANCEL_SALE`) obligatorio.
 
-- **preparing → ready**
-  - Acción: despachadora marca listo.
-  - Efecto: `Order.readyAt = now`. El pedido aparece en la pantalla pública mostrando **únicamente el número de pedido** (aplica tanto a MESA como a LLEVAR) y suena alerta breve.
+- **Marcar listo** — `PATCH /orders/{id}/status` 🔲 Sprint 4
+  - `PREPARING → READY`, `readyAt = now`. El pedido aparece en la pantalla pública mostrando **únicamente el número de pedido** (MESA y LLEVAR por igual) y suena una alerta breve.
 
-- **ready → delivered**
-  - Acción: cliente recoge / delivery retira / despachadora entrega en mesa; despachadora marca entregado.
-  - Efecto: `Order.deliveredAt = now`, `Order.deliveredBy = userId` registrados.
+- **Marcar entregado** — `PATCH /orders/{id}/status` 🔲 Sprint 4
+  - `READY → DELIVERED`, `deliveredAt = now`, `deliveredById`.
 
-- **delivered → closed**
-  - Acción: cierre administrativo — lo ejecuta **`POST /shifts/close`**: al cerrar el turno, todas las órdenes `delivered` del turno transicionan a `closed` en la misma operación (no hay endpoint dedicado; es exactamente el "típicamente al cierre de turno" de [PDR §4](../business/pdr.md#4-máquina-de-estados-de-pedidos)).
-
-- **(cualquier estado pagado) → cancelled (anulación)**
-  - Acción: admin / cajera anula un pedido ya pagado.
-  - Efecto requerido: `cancelReason` y `cancelDetails` obligatorios. **Reversión de inventario** (restituir presas y bebidas). Se registra en arqueo bajo `anulaciones` con monto. `AuditLog` obligatorio.
+- **Cierre administrativo** — `POST /shifts/close` 🔲 Sprint 3
+  - Al cerrar el turno, todas las órdenes `DELIVERED` del turno pasan a `CLOSED` en la misma operación. No hay endpoint dedicado.
 
 ## 4.2 Reglas transaccionales
 
-- El decremento de inventario y la marca de pago deben ocurrir en una **transacción atómica**. Si falla inventario (stock insuficiente), la orden permanece en su estado anterior y se notifica a la cajera con detalle del faltante.
-- **No existe job de auto-cancelación**: los pedidos `pendingPayment` solo transitan a `cancelled` por acción manual de la cajera o a `paid` al confirmar el pago.
-- **El registro de auditoría forma parte de la transacción.** En las acciones críticas, el `INSERT` en `AuditLog` ocurre **dentro de la misma `$transaction`** que la acción: si la operación se revierte, el audit tampoco queda (no hay constancia de algo que no pasó). Detalle en [§4.3](#43-auditoría--implementación-v1).
+- El descuento de inventario y la marca de pago ocurren en **una transacción atómica**. Si no hay stock suficiente, el pedido permanece en su estado anterior y se avisa a la cajera qué falta (🔲 Sprint 2; la lógica ya está prevista como un paso de `orders.create()`).
+- Los pedidos pendientes **no tienen job de auto-cancelación**: solo pasan a `CANCELLED` por acción manual o a pagados al confirmar el pago.
+- **El registro de auditoría forma parte de la transacción.** En las acciones críticas, el `INSERT` en `AuditLog` ocurre **dentro de la misma `$transaction`** que la acción: si la operación se revierte, el audit tampoco queda. Detalle en [§4.3](#43-auditoría--implementación-v1).
+- **Altas con rastro.** `currentStock` nunca se escribe sin una fila en `InventoryTransaction` en la misma transacción (alta con `initialStock` y ajuste).
 
 ---
 
 ## 4.3 Auditoría — implementación (V1)
 
-> Traducción técnica de la regla de negocio [PDR §2.9](../business/pdr.md#29-auditoría). La auditoría registra el rastro inmutable de las **acciones críticas** (quién, cuándo, qué entidad, qué cambió) sobre la entidad [`AuditLog`](#31-entidades-principales). **No confundir con el logging técnico** (errores/debug): la auditoría es un registro **de negocio**, persistido en BD, inmutable y consultable por el admin.
+> Traducción técnica de la regla de negocio [PDR §2.9](../business/pdr.md#29-auditoría). La auditoría registra el rastro inmutable de las **acciones críticas** (quién, cuándo, qué entidad, qué cambió) sobre la entidad `AuditLog` ([§3.1](#31-entidades-principales)). **No confundir con el logging técnico** (errores y debug): la auditoría es un registro **de negocio**, persistido en la base, inmutable y consultable por el admin.
 
-### Patrón V1: audit explícito dentro del service y la transacción
-- La escritura del `AuditLog` se hace de forma **explícita dentro del service** de cada acción crítica, en la **misma `prisma.$transaction`** que la operación. Dos motivos lo imponen:
-  1. **Atomicidad:** acción y audit se graban juntos o no se graban (§4.2). Evita auditar ventas que terminaron revertidas.
-  2. **Estado *antes/después*:** el `details` necesita el valor previo, que solo está disponible **antes de mutar**, dentro del service.
-- Recomendado: un `AuditService` con un único método `log(tx, { entity, entityId, action, userId, details })` invocado desde cada punto crítico, reutilizando la transacción activa.
+### Patrón: audit explícito dentro del service y la transacción
 
-### Las 6 acciones auditadas (§2.9) y su punto de captura
-| Acción (`action`) | Punto de captura | `entity` |
-|---|---|---|
-| `CREATE_SALE` | `POST /orders` y `POST /orders/custom` (al confirmar pago). Los **descuentos por ítem** aplicados en la creación van en `details` (`discountId`, `discountAmount`, ítems afectados) — no hay acción de audit separada para "aplicar descuento" | `Order` |
-| `CANCEL_SALE` | `POST /orders/{id}/cancel` | `Order` |
-| `ADJUST_INVENTORY` | `POST /inventory/adjust` | `InventoryItem` |
-| `CREATE_VOUCHER` | `POST /vouchers` | `Voucher` |
-| `OPEN_SHIFT` / `CLOSE_SHIFT` | `POST /shifts/open` · `/close` | `Shift` |
-| `GENERATE_REPORT` | `GET /reports/...` | `Report` (lógico — sin fila en BD; `entityId` es una clave legible, ver abajo) |
+- La escritura se hace de forma **explícita dentro del service** de cada acción crítica, en la **misma `prisma.$transaction`** que la operación, por dos motivos: **atomicidad** (acción y audit se graban juntos o no se graban: no se auditan ventas revertidas) y **estado antes/después** (el `details` necesita el valor previo, disponible solo antes de mutar).
+- Se hace con `AuditService.log(tx, { entity, entityId, action, userId, shiftId?, details? })` (`src/audit/`), reutilizando la transacción activa. Rechaza cualquier `action` que no esté en la lista cerrada `AUDIT_ACTIONS`.
 
-> El **acto de autorizar un descuento** ya queda auditado aparte (`AUTHORIZE_DISCOUNT`, §2.11 / FR-016b) — ver [§5.1](#51-endpoints-principales).
+### Acciones auditadas y su punto de captura
+
+| Acción (`action`) | Punto de captura | `entity` | Estado |
+|---|---|---|---|
+| `CREATE_SALE` | `POST /orders` con pago inmediato y `POST /orders/{id}/pay`; 🔲 `POST /orders/custom`. Los **descuentos por ítem** van en `details` (`discountId`, `discountAmount`, ítems afectados): no hay una acción aparte para "aplicar descuento" | `Order` | ✅ (custom y descuentos 🔲) |
+| `OPEN_SHIFT` | `POST /shifts/open` | `Shift` | ✅ |
+| `ADJUST_INVENTORY` | `POST /inventory/adjust` | `InventoryItem` | ✅ |
+| `CANCEL_SALE` | `POST /orders/{id}/cancel` (anulación de un pagado) | `Order` | 🔲 Sprint 2 |
+| `CREATE_VOUCHER` | `POST /vouchers` | `Voucher` | 🔲 Sprint 3 |
+| `CLOSE_SHIFT` | `POST /shifts/close` | `Shift` | 🔲 Sprint 3 |
+| `AUTHORIZE_DISCOUNT` | `POST /discounts/{id}/authorize` (el **acto de autorizar** queda auditado aparte, FR-016b) | `DiscountAuthorization` | 🔲 Sprint 3 |
+| `GENERATE_REPORT` | `GET /reports/...` | `Report` (lógico: sin fila en la base; `entityId` es una clave legible) | 🔲 Sprint 3 |
+
+La administración de clientes (alta, edición, activar/desactivar) todavía **no** se audita; sumarla exige agregar sus acciones (`CREATE_CUSTOMER`, `UPDATE_CUSTOMER`, `TOGGLE_CUSTOMER_ACTIVE`) a la lista cerrada `AUDIT_ACTIONS` (🔲 Sprint 4).
 
 ### Cómo se llena cada campo
-- **`userId`** (quién): del JWT, `request.user.sub`. Disponible en toda petición autenticada.
-- **`shiftId`** (en qué turno): del **turno activo de la sesión** que ejecuta la acción (en `OPEN_SHIFT`/`CLOSE_SHIFT` es el propio `Shift`). NULL en acciones de admin fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`). El log nace sabiendo su turno — la consulta por turno es una FK directa, sin ventanas horarias.
-- **`timestamp`** (cuándo): reloj del server (`@default(now())`).
-- **`entity` + `entityId`** (qué entidad): tipo e id del registro afectado. En una **creación**, el `entityId` está disponible **tras el insert dentro de la misma `tx`**.
-  - `entityId` es **`string`, no `uuid`** (ver [§3.1](#31-entidades-principales)): al ser una referencia polimórfica no tiene FK, así que el tipo `uuid` no daba integridad — solo impedía representar entidades **lógicas**.
-  - **Entidades persistidas** (`Order`, `Voucher`, `InventoryItem`, `Shift`, `DiscountAuthorization`): se guarda su UUID.
-  - **Entidad lógica `Report`** (`GENERATE_REPORT` no crea fila en ninguna tabla): se guarda una **clave legible y consultable** con formato `<reporte>:<alcance>` — ej. `"sales:2026-07"`, `"inventory-presas:2026-07-08"`. Nunca un UUID inventado: un identificador falso en la tabla que existe para ser prueba destruye su valor. Así el admin puede filtrar por `entityId` y ver quién generó ese reporte exacto.
-- **`action` + `details`** (qué cambió): `action` es el verbo fijo del endpoint; `details: JSON` guarda el cambio concreto:
-  - **Creaciones** (venta, vale): qué se creó → `{ total, items, paymentMethod }`, `{ worker, product, amount }`.
-  - **Mutaciones** (ajuste de inventario, cierre de caja): estado previo y nuevo → `{ before, after, reason }`, `{ expected, counted, difference }`.
+
+- **`userId`** (quién): del JWT, `request.user.sub`.
+- **`shiftId`** (en qué turno): del **turno activo de la sesión** que ejecuta la acción (en `OPEN_SHIFT` y `CLOSE_SHIFT` es el propio turno). `null` en las acciones de admin fuera de una sesión de caja (`ADJUST_INVENTORY`, `GENERATE_REPORT`). El log nace sabiendo su turno: la consulta por turno es una FK directa.
+- **`timestamp`** (cuándo): reloj del servidor.
+- **`entity` + `entityId`** (qué entidad): tipo e id del registro afectado. En una **creación**, el `entityId` está disponible tras el insert, dentro de la misma transacción. Las entidades persistidas guardan su UUID; la entidad lógica `Report` guarda una **clave legible** `<reporte>:<alcance>` (por ejemplo `"sales:2026-07"`), nunca un UUID inventado.
+- **`action` + `details`** (qué cambió): `action` es el verbo fijo; `details` guarda el cambio concreto. En **creaciones**: qué se creó (`{ total, items, paymentMethod }`). En **mutaciones**: el estado previo y el nuevo (`{ before, after, reason }`, `{ expected, counted, difference }`). Hoy `ADJUST_INVENTORY` guarda `{ productCode, delta, reason, note }`.
 
 ### Inmutabilidad: tabla append-only
-- A `AuditLog` solo se le hace **`INSERT`** y **`SELECT`**. **Nunca `UPDATE` ni `DELETE`.** Un registro de auditoría editable no sirve como prueba — la inmutabilidad **es** la feature.
 
-### Consulta
-- El rastro se consulta **como lo piensa el negocio, sin paginación** (admin): **`POST /api/v1/audit-logs/shift`** con `{ date, periodId, cashRegisterId? }` → los logs de ese turno (~50-80 filas; caja opcional — omitida = todas las cajas de ese período), y **`POST /api/v1/audit-logs/month`** con `{ month }` → el mes completo. Resolución por **FK directa**: `Shift` por fecha + período (+ caja) → `AuditLog WHERE shiftId IN (...)` — cero ventanas horarias. URLs limpias, datos por body, orden `timestamp DESC`. Ver [§5.1](#51-endpoints-principales) y payload en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin). Auditar sin poder consultar no aporta valor — por eso la consulta es parte del contrato V1.
+A `AuditLog` solo se le hace **`INSERT`** y **`SELECT`**. **Nunca `UPDATE` ni `DELETE`**: un registro editable no sirve como prueba, la inmutabilidad **es** la feature.
 
-### Por qué NO un interceptor genérico en V1
-- Un `AuditInterceptor` global corre **fuera de la transacción** del service y **no tiene el estado previo**, así que no puede garantizar atomicidad ni llenar `details` con el *antes/después*. Por eso V1 usa audit explícito.
-- Un interceptor (para las acciones simples, sin before/after) es una **optimización diferida a V2**, y se sumará **con un caso real** cuando la repetición lo justifique — misma disciplina que el catálogo de descuentos ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). No se introduce antes.
+### Consulta 🔲 Sprint 5
+
+El rastro se consulta **como lo piensa el negocio, sin paginación** (admin): **`POST /audit-logs/shift`** con `{ date, periodId, cashRegisterId? }` devuelve los logs de ese turno (~50-80 filas; sin caja = todas las cajas de ese período) y **`POST /audit-logs/month`** con `{ month }`, el mes completo. Se resuelve por **FK directa** (`Shift` por fecha + período + caja → `AuditLog WHERE shiftId IN (...)`), sin ventanas horarias. Contrato en [§6.17](#617-auditoría--sprint-5).
+
+### Por qué no un interceptor genérico en V1
+
+Un `AuditInterceptor` global corre **fuera de la transacción** del service y **no tiene el estado previo**, así que no puede garantizar atomicidad ni llenar `details` con el antes/después. Por eso V1 usa audit explícito. Un interceptor para las acciones simples queda **diferido a V2**, y entrará **con un caso real** cuando la repetición lo justifique.
 
 ---
 
@@ -434,1023 +424,1384 @@ stateDiagram-v2
 
 Reglas transversales que **todos** los endpoints respetan. El frontend envía el **mínimo**; el backend resuelve el resto y devuelve respuestas **listas para pintar**.
 
-1. **Lo que viene del token NUNCA viaja en el body.** El JWT lleva `{ sub: userId, email, role }`. El backend toma de `request.user` (no del request body) todos los campos de **actor/sesión**: `Order.createdBy`, `Voucher.issuedBy`, `Shift.cashierId`, `InventoryTransaction.userId`, `DiscountAuthorization.authorizedBy`. Si el front los manda, el backend los **ignora**.
-2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes, vales, gastos) NO reciben `shiftId`: el backend resuelve el **turno abierto de la sesión de cajera** autenticada (1 sesión activa por turno, FR-008b) y lo asigna. Mismo criterio para cualquier vínculo deducible de la sesión.
-3. **Precios y totales los calcula el backend desde la BD.** En la **orden estándar** el front **NO** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` / `Variant` y calcula `totalPrice` y `total`. **Única excepción:** la **venta custom**, donde la cajera confirma un `unitPrice` (input de negocio legítimo, §2.10). Snapshots (`discountAmount`, `customerName`) también los congela el backend, no el front.
-4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, primero hace un lookup exacto (`GET /customers/by-ci/{ci}` o `GET /customers/by-nit/{nit}`) y obtiene el `id` (UUID). Luego, al crear la orden, manda `customerId` (UUID), **no** `customerName`: el backend lee la tabla `Customer` y snapshotea el nombre. Idéntico criterio para los **descuentos**: el ítem lleva `discountId` (referencia al catálogo) y el backend valida, congela el snapshot y deriva los totales. El front jamás manda montos de descuento.
-5. **Respuestas listas para renderizar.** El backend devuelve todo lo que la UI muestra, **ya calculado y con nombres resueltos**. Los campos de actor se devuelven como objeto `{ id, name }` (ej. `createdBy: { id, name }`), no como id suelto, para que el frontend **solo pinte** sin segundas consultas ni cálculos.
-6. **Una operación de negocio = una llamada.** Todo lo que la cajera decide en una misma pantalla viaja en **un solo request** y el backend lo resuelve en **una sola transacción**. Los descuentos por plato van como `discountId` en cada ítem de `POST /orders` — **no existe** un endpoint separado para "aplicar descuento". Los endpoints separados se reservan para **momentos distintos en el tiempo** (`/pay` cuando el delivery paga al retirar, `/cancel`, `/status`), nunca para pasos de una misma operación.
+1. **Lo que viene del token nunca viaja en el body.** El token identifica al usuario (`sub`); el backend toma de `request.user` todos los campos de **actor y sesión**: `Order.createdById`, `Shift.cashierId`, `InventoryTransaction.userId`, y a futuro `Voucher.issuedById` y `DiscountAuthorization.authorizedById`. Además **no confía en el rol ni en la sucursal del token**: los lee de la base en cada request ([§5.2](#52-autenticación-y-autorización)). **Si el front manda uno de esos campos, el backend lo rechaza** con `400 VALIDATION_ERROR` ("El campo X no está permitido"): toda propiedad desconocida es un error, no se ignora.
+2. **El `shiftId` se deriva del turno activo.** Las operaciones de venta (órdenes y, a futuro, vales y gastos) no reciben `shiftId`: el backend resuelve el **turno abierto de la cajera** autenticada y lo asigna. Sin turno abierto, `409 NO_ACTIVE_SHIFT`.
+3. **Precios y totales los calcula el backend desde la base.** En la orden estándar el front **no** envía `unitPrice` ni `total`: el backend los toma de `Product.basePrice` y calcula `totalPrice` y `total`. **Única excepción:** la venta custom 🔲, donde la cajera confirma un `unitPrice` (input de negocio legítimo, [PDR §2.10](../business/pdr.md#210-ventas-custom-presas-surtidas)). Los snapshots (`customerName`, `discountAmount`) también los congela el backend.
+4. **El front manda referencias (ids), no datos copiados.** Para vincular un cliente, primero hace el lookup exacto (`GET /customers/by-ci/{ci}` o `by-nit/{nit}`) y obtiene su `id`; al crear la orden manda `customerId`, **no** `customerName`: el backend lee el `Customer` y snapshotea el nombre. Igual para los descuentos 🔲: el ítem lleva `discountId` y el backend valida, congela el snapshot y deriva los totales; el front jamás manda montos de descuento.
+5. **Respuestas listas para renderizar.** El backend devuelve todo lo que la UI muestra, ya calculado y con los nombres resueltos. Los campos de actor se devuelven como objeto `{ id, firstName, lastName }` (por ejemplo `createdBy`), no como id suelto.
+6. **Una operación de negocio = una llamada.** Todo lo que la cajera decide en una pantalla viaja en **un solo request** y se resuelve en **una sola transacción**. Los endpoints separados se reservan para **momentos distintos en el tiempo** (`/pay`, `/cancel`, `/status`), nunca para pasos de una misma operación. No existe un endpoint para "aplicar un descuento": va como `discountId` en cada ítem de `POST /orders`.
+7. **El alcance por rol y sucursal lo impone el backend.** El front puede ocultar acciones como ayuda visual, pero **no necesita filtrar ni restringir** nada para que sea correcto ([§5.6](#56-alcance-por-rol-y-sucursal)).
+8. **El negocio no borra, desactiva.** No existe ningún `DELETE`: toda baja es `PATCH /{recurso}/{id}/toggle-active`, que invierte el estado actual sin body y conserva el historial.
+9. **Semántica de `PATCH`.** Solo cambian los campos enviados. Un campo **anulable** (`phone`, `birthDate`, `email`, `salePrice`, `branchId` de un `SUPER_ADMIN`…) acepta `null` para borrarse; un campo **no anulable** con `null` da `400 VALIDATION_ERROR`. Un `PATCH` de sucursales o de clientes sin ningún campo da `400 NO_FIELDS_TO_UPDATE`.
 
 ## 5.1 Endpoints principales
 
-> El rol requerido por cada endpoint está en la **matriz de autorización** de [§5.2](#52-autenticación-y-autorización). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. Todos respetan los [principios de §5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
+> El rol de cada endpoint también está en la [matriz de §5.2](#matriz-de-autorización-endpoint--roles). Todos exigen `Authorization: Bearer <token>` salvo los marcados **público**. El detalle de request, response y errores de cada uno está en el [§6](#6-contratos-por-módulo-requestresponse). Los módulos van en el **orden en que se implementan**. `SUPER_ADMIN` pasa siempre por el control de roles (con las salvedades de [§5.6](#56-alcance-por-rol-y-sucursal)).
 
-- `POST /api/v1/auth/login` — **público** (`@Public()`): autentica y devuelve el JWT (payload `{ sub: userId, email, role, branchId }`) que el frontend envía como `Bearer` (FR-018). Login por **email + CI** (la contraseña es el CI hasheado con bcryptjs). Request/response en [§6.0](#60-authloginresponse).
-- `GET /api/v1/auth/me` — perfil del usuario autenticado, **cualquier rol**: `data.user = { id, firstName, lastName, email, role, branchId, branchName }` (`branchId` y `branchName` son `null` para `SUPER_ADMIN`). Se lee de la base en cada llamada, no del token: el token solo lleva ids y puede quedar desactualizado. Lo usa el header del front.
-- `POST /api/v1/auth/logout` — libera la **sesión activa del turno** del usuario autenticado (FR-008b): sin esto, quien terminó como cajera no podría reingresar como despachadora hasta que el turno cierre solo. La sesión también se extingue automáticamente al cerrar el turno.
-- `POST /api/v1/users` · `GET /api/v1/users` · `PATCH /api/v1/users/{id}` · `PATCH /api/v1/users/{id}/toggle-active` — gestión de usuarios por el admin ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): alta con rol, listado y edición (firstName, lastName, email, phone, ci, rol, branchId). `PATCH /api/v1/users/{id}` NO permite cambiar `active` — para activar/desactivar se usa el endpoint separado `toggle-active` (invierte el estado actual, sin body). El CI viaja solo en alta/edición y se guarda hasheado como `passwordHash` (bcryptjs, §5.2)
-- `POST /api/v1/branches` — crear sucursal (**solo SUPER_ADMIN**, FR-000): `{ name, address, phone? }`, `active` por defecto `true`. `phone` es opcional y se persiste como string libre (sin validación de formato en V1). Es el **prerrequisito** de `POST /users` (el admin se crea con `branchId`) y de todo lo que sigue (`Shift.branchId`, `CashRegister.branchId`, `InventoryItem.branchId` son required para entidades locales)
-- `GET /api/v1/branches` — listar sucursales (**solo SUPER_ADMIN**; alimenta el selector de sucursal del frontend y la gestión). Devuelve `id`, `name`, `address`, `phone`, `active` Cada sucursal trae además dos campos **derivados** (sin tocar el schema): `cashRegistersCount` (cajas/"terminales", activas o no) y `admin` (`{ id, firstName, lastName }` del ADMIN activo más antiguo de la sede, o `null` si no tiene).
-- `PATCH /api/v1/branches/{id}` — editar sucursal (**solo SUPER_ADMIN**): `{ name?, address?, phone? }`. Editar no altera datos pasados (las entidades locales guardan su `branchId`). Al menos un campo debe estar presente.
-- `PATCH /api/v1/branches/{id}/toggle-active` — **alternar** el estado de una sucursal (**solo SUPER_ADMIN**): si está `active: true` la desactiva (`active: false`) y si está inactiva la reactiva (`active: true`). Invierte el estado actual sin body. No borra datos; las entidades locales conservan su `branchId`
-- `POST /api/v1/products` — crear producto
-- `GET /api/v1/products` — listar productos (`ADMIN` ve todos; `CASHIER` solo `active` + `isSellable`, que es lo que consume el POS)
-- `GET /api/v1/products/{id}` — obtener producto con sus variantes
-- `PATCH /api/v1/products/{id}` — editar producto (`name`, `basePrice`, `category`, `description`, `isSellable`, `isInventoryItem`). **No** cambia `active` — la baja va por `toggle-active`. No acepta precio del front sin revalidar contra el catálogo (§5.0 princ. 3)
-- `PATCH /api/v1/products/{id}/toggle-active` — **alternar** `active` (admin): retira el producto del POS sin tocar las órdenes ya creadas (esas conservan su `snapshot`). Mismo patrón que branches/users/customers
-- `POST /api/v1/variants` — crear variante
-- `GET /api/v1/variants` — listar variantes (`?productId=` para filtrar)
-- `PATCH /api/v1/variants/{id}` — editar variante (`name`, `components`, `isDefault`). No cambia `active`
-- `PATCH /api/v1/variants/{id}/toggle-active` — alternar `active` (admin)
-- `POST /api/v1/cash-registers` — crear caja (**`ADMIN`**): `{ name }`. El `branchId` **se deriva del actor** (§5.0 princ. 1) — la caja pertenece a la sucursal del admin que la crea; un `ADMIN` no manda `branchId` (si manda otra sucursal, 403 `BRANCH_OUT_OF_SCOPE`). El **`SUPER_ADMIN`**, que no tiene sucursal, **debe** indicarla en el body (`BRANCH_REQUIRED` si falta) y puede editar y activar/desactivar cajas de cualquier sucursal. `name` es único por sucursal (`@@unique([branchId, name])`): duplicado → `CASH_REGISTER_ALREADY_EXISTS`. Es **prerrequisito directo** de `POST /shifts/open`
-- `GET /api/v1/cash-registers` — listar cajas de la sucursal del actor (incluye inactivas; la validación de pertenencia/actividad la hace `shifts/open`). **Solo `SUPER_ADMIN`** puede usar `?branchId=` para elegir una sucursal; sin él ve las de todas. Un rol de sucursal que pida otra recibe 403 `BRANCH_OUT_OF_SCOPE`.
-- `PATCH /api/v1/cash-registers/{id}` — editar caja (`name`). No cambia `active`
-- `PATCH /api/v1/cash-registers/{id}/toggle-active` — alternar `active` (admin)
-- `POST /api/v1/orders` — crear orden estándar (MESA / LLEVAR) con **N ítems** (`productId` + `quantity`; sin `customPieces`). Cada ítem acepta `discountId?` opcional: el backend valida (disponibilidad + autorización — `DISCOUNT_NOT_AVAILABLE` / `DISCOUNT_NOT_AUTHORIZED`), congela el snapshot y deriva `totalPrice` y `total` — **una sola llamada y transacción** (§5.0 princ. 6; el front NO manda precios ni montos). Request/response y la cuenta completa en [§6.3](#63-ordercreateresponse-mesa-pagado-con-sustitución) / [§6.6](#66-ordercreatewithdiscountresponse-descuento-al-personal-por-plato-en-la-creación--una-sola-llamada).
-  > **No existe endpoint separado para aplicar descuentos.** Descuento post-creación: sin soporte en V1 (sin caso real) — `pendingPayment` sin pagar → cancelar y recrear; pagada → anulación FR-011b.
-- `POST /api/v1/orders/custom` — crear orden custom (MESA / LLEVAR): ítems con `customPieces`, extras/bebidas opcionales, **precio unitario confirmado** por la cajera y `discountId?` opcional. El **precio sugerido** lo calcula el POS en el cliente con los `piecePrices` de `pos/context`; se persiste el confirmado, nunca la sugerencia (§2.10). Endpoint **separado** para DTOs y validaciones limpias por flujo. Payload en [§6.5](#65-customordercreateresponse-orden-llevar-custom--presas-surtidas-vía-post-apiv1orderscustom).
-- `GET /api/v1/orders/{id}` — obtener orden
-- `GET /api/v1/orders?status=&date=&createdBy=&table=&customer=` — listado con filtros: es el **panel de despacho** (filtro por `status`: preparing/ready/delivered, §7.2 / FR-003) y el **historial de comandas con búsqueda** por fecha, responsable, mesa o cliente (FR-012). Un solo endpoint para ambos usos
-- `GET /api/v1/public/orders/{token}` — **público**: vista de la comanda del cliente, accedida por el `publicToken` no adivinable del pedido (no por `id`). Devuelve solo campos seguros. Si la orden tiene `customerId`, incluye además los **otros pedidos del mismo cliente del día** (vista "mis pedidos del día"); el agrupado se hace por `customerId` + fecha, pero el acceso lo habilita el token, no el NIT (FR-015 / FR-019)
-- `GET /api/v1/public/ready-orders` — **público**: alimenta la **pantalla "turnos de banco"** del local (FR-007). Devuelve ÚNICAMENTE los números de pedido en estado `ready` — sin nombre, mesa ni ningún otro dato (§2.8): `{ "data": [12, 15, 18] }`. Al marcarse `delivered`, el número desaparece
-- `PATCH /api/v1/orders/{id}/status` — despacho marca `ready`/`delivered` ([§6.11b](#611b-orderstatusupdateresponse-despacho))
-- `POST /api/v1/orders/{id}/pay` — confirmar pago: `pendingPayment` → `paid` ([§6.4b](#64b-payorderresponse-confirmar-pago-de-un-pendiente))
-- `POST /api/v1/orders/{id}/cancel` — anular pedido pagado, motivo y detalle obligatorios ([§6.11](#611-cancelorderresponse-anulación-de-pedido-pagado))
-- `GET /api/v1/customers/by-ci/{ci}` — lookup exacto de cliente activo por CI (cédula). El POS lo usa en el componente G al tipear el CI y presionar Enter / onBlur.
-- `GET /api/v1/customers/by-nit/{nit}` — lookup exacto de cliente activo por NIT (factura razón social). Mismo patrón que `by-ci`.
-- `POST /api/v1/customers` — registrar cliente ([§6.2a](#62a-customercreateresponse--customersearchresponse))
-- `GET /api/v1/customers` — **lista administrativa** (`ADMIN`): `?search=&status=&from=&to=&page=&pageSize=`. `search` es texto libre (cada palabra debe aparecer en nombre, apellido, CI o NIT, sin distinguir mayúsculas); `status` = `active` | `inactive` | `all` (default `all`); `from`/`to` = fecha de **alta** (`YYYY-MM-DD`, ambas inclusivas); `page` ≥ 1 (default 1) y `pageSize` 1–100 (default 20). Devuelve `data: { customers, total, page, pageSize }`; cada cliente trae `birthDate`. Los clientes son globales: el ADMIN ve los de todas las sucursales.
-- `GET /api/v1/customers/{id}` — obtener datos completos del cliente (`CASHIER`, `ADMIN`). La cajera solo ve clientes **activos** (404 si está desactivado, igual que en los lookups); ADMIN ve también los desactivados
-- `PATCH /api/v1/customers/{id}` — editar datos personales (`CASHIER`, `ADMIN`): `firstName`, `lastName`, `sex`, `birthDate`, `phone`, `email`; `birthDate`, `phone` y `email` aceptan `null` para borrarlos. **`ci` y `nit` no se editan** (se rechazan con 400): son su identidad para buscarlo y facturarlo. Un body vacío da 400 `NO_FIELDS_TO_UPDATE`; la cajera no puede editar un cliente desactivado
-- `PATCH /api/v1/customers/{id}/toggle-active` — activar/desactivar cliente (`ADMIN`). El desactivado deja de aparecer en las búsquedas del POS; sus pedidos conservan el nombre
-- `GET /api/v1/customers/{id}/orders` — historial de pedidos del cliente, **de todas las sucursales** (`ADMIN`; [PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada): el cliente es global y la vista del administrador es cross-sucursal). Paginado (`?page=&pageSize=`); cada pedido trae `branchId` y `branchName`. Es el único lugar donde un ADMIN lee pedidos de otras sucursales
-- `POST /api/v1/inventory/items` — **crear ítem de inventario** (admin): `{ productCode, name, unit, type, unitMeasure?, salePrice?, initialStock? }`. El `branchId` **se deriva del actor** (§5.0 princ. 1) — el inventario es local por sucursal; no se acepta `branchId` en el body. `productCode` es único **por sucursal** (`@@unique([branchId, productCode])`): duplicado → `INVENTORY_ITEM_CODE_ALREADY_EXISTS`. `salePrice` es **solo VENTA** y aplica únicamente a `type ∈ {PECHO, ALA, PIERNA, ENTREPIERNA}` (alimenta el precio sugerido custom, §2.10); se rechaza en `INSUMO`. **`initialStock > 0` crea la `InventoryTransaction` con `reason: RECEPTION` en la MISMA transacción** que el alta (delta = `initialStock`): `currentStock` es un cache del libro de transacciones y nunca se escribe sin rastro, así el dashboard/delta del turno se calcula siempre desde las transacciones. Cargar el stock inicial por `/adjust` aparte obligaría a dos llamadas y dejaría el ítem existiendo en 0 sin que conste el ingreso
-- `GET /api/v1/inventory/items` — listar ítems del inventario de la sucursal del actor (`ADMIN`, `COOK`) con filtros `?type=&active=&search=`. Alimenta el selector de insumos del formulario de consumos manuales (FR-017) y la vista de stock del cocinero (FR-008) **Solo `SUPER_ADMIN`** puede usar `?branchId=` para elegir una sucursal (sin él ve las de todas); en el alta indica `branchId` en el body, y puede editar y activar/desactivar ítems de cualquier sucursal. Un rol de sucursal que nombre otra recibe 403 `BRANCH_OUT_OF_SCOPE`.
-- `PATCH /api/v1/inventory/items/{id}` — editar **solo** `name`, `unit`, `unitMeasure`, `salePrice` (admin). **`currentStock` NO es editable por acá**: cualquier movimiento de stock pasa por `POST /inventory/adjust` con motivo, que es la vía auditable y la única que escribe en el libro de transacciones
-- `POST /api/v1/inventory/adjust` — ajustar inventario (`ADMIN`; `SUPER_ADMIN` en cualquier sucursal), **con motivo**: `{ inventoryItemId, delta, reason, note }`. `delta` es un entero distinto de 0 (positivo suma, negativo resta) y **no puede dejar el stock en negativo** (409 `INSUFFICIENT_STOCK`; el chequeo es parte del UPDATE, así que dos ajustes simultáneos no lo rompen). `reason` solo puede ser `ADJUSTMENT` (corrección, merma) o `RECEPTION` (ingreso de mercadería); los demás motivos los escribe la operación que los causa. `note` es obligatoria. En una sola transacción actualiza el stock, escribe la fila del libro y la auditoría `ADJUST_INVENTORY`. Responde `data: { transaction, inventoryItem }` (el movimiento y el ítem con su stock nuevo)
-- `GET /api/v1/inventory/dashboard` — **dashboard de stock cocido** (`ADMIN`, `COOK`; `SUPER_ADMIN` con `?branchId=` opcional) — FR-006. Devuelve `data: { shift, pieces }`: una entrada por tipo de presa (`PECHO`, `ALA`, `PIERNA`, `ENTREPIERNA`) con `items`, `currentStock` y `delta: { sold, adjusted, received, net }`. **Ventana del delta:** desde el inicio del turno **abierto más antiguo** de la sucursal (`shift`); sin turno abierto, `shift` es `null` y todos los deltas son 0. `sold` cuenta las salidas `SALE`; `net` suma todos los motivos. Mientras el pago de una venta no descuente inventario (decremento al confirmar el pago, Sprint 2), `sold` solo refleja lo ya registrado en el libro
-- `POST /api/v1/inventory/manual-consumption` — registrar consumos manuales por turno
-- `GET /api/v1/inventory/shift-chicken-log/{shiftId}` — obtener el `ShiftChickenLog` del turno (al abrir, viene precargado con `reprocessRaw` = `rawLeftover` del último turno cerrado por `pieceType`)
-- `POST /api/v1/inventory/shift-chicken-log` — registrar/actualizar el ciclo crudo del turno (reproceso, procesado, sobrante crudo, sobrante cocido en expositor) por tipo de presa
-- `POST /api/v1/inventory/shift-chicken-log/{shiftId}/close` — cerrar el ShiftChickenLog del turno; dispara la reconciliación contra ventas y registra discrepancias
-- `POST /api/v1/shifts/open` — abrir caja/turno **declarando el período** (el backend valida que exista y esté activo; **nunca lo infiere del reloj** — [PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). Request en [§6.10](#610-cashopenresponse-éxito)
-- `POST /api/v1/shifts/close` — cerrar caja/turno con arqueo ([§6.10b](#610b-cashcloseresponse-arqueo)). Además ejecuta el **cierre administrativo** de [PDR §4](../business/pdr.md#4-máquina-de-estados-de-pedidos): las órdenes `delivered` del turno transicionan a `closed` en la misma operación (extingue también las `DiscountAuthorization` y la sesión de cajera del turno)
-- `GET /api/v1/shifts/shift-periods` — listar períodos del catálogo (admin y cajera — la pantalla de apertura los muestra). Por defecto solo los **activos**; `?includeInactive=true` (solo lo respetan `ADMIN`/`SUPER_ADMIN`; la cajera sigue viendo solo activos) trae también los desactivados, para poder reactivarlos.
-- `POST /api/v1/shifts/shift-periods` — crear período (admin): `{ name, displayOrder, referenceStart?, referenceEnd? }`. Permite el tercer turno del futuro ("Tarde") **sin migración ni código nuevo**
-- `PATCH /api/v1/shifts/shift-periods/{id}` — editar/desactivar período (admin). Los horarios de referencia son informativos: cambiarlos no reclasifica nada
-  > **Nota de ruta:** el catálogo de períodos se expone **anidado bajo `/shifts`** (y no top-level como `/shift-periods`) para mantenerlo junto al recurso que lo consume — el `periodId` que declara `POST /shifts/open`. Es la ruta ya implementada en `src/shifts/shifts.controller.ts`; el código manda sobre la doc (regla de precedencia del [implementation guide](implementation_guide.md)). El módulo nuevo de `cash-registers` sí va **top-level** (`/cash-registers`), por ser un recurso propio de la sucursal y no parte del turno.
-- `POST /api/v1/expenses` — registrar gasto pagado desde caja (FR-009); error claro sin turno abierto. Aparece en arqueo y reportes; no se audita (§2.9). Sin GET de listado en V1 (se agrega con un caso real). Request en [§6.13](#613-expensecreateresponse-gasto-desde-caja--fr-009)
-- `POST /api/v1/vouchers` — crear vale ([§6.7](#67-vouchercreateresponse))
-- `GET /api/v1/vouchers` — listar vales con filtros
-- ~~`PATCH /api/v1/inventory/{id}/sale-price`~~ — **no se implementa como endpoint aparte**: el precio de venta por presa cocida (admin; alimenta el precio sugerido de la venta custom, §2.10) ya se configura con `salePrice` en `PATCH /inventory/items/{id}` (`null` lo borra; solo vale en tipos de presa). Duplicarlo no aportaba nada
-- `POST /api/v1/discounts` — crear descuento (admin) ([§6.6b](#66b-discountcreateresponse-catálogo--admin))
-- `GET /api/v1/reports/branches-summary` — **solo SUPER_ADMIN**: resumen consolidado de todas las sucursales (ventas, inventario, turnos activos).
-- `GET /api/v1/discounts` — listar descuentos del catálogo (admin; filtros: `availability`, `active`). El POS **no consume este endpoint** en operación normal: los descuentos aplicables a la sesión llegan en `GET /pos/context`
-- `PATCH /api/v1/discounts/{id}` — editar descuento (admin). Editar el `fixedAmount` NO afecta ventas pasadas: el snapshot quedó congelado en cada `OrderItem` (§2.11)
-- `GET /api/v1/pos/context` — **carga del POS en UNA llamada** (§5.0, principio 6), liviana (solo datos activos, pocos KB): `products`+`variants`, `discounts` **ya filtrados por el backend** para la sesión (activos + ventana vigente + autorización si corresponde — el POS no filtra nada), `piecePrices` (para el precio sugerido custom **en el cliente**), `shiftPeriods` y `shift` activo (o `null`). Detalle y payload en [§6.12](#612-poscontextresponse-carga-del-pos-en-una-llamada)
-- `POST /api/v1/discounts/{id}/authorize` — el admin otorga la **autorización por turno** a una sesión de cajera; deja `AuditLog` del acto de autorizar ([§6.6c](#66c-discountauthorizationresponse-admin-autoriza-a-la-sesión-de-cajera-por-turno))
-- `GET /api/v1/discounts/authorizations` — listar autorizaciones vigentes del turno (filtro: `shiftId`, `cashierId`)
-- `GET /api/v1/reports/sales` — reporte de ventas por turno/día y rango de fechas (FR-010a)
-- `GET /api/v1/reports/inventory-presas` — reporte de inventario de presas: vendidas y restantes por tipo (FR-010b); consolida el inventario diario de ambos turnos (§2.3)
-- `GET /api/v1/reports/cash-audit` — reporte de **arqueo** por turno o rango: apertura, cierre, ventas por método, gastos, vales, anulaciones y diferencia (FR-010c / §2.6)
-  > Los tres reports aceptan `?format=csv` (default `json`) — FR-010 exige exportación a CSV
-- `POST /api/v1/audit-logs/shift` — logs de auditoría de **UN turno** (admin; caja opcional = todas las del período). Sin paginación, resolución por FK directa (§4.3). Request/response en [§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin)
-- `POST /api/v1/audit-logs/month` — logs de un **mes calendario** (admin), sin paginación; incluye los `shiftId = null` que no aparecen en `/shift`. Un **año** es export CSV de reportes (V2). Solo lectura en ambos; la consulta no se audita ([§6.14](#614-auditlogsbyshiftresponse-consulta-del-rastro-por-turno--admin))
-- `POST /api/v1/print/invoice` — imprimir factura térmica (a demanda)
-- `GET /api/v1/print/invoice/{orderId}/pdf` — descargar PDF factura (fallback)
+### Autenticación
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /auth/login` | público | 200 | Iniciar sesión y obtener token JWT (un ejemplo por rol) | ✅ |
+| `GET /auth/me` | cualquier rol | 200 | Perfil del usuario autenticado (nombre, rol, sucursal) para el header. Cualquier rol. | ✅ |
+| `POST /auth/logout` | cualquier rol | 200 | Cerrar sesión | ✅ |
+
+### Sucursales
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /branches` | `SUPER_ADMIN` | 201 | Crear sucursal (SUPER_ADMIN) | ✅ |
+| `GET /branches` | `SUPER_ADMIN` | 200 | Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN) | ✅ |
+| `PATCH /branches/:id` | `SUPER_ADMIN` | 200 | Actualizar sucursal (SUPER_ADMIN) | ✅ |
+| `PATCH /branches/:id/toggle-active` | `SUPER_ADMIN` | 200 | Activar/desactivar sucursal (toggle) (SUPER_ADMIN) | ✅ |
+
+### Usuarios
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /users` | `ADMIN` | 201 | Crear usuario. SUPER_ADMIN: cualquier rol y sucursal. ADMIN: solo CASHIER, DISPATCHER y COOK de su sucursal. | ✅ |
+| `GET /users` | `ADMIN` | 200 | Listar usuarios con filtro por rol. ADMIN ve solo el personal (CASHIER, DISPATCHER, COOK) de su sucursal. | ✅ |
+| `GET /users/:id` | `ADMIN` | 200 | Obtener usuario por id (admin) | ✅ |
+| `PATCH /users/:id` | `ADMIN` | 200 | Editar usuario (admin). NO permite cambiar active; usar PATCH /users/:id/toggle-active | ✅ |
+| `PATCH /users/:id/toggle-active` | `ADMIN`, `SUPER_ADMIN` | 200 | Activar/desactivar usuario (toggle) (ADMIN / SUPER_ADMIN) | ✅ |
+
+### Cajas registradoras
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /cash-registers` | `CASHIER`, `ADMIN` | 200 | Listar cajas registradoras de la sucursal del usuario (CASHIER / ADMIN). SUPER_ADMIN: ?branchId= opcional. | ✅ |
+| `POST /cash-registers` | `ADMIN` | 201 | Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId) | ✅ |
+| `PATCH /cash-registers/:id` | `ADMIN` | 200 | Editar nombre de caja (ADMIN) | ✅ |
+| `PATCH /cash-registers/:id/toggle-active` | `ADMIN` | 200 | Activar/desactivar caja registradora (toggle) (ADMIN) | ✅ |
+
+### Turnos y períodos de turno
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /shifts/shift-periods` | `CASHIER`, `ADMIN` | 200 | Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados. | ✅ |
+| `POST /shifts/shift-periods` | `ADMIN` | 201 | Crear período de turno (ADMIN) | ✅ |
+| `PATCH /shifts/shift-periods/:id` | `ADMIN` | 200 | Editar/desactivar período de turno (ADMIN) | ✅ |
+| `POST /shifts/open` | `CASHIER` | 201 | Abrir turno de caja declarando el período (no se infiere del reloj) | ✅ |
+| `GET /shifts/active` | `CASHIER` | 200 | Obtener el turno activo de la cajera. Devuelve shift: null si no hay. | ✅ |
+| `POST /shifts/close` | `CASHIER` | — | Cerrar caja con arqueo; cierra las órdenes entregadas del turno | 🔲 Sprint 3 |
+
+> **Nota de ruta:** el catálogo de períodos vive **anidado bajo `/shifts`** (`/shifts/shift-periods`) para mantenerlo junto al recurso que lo consume, el `periodId` que declara `POST /shifts/open`. Las cajas, en cambio, son un recurso propio de la sucursal y van **top-level** (`/cash-registers`).
+
+### Productos y variantes
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /products` | `ADMIN` | 201 | Crear producto (admin) | ✅ |
+| `GET /products` | `ADMIN`, `CASHIER` | 200 | Listar productos. ADMIN ve todos; CASHIER solo activos e isSellable. | ✅ |
+| `GET /products/:id` | `ADMIN` | 200 | Obtener producto con sus variantes (ADMIN) | ✅ |
+| `PATCH /products/:id` | `ADMIN` | 200 | Editar producto (ADMIN) | ✅ |
+| `PATCH /products/:id/toggle-active` | `ADMIN` | 200 | Activar/desactivar producto (toggle) (ADMIN) | ✅ |
+| `POST /variants` | `ADMIN` | 201 | Crear variante de un producto (admin) | ✅ |
+| `GET /variants` | `ADMIN` | 200 | Listar variantes (admin). Filtro opcional por productId. | ✅ |
+| `PATCH /variants/:id` | `ADMIN` | 200 | Editar variante (admin) | ✅ |
+| `PATCH /variants/:id/toggle-active` | `ADMIN` | 200 | Activar/desactivar variante (toggle) (admin) | ✅ |
+
+### Clientes
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /customers/by-ci/:ci` | `CASHIER`, `ADMIN` | 200 | Lookup exacto de cliente activo por CI (cédula). | ✅ |
+| `GET /customers/by-nit/:nit` | `CASHIER`, `ADMIN` | 200 | Lookup exacto de cliente activo por NIT (factura razón social). | ✅ |
+| `GET /customers` | `ADMIN` | 200 | Listar clientes (ADMIN): búsqueda libre, estado, fechas de alta y paginación. | ✅ |
+| `POST /customers` | `CASHIER`, `ADMIN` | 201 | Registrar cliente (POS, atajo F9) — CASHIER / ADMIN | ✅ |
+| `GET /customers/:id` | `CASHIER`, `ADMIN` | 200 | Obtener cliente por id. La cajera solo ve los activos; ADMIN ve también los desactivados. | ✅ |
+| `GET /customers/:id/orders` | `ADMIN` | 200 | Historial de pedidos del cliente, de todas las sucursales (ADMIN). | ✅ |
+| `PATCH /customers/:id` | `CASHIER`, `ADMIN` | 200 | Editar datos personales del cliente. ci y nit no se editan. La cajera solo edita los activos. | ✅ |
+| `PATCH /customers/:id/toggle-active` | `ADMIN` | 200 | Activar/desactivar cliente (toggle) (ADMIN) | ✅ |
+
+> Las rutas estáticas (`by-ci`, `by-nit`) se declaran **antes** de `:id` para no colisionar con él.
+
+### Inventario
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /inventory/items` | `ADMIN`, `COOK` | 200 | Listar ítems de inventario de la sucursal (ADMIN / COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional. | ✅ |
+| `POST /inventory/items` | `ADMIN` | 201 | Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId) | ✅ |
+| `PATCH /inventory/items/:id` | `ADMIN` | 200 | Editar ítem de inventario (ADMIN) | ✅ |
+| `PATCH /inventory/items/:id/toggle-active` | `ADMIN` | 200 | Activar/desactivar ítem de inventario (toggle) (ADMIN) | ✅ |
+| `POST /inventory/adjust` | `ADMIN` | 201 | Ajustar stock con motivo (ADMIN): suma o resta piezas y deja rastro en el libro y la auditoría. | ✅ |
+| `GET /inventory/dashboard` | `ADMIN`, `COOK` | 200 | Dashboard de stock cocido por tipo de presa y variación desde la apertura del turno (ADMIN / COOK). | ✅ |
+| `POST /inventory/manual-consumption` | `COOK` | — | Registrar consumos manuales del turno | 🔲 Sprint 2 |
+| `GET /inventory/shift-chicken-log/:shiftId` | `COOK` | — | Ciclo crudo de presas del turno (reproceso autopoblado) | 🔲 Sprint 2 |
+| `POST /inventory/shift-chicken-log` | `COOK` | — | Registrar o actualizar el ciclo crudo del turno | 🔲 Sprint 2 |
+| `POST /inventory/shift-chicken-log/:shiftId/close` | `COOK` | — | Cerrar el ciclo crudo y reconciliar contra ventas | 🔲 Sprint 2 |
+
+> El precio de venta de una presa se configura con `salePrice` en `PATCH /inventory/items/{id}` (`null` lo borra; solo vale en tipos de presa).
+
+### POS
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /pos/context` | `CASHIER` | 200 | Carga única del POS: productos + variantes + períodos + turno activo. | ✅ |
+
+### Pedidos
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /orders` | `CASHIER` | 201 | Crear pedido estándar MESA/LLEVAR con N ítems. Total calculado en backend. | ✅ |
+| `POST /orders/:id/pay` | `CASHIER` | 201 | Confirmar pago de un pedido pendiente. Descuenta inventario (Sprint 2). | ✅ |
+| `POST /orders/:id/cancel` | `CASHIER` | 201 | Cancelar pedido pendiente (manual, sin motivo). Pagados llegan en Sprint 2. | ✅ |
+| `GET /orders/:id` | `CASHIER`, `DISPATCHER`, `ADMIN` | 200 | Obtener pedido por id | ✅ |
+| `GET /orders` | `CASHIER`, `DISPATCHER`, `ADMIN` | 200 | Listar pedidos con filtros (panel despacho + historial). Restringido por sucursal. | ✅ |
+| `POST /orders/custom` | `CASHIER` | — | Crear orden custom (presas surtidas) con precio confirmado por la cajera | 🔲 Sprint 2 |
+| `PATCH /orders/:id/status` | `DISPATCHER` | — | Despacho marca READY / DELIVERED | 🔲 Sprint 4 |
+
+> **Ampliaciones pendientes de los endpoints existentes:** `POST /orders` 🔲 acepta `discountId` por ítem (Sprint 3) y descuenta inventario al cobrar (Sprint 2); `POST /orders/{id}/pay` 🔲 descuenta inventario (Sprint 2); `POST /orders/{id}/cancel` 🔲 anula pedidos **pagados** con `reason` y `details` (Sprint 2); `GET /pos/context` 🔲 suma `piecePrices` (Sprint 2) y `discounts` (Sprint 3).
+
+### Gastos
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /expenses` | `CASHIER` | — | Registrar gasto pagado desde caja | 🔲 Sprint 3 |
+
+### Vales
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /vouchers` | `CASHIER` | — | Crear vale (descuenta nómina, no suma a caja) | 🔲 Sprint 3 |
+| `GET /vouchers` | `CASHIER`, `ADMIN` | — | Listar vales con filtros | 🔲 Sprint 3 |
+
+### Descuentos
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /discounts` | `ADMIN` | — | Crear descuento del catálogo | 🔲 Sprint 3 |
+| `GET /discounts` | `ADMIN` | — | Listar descuentos (filtros availability, active) | 🔲 Sprint 3 |
+| `PATCH /discounts/:id` | `ADMIN` | — | Editar descuento (no altera ventas pasadas) | 🔲 Sprint 3 |
+| `POST /discounts/:id/authorize` | `ADMIN` | — | Autorizar a una cajera para el turno | 🔲 Sprint 3 |
+| `GET /discounts/authorizations` | `ADMIN` | — | Listar autorizaciones vigentes del turno | 🔲 Sprint 3 |
+
+### Reportes
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /reports/sales` | `ADMIN` | — | Ventas por turno/día y rango (`?format=csv`) | 🔲 Sprint 3 |
+| `GET /reports/inventory-presas` | `ADMIN` | — | Presas vendidas y restantes por tipo (`?format=csv`) | 🔲 Sprint 3 |
+| `GET /reports/cash-audit` | `ADMIN` | — | Arqueo por turno o rango (`?format=csv`) | 🔲 Sprint 3 |
+| `GET /reports/branches-summary` | `SUPER_ADMIN` | — | Resumen consolidado de todas las sucursales | ⏸️ aplazado |
+
+> Los tres reportes aceptan `?format=csv` (por defecto `json`): FR-010 exige exportar a CSV.
+
+### Auditoría
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `POST /audit-logs/shift` | `ADMIN` | — | Rastro de auditoría de un turno | 🔲 Sprint 5 |
+| `POST /audit-logs/month` | `ADMIN` | — | Rastro de auditoría de un mes calendario | 🔲 Sprint 5 |
+
+### Vistas públicas e impresión
+
+| Endpoint | Roles | HTTP | Qué hace | Estado |
+|---|---|---|---|---|
+| `GET /public/orders/:token` | público | — | Comanda del cliente por `publicToken` | 🔲 Sprint 4 |
+| `GET /public/ready-orders` | público | — | Números de pedido en estado `READY` de una sucursal (pantalla de turnos) | 🔲 Sprint 4 |
+| `POST /print/invoice` | `CASHIER` | — | Imprimir factura térmica | 🔲 Sprint 4 |
+| `GET /print/invoice/:orderId/pdf` | `CASHIER` | — | Descargar la factura en PDF (alternativa) | 🔲 Sprint 4 |
 
 ## 5.2 Autenticación y autorización
 
-> **Decisión V1 ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) / FR-018):** el control de permisos por rol se aplica **en el backend**, no solo en la UI. La UI oculta pantallas por comodidad, pero **la frontera de seguridad es el backend**: valida el token y el rol en **cada** petición.
+> **Decisión V1 ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) / FR-018):** el control de permisos por rol y sucursal se aplica **en el backend**, no solo en la UI. La UI oculta pantallas por comodidad; **la frontera de seguridad es la API**, que valida el token, el usuario y el rol en **cada** petición.
 
-### Enfoque elegido — liviano, sin Passport
+### Enfoque: guards de NestJS, sin Passport
 
-Se usan los **guards de NestJS** de caja, con `@nestjs/jwt` directo (sin `@nestjs/passport`). Dos guards encadenados, ambos registrados **globales** vía `APP_GUARD` — así todo queda protegido por default y se abre solo lo necesario:
+`@nestjs/jwt` directo, con dos guards encadenados, ambos registrados **globales** (`APP_GUARD`): todo queda protegido por defecto y se abre solo lo necesario.
 
-1. **`AuthGuard` (autenticación).** Corre primero. Extrae el token del header `Authorization: Bearer <token>`, lo verifica con `jwtService.verifyAsync(token)`:
-   - sin token, o token **inválido / expirado** → lanza `UnauthorizedException` → **401**.
-   - token OK → inyecta el payload en `request.user` (`{ sub, email, role, branchId }`) y deja pasar.
-   - respeta el decorator **`@Public()`**: las rutas marcadas (ej. `POST /auth/login`) saltan la verificación.
-2. **`RolesGuard` (autorización).** Corre después del `AuthGuard`. Lee los roles declarados con `@Roles(...)` usando `Reflector.getAllAndOverride([handler, class])`:
-   - el endpoint **no declara** `@Roles` → pasa (autenticado alcanza).
-   - declara roles y `request.user.role` **no** está en la lista → lanza `ForbiddenException` → **403**.
+1. **`AuthGuard` (autenticación)** — corre primero ✅
+   - Extrae el token de `Authorization: Bearer <token>` y lo verifica (firma y vencimiento).
+   - Sin cabecera → `401 TOKEN_REQUIRED`. Token inválido o vencido → `401 TOKEN_INVALID`.
+   - Con el token válido **consulta al usuario en la base** (`active`, `role`, `branchId`). Si no existe o está desactivado → `401 USER_INACTIVE`.
+   - Deja en `request.user` el payload del token **con el rol y la sucursal vigentes de la base**: lo que dice el token sobre ellos se descarta.
+   - Respeta `@Public()`: las rutas marcadas (`POST /auth/login`) saltan la verificación.
+2. **`RolesGuard` (autorización)** — corre después ✅
+   - El endpoint **no declara** `@Roles(...)` → alcanza con estar autenticado (`GET /auth/me`, `POST /auth/logout`).
+   - `SUPER_ADMIN` **pasa siempre**, sin importar los roles declarados.
+   - Cualquier otro rol que no esté en la lista → `403 FORBIDDEN`.
 
-> **Bootstrap del sistema (SUPER_ADMIN):** el script de bootstrap (`pnpm bootstrap:admin` → `scripts/bootstrap-superadmin.ts`, reutilizado por el seeder) crea **siempre** un `SUPER_ADMIN` por defecto si no existe (idempotente), leyendo las credenciales de variables de entorno (`SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_FIRSTNAME`, `SUPER_ADMIN_LASTNAME`, `SUPER_ADMIN_CI`; defaults: `superadmin@gmail.com` / CI `password123`, `branchId = null`). Es el usuario de **bootstrap**: tiene acceso global a todos los endpoints (el `RolesGuard` lo deja pasar siempre, sin importar el `@Roles` declarado) y es el que permite crear el resto de la jerarquía de usuarios (admins, cajeras, etc.) vía `POST /users`. El login se hace con **email + CI** (la contraseña es el CI hasheado con bcryptjs). **No se abre ningún endpoint sin token** aunque la BD esté vacía — el bootstrap se resuelve con el script/seeder, no debilitando la seguridad.
+> **Por qué guards y no middleware:** el middleware corre **antes** del routing y no conoce el handler destino, así que no puede leer el `@Roles` de ese endpoint. El guard corre **después**, con el contexto completo, y por eso puede leer los metadatos del decorador. La autorización por rol va en guard.
 
-### Piezas (qué archivo hace qué)
+### El token
+
+- Firmado con HS256 con `JWT_SECRET`. Payload: `{ sub, email, role, branchId, iat, exp }`. **Siempre vence**: 2 h en `development` y `qa`, 8 h en `production` (se ajusta con `JWT_EXPIRES_IN`; [§1.1](#11-configuración-por-entorno)).
+- Es **legible** (cualquiera puede decodificar el payload), pero no se puede falsificar. Sirve para saber quién es el usuario y que la sesión vence; **el backend no decide nada con el rol o la sucursal que trae**.
+- **No hay renovación**: al vencer, el usuario vuelve a loguearse (🔲 el token de renovación está aplazado, ver [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
+- **Consecuencia útil:** desactivar a alguien, cambiarle el rol o trasladarlo de sucursal **se aplica al instante**, sin esperar a que venza su token.
+- Para mostrar el nombre y la sucursal (por ejemplo en el header) el front usa `GET /auth/me`, no el token.
+
+### Login
+
+- **Login por email + CI**: la contraseña es el **CI** del usuario (se compara contra `passwordHash`, el hash bcrypt del CI). Los usuarios del seed entran con `password123`.
+- `LoginDto` exige una contraseña de **mínimo 6 caracteres**: un usuario creado con un CI más corto **no puede loguearse**.
+- Un email inexistente, un usuario desactivado y una contraseña incorrecta dan el **mismo** `401 INVALID_CREDENTIALS` (no se revela cuál falló).
+
+### Piezas
 
 | Pieza | Rol en el sistema |
-|------|-------------------|
-| `@Public()` | Marca una ruta como abierta (sin token). Vía `SetMetadata(IS_PUBLIC_KEY, true)`. |
-| `@Roles(UserRole.ADMIN, ...)` | Declara qué roles pueden tocar el handler. Vía `SetMetadata(ROLES_KEY, roles)`. |
-| `AuthGuard` | Verifica el JWT, inyecta `request.user`, respeta `@Public()`. → 401 |
-| `RolesGuard` | Compara `request.user.role` contra `@Roles`. → 403 |
-| `JwtModule` | Firma/verifica el token. La clave sale de `JWT_SECRET` (obligatoria, mínimo 32 caracteres) y la expiración depende del entorno (`APP_ENV`: 2 h en `development`/`qa`, 8 h en `production`; se ajusta con `JWT_EXPIRES_IN`, máximo 24 h). La configuración vive en `src/config/` y se valida al arrancar. No hay renovación: al vencer, vuelve a loguearse. |
-| `bcryptjs` | Hashea/compara contraseñas en el login (`User.passwordHash`). |
-| `ValidationPipe` (global) | Valida el body contra los DTOs (class-validator). |
+|---|---|
+| `@Public()` | Marca una ruta como abierta (sin token). |
+| `@Roles(UserRole.ADMIN, …)` | Declara qué roles pueden tocar el handler. |
+| `AuthGuard` | Verifica el JWT, consulta al usuario y deja el rol y la sucursal vigentes en `request.user`. → 401 |
+| `RolesGuard` | Compara `request.user.role` con `@Roles`. → 403 |
+| `JwtModule` | Firma y verifica el token (`JWT_SECRET`, vencimiento por entorno). |
+| `bcryptjs` | Hashea y compara la contraseña en el login (`User.passwordHash`). |
+| `ValidationPipe` (global) | Valida el body y la query contra los DTOs (class-validator). |
 
-> **Regla para campos UUID en DTOs:** usar `@IsUUID()` (sin argumento de versión). No usar `@IsUUID('4')` — los IDs generados por la aplicación (especialmente con `uuid(7)` en Prisma) no son UUIDv4 y la validación fallaría innecesariamente.
+> **Regla para campos UUID en DTOs:** usar `@IsUUID()` sin argumento de versión. No usar `@IsUUID('4')`: los ids de la aplicación (`uuid(7)` de Prisma) no son UUIDv4.
 
-> **Por qué guards y no middleware:** el middleware corre **antes** del routing y no conoce el handler destino, así que no puede leer el `@Roles` de ese endpoint. El guard corre **después** del routing, con `ExecutionContext` completo, y por eso puede leer los metadatos del decorator. La autorización por rol **va en guard**, no en middleware.
+### Matriz de autorización (endpoint → roles)
 
-### Snippets de referencia (patrón NestJS estándar)
+Es la **spec que el `RolesGuard` implementa**: aterriza la matriz de negocio del [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) a roles por endpoint. `SUPER_ADMIN` no se lista: pasa siempre. Que un rol pase el control no significa que vea todos los datos: el [alcance por sucursal](#56-alcance-por-rol-y-sucursal) se aplica además.
 
-```typescript
-// roles.decorator.ts
-export const ROLES_KEY = 'roles';
-export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
+| Endpoint | Roles permitidos | Estado |
+|---|---|---|
+| `POST /auth/login` | público | ✅ |
+| `GET /auth/me`<br>`POST /auth/logout` | cualquier rol | ✅ |
+| `POST /branches`<br>`GET /branches`<br>`PATCH /branches/:id`<br>`PATCH /branches/:id/toggle-active` | `SUPER_ADMIN` | ✅ |
+| `POST /users`<br>`GET /users`<br>`GET /users/:id`<br>`PATCH /users/:id` | `ADMIN` | ✅ |
+| `PATCH /users/:id/toggle-active` | `ADMIN`, `SUPER_ADMIN` | ✅ |
+| `GET /cash-registers` | `CASHIER`, `ADMIN` | ✅ |
+| `POST /cash-registers`<br>`PATCH /cash-registers/:id`<br>`PATCH /cash-registers/:id/toggle-active` | `ADMIN` | ✅ |
+| `GET /shifts/shift-periods` | `CASHIER`, `ADMIN` | ✅ |
+| `POST /shifts/shift-periods`<br>`PATCH /shifts/shift-periods/:id` | `ADMIN` | ✅ |
+| `POST /shifts/open`<br>`GET /shifts/active` | `CASHIER` | ✅ |
+| `POST /shifts/close` | `CASHIER` | 🔲 Sprint 3 |
+| `POST /products`<br>`GET /products/:id`<br>`PATCH /products/:id`<br>`PATCH /products/:id/toggle-active`<br>`POST /variants`<br>`GET /variants`<br>`PATCH /variants/:id`<br>`PATCH /variants/:id/toggle-active` | `ADMIN` | ✅ |
+| `GET /products` | `ADMIN`, `CASHIER` | ✅ |
+| `GET /customers/by-ci/:ci`<br>`GET /customers/by-nit/:nit`<br>`POST /customers`<br>`GET /customers/:id`<br>`PATCH /customers/:id` | `CASHIER`, `ADMIN` | ✅ |
+| `GET /customers`<br>`GET /customers/:id/orders`<br>`PATCH /customers/:id/toggle-active` | `ADMIN` | ✅ |
+| `GET /inventory/items`<br>`GET /inventory/dashboard` | `ADMIN`, `COOK` | ✅ |
+| `POST /inventory/items`<br>`PATCH /inventory/items/:id`<br>`PATCH /inventory/items/:id/toggle-active`<br>`POST /inventory/adjust` | `ADMIN` | ✅ |
+| `POST /inventory/manual-consumption`<br>`GET /inventory/shift-chicken-log/:shiftId`<br>`POST /inventory/shift-chicken-log`<br>`POST /inventory/shift-chicken-log/:shiftId/close` | `COOK` | 🔲 Sprint 2 |
+| `GET /pos/context` | `CASHIER` | ✅ |
+| `POST /orders`<br>`POST /orders/:id/pay`<br>`POST /orders/:id/cancel` | `CASHIER` | ✅ |
+| `GET /orders/:id`<br>`GET /orders` | `CASHIER`, `DISPATCHER`, `ADMIN` | ✅ |
+| `POST /orders/custom` | `CASHIER` | 🔲 Sprint 2 |
+| `PATCH /orders/:id/status` | `DISPATCHER` | 🔲 Sprint 4 |
+| `POST /expenses` | `CASHIER` | 🔲 Sprint 3 |
+| `POST /vouchers` | `CASHIER` | 🔲 Sprint 3 |
+| `GET /vouchers` | `CASHIER`, `ADMIN` | 🔲 Sprint 3 |
+| `POST /discounts`<br>`GET /discounts`<br>`PATCH /discounts/:id`<br>`POST /discounts/:id/authorize`<br>`GET /discounts/authorizations` | `ADMIN` | 🔲 Sprint 3 |
+| `GET /reports/sales`<br>`GET /reports/inventory-presas`<br>`GET /reports/cash-audit` | `ADMIN` | 🔲 Sprint 3 |
+| `GET /reports/branches-summary` | `SUPER_ADMIN` | ⏸️ aplazado |
+| `POST /audit-logs/shift`<br>`POST /audit-logs/month` | `ADMIN` | 🔲 Sprint 5 |
+| `GET /public/orders/:token`<br>`GET /public/ready-orders` | público | 🔲 Sprint 4 |
+| `POST /print/invoice`<br>`GET /print/invoice/:orderId/pdf` | `CASHIER` | 🔲 Sprint 4 |
 
-// public.decorator.ts
-export const IS_PUBLIC_KEY = 'isPublic';
-export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+### Sesión única por turno (FR-008b) 🔲 Sprint 5
+
+Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 rol** ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)): el login rechaza abrir una segunda sesión con otro rol en el turno vigente con un mensaje claro. Es responsabilidad del servicio de auth y turnos, no del guard. `POST /auth/logout` y el cierre de turno la liberan. Hoy `POST /auth/logout` solo registra el evento y **no invalida el token**.
+
+## 5.3 Estructura de respuesta estándar
+
+**Éxito**
+
+```json
+{ "isSuccess": true, "message": "Caja creada correctamente", "data": { "cashRegister": {} }, "error": null }
 ```
 
-```typescript
-// roles.guard.ts (autorización)
-@Injectable()
-export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
-  canActivate(ctx: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
-      ctx.getHandler(),
-      ctx.getClass(),
-    ]);
-    if (!required) return true;               // endpoint sin @Roles → autenticado alcanza
-    const { user } = ctx.switchToHttp().getRequest();
-    return required.includes(user.role);      // false → 403 ForbiddenException
+**Error**
+
+```json
+{
+  "isSuccess": false,
+  "message": "Error de validación",
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [{ "field": "items[0].quantity", "message": "El campo quantity debe ser un número válido" }]
   }
 }
 ```
 
-```typescript
-// app.module.ts — ambos guards globales, orden importa (Auth primero)
-providers: [
-  { provide: APP_GUARD, useClass: AuthGuard },
-  { provide: APP_GUARD, useClass: RolesGuard },
-];
+- El éxito se arma siempre con el helper `ok(message, data)` (`src/common/http/api-result.ts`). `data` es un objeto cuya clave nombra la entidad (`{ branch }`, `{ order }`) o el recurso en plural (`{ users, total }`); en `logout` es `null`.
+- **Códigos HTTP:** `200` para `GET`, `PATCH`, `login` y `logout`; `201` para todo `POST` que crea o actúa, **incluidos `POST /orders/{id}/pay` y `POST /orders/{id}/cancel`** (ver [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
+- **Formatos de los datos:**
+
+| Tipo | Formato | Ejemplo |
+|---|---|---|
+| Id | UUID v7 | `01900000-0000-7000-8000-000000000101` |
+| Importe (`Decimal`) | **string** | `"45"`, `"12.5"` |
+| Fecha y hora | ISO 8601 UTC, también las columnas de solo fecha (`birthDate`) | `"2026-05-01T12:00:00.000Z"`, `"1990-03-14T00:00:00.000Z"` |
+| Enum | MAYÚSCULAS | `"PREPARING"` |
+| Tipos dentro de JSON (`components`, `selectedPieces`…) | minúscula | `"presa"`, `"pecho"` |
+
+- **Listas:** el arreglo viaja dentro de `data` con el nombre del recurso en plural (`{ users: [...], total }`). Casi todas agregan `total`; `GET /cash-registers` y `GET /shifts/shift-periods` **no** lo traen. Las listas **paginadas** (`GET /customers` y `GET /customers/{id}/orders`) agregan `page` y `pageSize` y aceptan `?page=` (≥ 1, por defecto 1) y `?pageSize=` (1 a 100, por defecto 20). El resto de las listas **no pagina**.
+
+## 5.4 Reglas del contrato
+
+- El frontend decide el flujo con `isSuccess`, y la razón de un fallo con **`error.code`** (nunca con el texto del `message`).
+- `error` es **singular**. `details` es **siempre un array** (vacío si no hay detalle por campo); cada elemento es `{ field, message }` y `field` es la ruta del campo en el body (`items[0].quantity`).
+- El `code` es un **string estable** del catálogo ([§5.5](#55-catálogo-de-códigos-de-error)) y cada código tiene **un único status HTTP**. Convención de nombres: `X_NOT_FOUND` = el recurso va en la **URL** (404); `X_REFERENCE_NOT_FOUND` = el recurso va **referenciado desde el body** y no existe (400).
+- El `message` está en español y puede incluir el valor involucrado. Los errores de validación (`VALIDATION_ERROR`) llevan un `{ field, message }` por regla fallida y, como `message` de nivel superior, el **primero**.
+- **Propiedades desconocidas:** cualquier campo del body o de la query que el DTO no declare es un `400 VALIDATION_ERROR` ("El campo X no está permitido"). Los tipos se convierten antes de validar (`?page=2` llega como número).
+- **Errores que genera el propio Nest** (no pasan por el catálogo): reciben un código genérico según su status.
+
+| Código | HTTP | Cuándo |
+|---|---|---|
+| `BAD_REQUEST` | 400 | Id con formato inválido en la URL o en la query (`"Validation failed (uuid is expected)"`) |
+| `UNAUTHORIZED` | 401 | Reservado para errores 401 que no salgan del catálogo |
+| `FORBIDDEN` | 403 | También es un código del catálogo (control de roles) |
+| `NOT_FOUND` | 404 | Ruta inexistente (`"Cannot GET /api/v1/…"`) |
+| `CONFLICT` | 409 | Violación de unicidad de la base que ningún chequeo previo atrapó (por ejemplo, renombrar una sucursal con un nombre repetido) |
+| `INTERNAL_SERVER_ERROR` | 500 | Falla no prevista (el detalle queda en el log del servidor, no en la respuesta) |
+
+- **Mensajes en inglés (conocidos):** los de `BAD_REQUEST` y `NOT_FOUND` de arriba, y los de algunas reglas de validación poco comunes (`must not be less than`, `must not be greater than`). El front decide por `code` y debe mostrar su propio texto en español en esos casos ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
+- **Códigos previstos para el Sprint 3:** `DISCOUNT_NOT_AVAILABLE` (descuento inactivo o fuera de su ventana: rechaza la orden completa) y `DISCOUNT_NOT_AUTHORIZED` (la sesión de la cajera no tiene autorización vigente para ese descuento). No existe `DISCOUNT_ALREADY_APPLIED`: con un único `discountId` por ítem el apilamiento es **irrepresentable**.
+
+## 5.5 Catálogo de códigos de error
+
+Fuente única: `src/common/errors/error-codes.ts`. Esta tabla se mantiene igual a ella; si difieren, manda el código.
+
+**Cross-cutting**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `VALIDATION_ERROR` | 400 | Error de validación | 29 endpoints (ver §6) |
+| `USER_WITHOUT_BRANCH` | 400 | El usuario no tiene una sucursal asignada. Contacte al administrador. | 15 endpoints (ver §6) |
+
+**Cash registers**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `CASH_REGISTER_NOT_FOUND` | 404 | Caja registradora no encontrada | `PATCH /cash-registers/:id`<br>`PATCH /cash-registers/:id/toggle-active` |
+| `CASH_REGISTER_ALREADY_EXISTS` | 400 | Ya existe una caja con ese nombre en la sucursal | `POST /cash-registers`<br>`PATCH /cash-registers/:id` |
+
+**Branches**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `BRANCH_NOT_FOUND` | 404 | Sucursal no encontrada | `PATCH /branches/:id`<br>`PATCH /branches/:id/toggle-active` |
+| `BRANCH_REFERENCE_NOT_FOUND` | 400 | La sucursal indicada no existe | 4 endpoints (ver §6) |
+| `BRANCH_REQUIRED` | 400 | Indique la sucursal (branchId) | `POST /cash-registers`<br>`POST /inventory/items` |
+| `BRANCH_ALREADY_EXISTS` | 400 | Ya existe una sucursal con ese nombre | `POST /branches` |
+| `NO_FIELDS_TO_UPDATE` | 400 | Debe enviar al menos un campo para actualizar | `PATCH /branches/:id`<br>`PATCH /customers/:id` |
+
+**Users**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `USER_NOT_FOUND` | 404 | Usuario no encontrado | `GET /users/:id`<br>`PATCH /users/:id`<br>`PATCH /users/:id/toggle-active` |
+| `USER_EMAIL_ALREADY_EXISTS` | 400 | El email ya está registrado | `POST /users`<br>`PATCH /users/:id` |
+| `USER_CI_ALREADY_EXISTS` | 400 | El CI ya está registrado | `POST /users`<br>`PATCH /users/:id` |
+| `USER_PHONE_ALREADY_EXISTS` | 400 | El teléfono ya está registrado | `POST /users`<br>`PATCH /users/:id` |
+| `BRANCH_REQUIRED_FOR_ROLE` | 400 | El branchId es obligatorio para los roles de sucursal | `POST /users`<br>`PATCH /users/:id` |
+| `FIELD_NOT_EDITABLE` | 400 | El campo no puede modificarse en este endpoint | `PATCH /users/:id` |
+| `ROLE_NOT_ALLOWED` | 403 | No tiene permisos para asignar ese rol | `POST /users`<br>`PATCH /users/:id` |
+| `BRANCH_OUT_OF_SCOPE` | 403 | No tiene permisos sobre esa sucursal | 7 endpoints (ver §6) |
+| `USER_HAS_OPEN_SHIFT` | 409 | El usuario tiene un turno abierto. Ciérrelo antes de cambiar su rol o sucursal. | `PATCH /users/:id` |
+| `CANNOT_TOGGLE_SELF` | 400 | No puede cambiar el estado de su propio usuario | `PATCH /users/:id/toggle-active` |
+| `FORBIDDEN` | 403 | Acceso denegado: privilegios insuficientes | cualquier endpoint con roles |
+
+**Shifts and shift periods**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `SHIFT_PERIOD_NOT_FOUND` | 404 | Período de turno no encontrado | `PATCH /shifts/shift-periods/:id` |
+| `SHIFT_PERIOD_REFERENCE_NOT_FOUND` | 400 | El período de turno no existe o está inactivo | `POST /shifts/open` |
+| `SHIFT_PERIOD_ALREADY_EXISTS` | 400 | Ya existe un período de turno con ese nombre | `POST /shifts/shift-periods`<br>`PATCH /shifts/shift-periods/:id` |
+| `CASH_REGISTER_REFERENCE_NOT_FOUND` | 400 | La caja no existe o no pertenece a su sucursal | `POST /shifts/open` |
+| `CASH_REGISTER_INACTIVE` | 400 | La caja está inactiva y no puede abrirse un turno en ella | `POST /shifts/open` |
+| `CASH_REGISTER_IN_USE` | 409 | La caja ya está abierta por otra cajera | `POST /shifts/open` |
+| `SHIFT_NOT_FOUND` | 404 | Turno no encontrado | _reservado: ningún endpoint lo emite todavía_ |
+| `SHIFT_FROM_OTHER_BRANCH` | 400 | El turno pertenece a otra sucursal | _reservado: ningún endpoint lo emite todavía_ |
+| `SHIFT_ALREADY_OPEN` | 409 | Ya tiene un turno abierto. Ciérrelo antes de abrir otro. | `POST /shifts/open` |
+| `NO_ACTIVE_SHIFT` | 409 | No hay un turno abierto. Abra caja antes de registrar pedidos. | `POST /orders` |
+
+**Products and variants**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `PRODUCT_NOT_FOUND` | 404 | Producto no encontrado | `GET /products/:id`<br>`PATCH /products/:id`<br>`PATCH /products/:id/toggle-active` |
+| `PRODUCT_REFERENCE_NOT_FOUND` | 400 | El producto indicado no existe | `POST /orders`<br>`POST /variants` |
+| `DUPLICATE_PRODUCT_NAME` | 400 | Ya existe un producto con ese nombre | `POST /products`<br>`PATCH /products/:id` |
+| `VARIANT_NOT_FOUND` | 404 | Variante no encontrada | `PATCH /variants/:id`<br>`PATCH /variants/:id/toggle-active` |
+
+**Inventory**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `INVENTORY_ITEM_NOT_FOUND` | 404 | Ítem de inventario no encontrado | `PATCH /inventory/items/:id`<br>`PATCH /inventory/items/:id/toggle-active`<br>`POST /inventory/adjust` |
+| `INVENTORY_ITEM_CODE_ALREADY_EXISTS` | 400 | Ya existe un ítem con ese código en la sucursal | `POST /inventory/items` |
+| `INSUFFICIENT_STOCK` | 409 | Stock insuficiente: el ajuste dejaría el stock en negativo | `POST /inventory/adjust` |
+| `SALE_PRICE_NOT_ALLOWED_FOR_TYPE` | 400 | El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) | `POST /inventory/items`<br>`PATCH /inventory/items/:id` |
+
+**Customers**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `CUSTOMER_NOT_FOUND` | 404 | Cliente no encontrado | 6 endpoints (ver §6) |
+| `CUSTOMER_REFERENCE_NOT_FOUND` | 400 | El cliente indicado no existe | `POST /orders` |
+| `CUSTOMER_INACTIVE` | 400 | El cliente está inactivo. Reactívelo o use la venta S/N. | `POST /orders` |
+| `CUSTOMER_CI_ALREADY_EXISTS` | 400 | Ya existe un cliente registrado con esa CI | `POST /customers` |
+| `CUSTOMER_NIT_ALREADY_EXISTS` | 400 | Ya existe un cliente registrado con ese NIT | `POST /customers` |
+
+**Orders**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `ORDER_NOT_FOUND` | 404 | Pedido no encontrado | `POST /orders/:id/pay`<br>`POST /orders/:id/cancel`<br>`GET /orders/:id` |
+| `ORDER_FROM_OTHER_BRANCH` | 403 | No tiene acceso a pedidos de otra sucursal | `POST /orders/:id/pay`<br>`POST /orders/:id/cancel`<br>`GET /orders/:id` |
+| `ORDER_ALREADY_PAID` | 409 | La orden ya está pagada | `POST /orders/:id/pay` |
+| `ORDER_CANCELLED` | 409 | La orden fue cancelada | `POST /orders/:id/pay` |
+| `ORDER_ALREADY_PAID_USE_ANULL` | 409 | La orden ya está pagada. La anulación con motivo llega en Sprint 2. | `POST /orders/:id/cancel` |
+| `PAYMENT_METHOD_REQUIRED` | 400 | El método de pago es obligatorio cuando el pedido se crea pagado | `POST /orders` |
+| `PAYMENT_METHOD_NOT_ALLOWED` | 400 | No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING) | `POST /orders` |
+| `PRODUCT_INACTIVE` | 400 | El producto no está disponible para la venta | `POST /orders` |
+| `VARIANT_REFERENCE_NOT_FOUND` | 400 | La variante no existe o no pertenece al producto | `POST /orders` |
+| `MULTIPLE_SUBSTITUTIONS_NOT_ALLOWED` | 400 | Solo se permite una sustitución por ítem (PDR §2.1) | `POST /orders` |
+| `INVALID_SUBSTITUTION_TARGET` | 400 | La sustitución solo aplica al acompañamiento por defecto (mixto) | `POST /orders` |
+
+**Authentication**
+
+| Código | HTTP | Mensaje por defecto | Dónde |
+|---|---|---|---|
+| `INVALID_CREDENTIALS` | 401 | Credenciales inválidas | `POST /auth/login` |
+| `TOKEN_REQUIRED` | 401 | Token de autenticación requerido | cualquier endpoint autenticado |
+| `TOKEN_INVALID` | 401 | Token inválido o expirado | cualquier endpoint autenticado |
+| `USER_INACTIVE` | 401 | El usuario está inactivo o ya no existe | cualquier endpoint autenticado |
+
+
+## 5.6 Alcance por rol y sucursal
+
+Lo impone el backend. Si algo cae fuera del alcance del usuario responde **404** (no se revela que existe); si intenta asignar algo que no puede, **403**; y un cambio de rol, sucursal o estado aplica **al instante**.
+
+| Recurso | `SUPER_ADMIN` | `ADMIN` | Otros roles |
+|---|---|---|---|
+| **Usuarios** | cualquier rol y sucursal; **único que traslada personal** (cambiar `branchId`) | solo `CASHIER`, `DISPATCHER` y `COOK` **de su sucursal**. Lo demás: 404 al verlo o editarlo; `403 ROLE_NOT_ALLOWED` al asignar un rol superior; `403 BRANCH_OUT_OF_SCOPE` al nombrar otra sucursal | no gestionan usuarios |
+| **Sucursales** | todas | — | — |
+| **Cajas e inventario** | elige la sucursal: `?branchId=` en las listas (sin él ve todas) y `branchId` **obligatorio** en el body al crear; edita cualquier sucursal | su sucursal (si nombra otra: `403 BRANCH_OUT_OF_SCOPE`) | `CASHIER` ve las cajas de la suya; `COOK` lee inventario y dashboard de la suya |
+| **Pedidos** | todos | **solo los de su sucursal** (`403 ORDER_FROM_OTHER_BRANCH` en el detalle; lista acotada) | `CASHIER` y `DISPATCHER`: los de su sucursal |
+| **Clientes** (globales, sin sucursal) | todo | lista, detalle, edición, activar/desactivar e historial de pedidos **de todas las sucursales** | `CASHIER`: lookups, alta, detalle y edición, **solo de clientes activos** |
+| **Turnos** | — (no tiene sucursal ni abre turnos) | períodos con `?includeInactive=true` | `CASHIER`: **un turno abierto a la vez**, y **una caja la usa una sola cajera a la vez** |
+| **Productos, variantes y períodos** | globales | gestión completa | `CASHIER` lee los productos activos y vendibles |
+
+- **`SUPER_ADMIN` y la sucursal.** Pasa el control de roles en cualquier endpoint con `@Roles`, pero **no tiene sucursal** (`branchId = null`): los endpoints que operan sobre la sucursal del actor (`POST /orders`, `/orders/{id}/pay`, `/orders/{id}/cancel`, `POST /shifts/open`) le responden `400 USER_WITHOUT_BRANCH`. En cajas e inventario elige la sucursal como indica la tabla.
+- **Excepción deliberada** al alcance por sucursal: `GET /customers/{id}/orders` devuelve los pedidos del cliente de **todas** las sucursales, porque el cliente es global y la vista del administrador sobre él es cross-sucursal ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)). Cada pedido indica su sucursal.
+- El código de estas reglas vive en `src/common/auth/` (`requireBranchId`, `readableBranchId`, `resolveWriteBranchId`).
+
+---
+
+# 6. Contratos por módulo (request/response)
+
+> Los módulos van en el **orden en que se implementan** (el mismo que el [mapa de §5.1](#51-endpoints-principales)). Los **requests** salen de los DTOs (campos y validaciones reales); los **responses** muestran la forma real de `data`. Cada endpoint lista sus **errores propios**; los comunes a todo endpoint autenticado (`401` y `403`, [§5.2](#52-autenticación-y-autorización)) no se repiten, y `VALIDATION_ERROR` es siempre un `400` con un `{ field, message }` por regla fallida. En los ejemplos se omiten el `isSuccess`, el `message` y el `error: null` cuando no aportan.
+
+## 6.1 Autenticación — Sprint 0
+
+**`POST /auth/login`** — público ✅
+
+```json
+{ "email": "cajera1@gmail.com", "password": "password123" }
 ```
 
-```typescript
-// uso en un controller
-@Roles(UserRole.CASHIER)
-@Post('orders')                 // solo cajera
-registrarVenta() { /* ... */ }
+`email` es un correo válido; `password` es un string de **mínimo 6 caracteres** (la contraseña es el CI del usuario).
 
-@Roles(UserRole.ADMIN, UserRole.CASHIER)
-@Get('vouchers')                // dos roles, sin función nueva
-listarVales() { /* ... */ }
+```json
+{ "isSuccess": true, "message": "Login exitoso", "data": { "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }, "error": null }
 ```
 
-### Matriz de autorización endpoint → roles
+**Errores propios:** `VALIDATION_ERROR` (400) · `INVALID_CREDENTIALS` (401).
 
-Es la **spec que el `RolesGuard` implementa** — aterriza la matriz de negocio del [PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend) a roles por endpoint. `ADMIN` siempre puede operar lo administrativo; las lecturas que el POS necesita se abren a los roles que las consumen.
+**`GET /auth/me`** — cualquier rol ✅. El perfil del usuario autenticado, leído de la base en cada llamada; es lo que usa el header del front.
 
-| Endpoint | Roles permitidos |
-|----------|------------------|
-| `POST /auth/login` | **público** (`@Public()`) |
-| `POST /auth/logout`, `GET /auth/me` | cualquier rol autenticado |
-| `POST /users`, `GET /users`, `PATCH /users/{id}`, `PATCH /users/{id}/toggle-active` | `ADMIN` (solo el personal — `CASHIER`, `DISPATCHER`, `COOK` — **de su sucursal**; lo demás responde 404/403). `SUPER_ADMIN`: cualquier rol y sucursal; **cambiar la sucursal de alguien (traslado) es solo de `SUPER_ADMIN`** y se rechaza si el usuario tiene un turno abierto |
-| `POST /branches`, `GET /branches`, `PATCH /branches/{id}`, `PATCH /branches/{id}/toggle-active` | **`SUPER_ADMIN`** *(gestión de sucursales — FR-000; el `RolesGuard` deja pasar siempre al SUPER_ADMIN)* |
-| `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `PATCH /products/{id}/toggle-active` | `ADMIN` |
-| `POST /variants`, `GET /variants`, `PATCH /variants/{id}`, `PATCH /variants/{id}/toggle-active` | `ADMIN` |
-| `GET /products` *(lectura POS)* | `ADMIN`, `CASHIER` *(el POS lo consume)* |
-| `POST /cash-registers`, `GET /cash-registers`, `PATCH /cash-registers/{id}`, `PATCH /cash-registers/{id}/toggle-active` | `ADMIN` *(caja local de su sucursal; el `SUPER_ADMIN` opera global: `?branchId=` en la lista y `branchId` en el alta)* |
-| `POST /orders`, `POST /orders/custom` *(incluye descuentos por ítem vía `discountId`)* | `CASHIER` |
-| `POST /orders/{id}/pay`, `POST /orders/{id}/cancel` | `CASHIER` |
-| `GET /pos/context` | `CASHIER` |
-| `GET /orders/{id}`, `GET /orders` *(panel despacho + historial)* | `CASHIER`, `DISPATCHER`, `ADMIN` |
-| `PATCH /orders/{id}/status` (ready / delivered) | `DISPATCHER` |
-| `GET /public/orders/{token}`, `GET /public/ready-orders` | **público** (token no adivinable / solo números de pedido) |
-| `GET /customers/by-ci/{ci}`, `GET /customers/by-nit/{nit}`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}` | `CASHIER`, `ADMIN` |
-| `GET /customers`, `GET /customers/{id}/orders`, `PATCH /customers/{id}/toggle-active` | `ADMIN` |
-| `POST /shifts/open`, `POST /shifts/close` | `CASHIER` |
-| `GET /shifts/shift-periods` | `CASHIER`, `ADMIN` *(la pantalla de apertura los muestra)* |
-| `POST /shifts/shift-periods`, `PATCH /shifts/shift-periods/{id}` | `ADMIN` |
-| `POST /expenses` | `CASHIER` |
-| `POST /vouchers` | `CASHIER` |
-| `GET /vouchers` | `CASHIER`, `ADMIN` |
-| `POST /print/invoice`, `GET /print/invoice/{id}/pdf` | `CASHIER` |
-| `POST /inventory/items`, `PATCH /inventory/items/{id}`, `POST /inventory/adjust`, `PATCH /inventory/{id}/sale-price` | `ADMIN` |
-| `GET /inventory/items` *(listar insumos / stock)* | `ADMIN`, `COOK` *(FR-008: el cocinero ve stock e insumos)* |
-| `POST /inventory/manual-consumption` | `COOK` |
-| `POST/GET /inventory/shift-chicken-log[...]` | `COOK` |
-| `POST /discounts`, `PATCH /discounts/{id}` | `ADMIN` |
-| `GET /discounts` | `ADMIN` *(el POS recibe los aplicables en `GET /pos/context`)* |
-| `POST /discounts/{id}/authorize`, `GET /discounts/authorizations` | `ADMIN` |
-| `GET /inventory/dashboard` | `ADMIN`, `COOK` *(FR-008: el cocinero ve el dashboard)* |
-| `GET /reports/sales`, `GET /reports/inventory-presas`, `GET /reports/cash-audit` | `ADMIN` |
-| `POST /audit-logs/shift`, `POST /audit-logs/month` | `ADMIN` |
-
-> El **payload del JWT** lleva `{ sub: userId, email, role, branchId }`; el `RolesGuard` compara `role` contra la columna de arriba. El código de error de contrato para el 403 es `FORBIDDEN` (ver §5.4).
-
-### Sesión única por turno (FR-008b)
-
-Dentro de un mismo turno, un usuario solo puede tener **1 sesión activa con 1 rol** ([PDR §2.7](../business/pdr.md#27-roles-e-interfaces-v1-con-autenticación-jwt-y-control-de-permisos-por-rol-en-backend)). El login rechaza abrir una segunda sesión con otro rol en el turno vigente con un mensaje claro. No es responsabilidad del guard sino del servicio de auth/turnos.
-
-## 5.3 Estructura de respuesta estándar
-
-**Éxito:**
 ```json
 {
-  "isSuccess": true,
-  "message": "Operacion exitosa",
-  "data": {},
-  "error": null
+  "data": {
+    "user": {
+      "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez",
+      "email": "cajera1@gmail.com", "role": "CASHIER",
+      "branchId": "uuid-branch-1", "branchName": "Sucursal Principal"
+    }
+  }
 }
 ```
 
-> En el código, las respuestas de éxito se arman siempre con el helper `ok(message, data)` (`src/common/http/api-result.ts`): nadie escribe el literal a mano.
+`branchId` y `branchName` son `null` para `SUPER_ADMIN`.
 
-**Error:**
+**Errores propios:** `TOKEN_REQUIRED` (401) · `TOKEN_INVALID` (401) · `USER_INACTIVE` (401).
+
+**`POST /auth/logout`** — cualquier rol ✅. Responde `200` con `data: null`. Hoy solo registra el evento y **no invalida el token** (🔲 Sprint 5, [§5.2](#sesión-única-por-turno-fr-008b--sprint-5)).
+
+## 6.2 Sucursales — Sprint 0
+
+Solo `SUPER_ADMIN`. Objeto `branch`:
+
+```json
+{ "id": "uuid-branch-1", "name": "Sucursal Principal", "address": "Av. Principal #123, Ciudad", "phone": null, "active": true, "createdAt": "2026-05-01T12:00:00.000Z", "updatedAt": "2026-05-01T12:00:00.000Z" }
+```
+
+**`GET /branches`** ✅ — `data: { branches, total }`, de la más reciente a la más antigua. Cada sucursal trae dos campos **derivados** (el schema no cambia): `cashRegistersCount` (cajas, activas o no) y `admin` (`{ id, firstName, lastName }` del ADMIN **activo más antiguo** de la sede, o `null` si no tiene).
+
+```json
+{ "data": { "branches": [ { "id": "uuid-branch-1", "name": "Sucursal Principal", "address": "Av. Principal #123, Ciudad", "phone": null, "active": true, "createdAt": "…", "updatedAt": "…", "cashRegistersCount": 2, "admin": { "id": "uuid-user-admin", "firstName": "Jhonny", "lastName": "Hurtado Zardan" } } ], "total": 1 } }
+```
+
+**`POST /branches`** ✅ — `201 { branch }`.
+
+| Campo | Regla |
+|---|---|
+| `name` | obligatorio, 1–100 caracteres, **único** |
+| `address` | obligatorio, 1–200 caracteres |
+| `phone` | opcional, hasta 30 caracteres (texto libre) |
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `BRANCH_ALREADY_EXISTS` (400).
+
+**`PATCH /branches/{id}`** ✅ — `{ name?, address?, phone? }` con las mismas reglas; **al menos un campo**. `200 { branch }`. Renombrar con un nombre ya usado responde `409 CONFLICT` genérico ([§5.4](#54-reglas-del-contrato)).
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `NO_FIELDS_TO_UPDATE` (400) · `BRANCH_NOT_FOUND` (404).
+
+**`PATCH /branches/{id}/toggle-active`** ✅ — invierte `active` sin body; no borra nada ni toca las entidades que la referencian. `200 { branch }`.
+
+**Errores propios:** `BRANCH_NOT_FOUND` (404).
+
+## 6.3 Usuarios — Sprint 0
+
+Alcance por rol y sucursal: [§5.6](#56-alcance-por-rol-y-sucursal). Objeto `user` (nunca incluye `passwordHash`):
+
+```json
+{ "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez", "email": "cajera1@gmail.com", "phone": null, "ci": "CASHIER-001", "role": "CASHIER", "active": true, "branchId": "uuid-branch-1", "createdAt": "…", "updatedAt": "…" }
+```
+
+**`POST /users`** ✅ — `201 { user }`.
+
+| Campo | Regla |
+|---|---|
+| `firstName`, `lastName` | obligatorios, 1–50 caracteres |
+| `email` | obligatorio, correo válido, **único** |
+| `phone` | opcional; si viene, **único** |
+| `ci` | obligatorio, **único**. Es también la **contraseña de login**: para poder iniciar sesión necesita al menos 6 caracteres |
+| `role` | obligatorio, uno de `UserRole`. Un ADMIN solo puede asignar `CASHIER`, `DISPATCHER` o `COOK` |
+| `branchId` | UUID. **Obligatorio para todo rol salvo `SUPER_ADMIN`**, y debe existir. Un ADMIN no lo manda: se usa la suya (y si manda otra recibe `BRANCH_OUT_OF_SCOPE`) |
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_EMAIL_ALREADY_EXISTS` (400) · `USER_CI_ALREADY_EXISTS` (400) · `USER_PHONE_ALREADY_EXISTS` (400) · `BRANCH_REQUIRED_FOR_ROLE` (400) · `BRANCH_REFERENCE_NOT_FOUND` (400) · `FORBIDDEN` (403) · `ROLE_NOT_ALLOWED` (403) · `BRANCH_OUT_OF_SCOPE` (403).
+
+**`GET /users`** ✅ — `?role=` opcional. `data: { users, total }`, del más reciente al más antiguo, ya acotado al alcance del usuario.
+
+**Errores propios:** `VALIDATION_ERROR` (400).
+
+**`GET /users/{id}`** ✅ — `200 { user }`.
+
+**Errores propios:** `USER_NOT_FOUND` (404).
+
+**`PATCH /users/{id}`** ✅ — cualquiera de `firstName`, `lastName`, `email`, `phone`, `ci`, `role`, `branchId`; `200 { user }`.
+
+- `phone: null` borra el teléfono. `branchId: null` solo es válido si el rol resultante es `SUPER_ADMIN`.
+- `ci` actualiza **la CI y la contraseña** a la vez.
+- Cambiar `role` o `branchId` de alguien con un **turno abierto** se rechaza (`USER_HAS_OPEN_SHIFT`). Cambiar `branchId` (traslado) es solo de `SUPER_ADMIN`.
+- `active` **no se edita acá**: enviarlo da `400 VALIDATION_ERROR` ("El campo active no está permitido"); se usa `toggle-active`. (`FIELD_NOT_EDITABLE` es una defensa del service que hoy no se alcanza: el pipe rechaza el campo antes.)
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_NOT_FOUND` (404) · `USER_EMAIL_ALREADY_EXISTS` (400) · `USER_CI_ALREADY_EXISTS` (400) · `USER_PHONE_ALREADY_EXISTS` (400) · `BRANCH_REQUIRED_FOR_ROLE` (400) · `BRANCH_REFERENCE_NOT_FOUND` (400) · `FIELD_NOT_EDITABLE` (400) · `FORBIDDEN` (403) · `ROLE_NOT_ALLOWED` (403) · `BRANCH_OUT_OF_SCOPE` (403) · `USER_HAS_OPEN_SHIFT` (409).
+
+**`PATCH /users/{id}/toggle-active`** ✅ — invierte `active` sin body. Un ADMIN solo puede sobre el personal de su sucursal; nadie, salvo `SUPER_ADMIN`, puede desactivarse a sí mismo.
+
+**Errores propios:** `USER_NOT_FOUND` (404) · `CANNOT_TOGGLE_SELF` (400).
+
+## 6.4 Cajas registradoras — Sprint 1
+
+Objeto `cashRegister`: `{ "id": "uuid-caja-1", "name": "Caja 1", "active": true, "branchId": "uuid-branch-1" }`. El `name` es único **por sucursal**.
+
+**`GET /cash-registers`** ✅ — `?branchId=` (solo `SUPER_ADMIN`; sin él ve todas). `data: { cashRegisters }` por nombre ascendente, **incluidas las inactivas** (la validación de actividad la hace `POST /shifts/open`). Sin `total`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400) · `BRANCH_OUT_OF_SCOPE` (403).
+
+**`POST /cash-registers`** ✅ — `{ name, branchId? }` con `name` de 1–100 caracteres. La caja pertenece a la sucursal del ADMIN que la crea; el `SUPER_ADMIN` **debe** indicar `branchId`. `201 { cashRegister }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `CASH_REGISTER_ALREADY_EXISTS` (400) · `USER_WITHOUT_BRANCH` (400) · `BRANCH_REQUIRED` (400) · `BRANCH_REFERENCE_NOT_FOUND` (400) · `FORBIDDEN` (403) · `BRANCH_OUT_OF_SCOPE` (403).
+
+**`PATCH /cash-registers/{id}`** ✅ — `{ name }` (obligatorio). `200 { cashRegister }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `CASH_REGISTER_ALREADY_EXISTS` (400) · `CASH_REGISTER_NOT_FOUND` (404) · `USER_WITHOUT_BRANCH` (400).
+
+**`PATCH /cash-registers/{id}/toggle-active`** ✅ — invierte `active`; no borra la caja ni los turnos que la referencian.
+
+**Errores propios:** `CASH_REGISTER_NOT_FOUND` (404) · `USER_WITHOUT_BRANCH` (400).
+
+## 6.5 Turnos y períodos de turno — Sprint 1
+
+Objeto `period`: `{ "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00", "active": true }`.
+
+**`GET /shifts/shift-periods`** ✅ — `data: { periods }` por `displayOrder`. Por defecto **solo los activos**; `?includeInactive=true` (lo respetan solo `ADMIN` y `SUPER_ADMIN`; la cajera siempre recibe los activos) trae también los desactivados, para poder reactivarlos. Cualquier otro valor da `400`.
+
+**Errores propios:** `VALIDATION_ERROR` (400).
+
+**`POST /shifts/shift-periods`** ✅ — `{ name, displayOrder, referenceStart?, referenceEnd? }`: `name` de 1–100 caracteres y **único**; `displayOrder` entero ≥ 1; los horarios, hasta 10 caracteres e informativos. Permite un tercer turno ("Tarde") **sin migración ni código**. `201 { period }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `SHIFT_PERIOD_ALREADY_EXISTS` (400).
+
+**`PATCH /shifts/shift-periods/{id}`** ✅ — cualquiera de `name`, `displayOrder`, `referenceStart`, `referenceEnd`, `active`. `referenceStart` y `referenceEnd` aceptan `null` para borrarse; el resto no. Los horarios son informativos: cambiarlos **no reclasifica** ningún turno existente; desactivar un período lo retira de la apertura sin tocar los turnos históricos. `200 { period }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `SHIFT_PERIOD_ALREADY_EXISTS` (400) · `SHIFT_PERIOD_NOT_FOUND` (404).
+
+Objeto `shift` (apertura y turno activo):
+
 ```json
 {
-  "isSuccess": false,
-  "message": "Error de validacion",
-  "data": null,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "details": [
-      {
-        "field": "items[0].quantity",
-        "message": "Debe ser mayor a 0"
+  "id": "uuid-shift-1", "status": "OPEN", "openingAmount": "200", "lastOrderNumber": 0,
+  "startAt": "2026-05-01T12:00:00.000Z", "branchId": "uuid-branch-1",
+  "cashier": { "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez" },
+  "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
+  "period": { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1 }
+}
+```
+
+**`POST /shifts/open`** ✅ — abre el turno **declarando el período** (nunca se infiere del reloj, [PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1)). El `periodId` viene preseleccionado en la pantalla como sugerencia editable.
+
+```json
+{ "openingAmount": 200, "cashRegisterId": "uuid-caja-1", "periodId": "uuid-period-manana" }
+```
+
+`openingAmount`: número de 0 a 999999.99 con hasta 2 decimales. `201 { shift }`. En la misma transacción escribe `OPEN_SHIFT` en `AuditLog`.
+
+**Reglas:** la cajera no puede tener otro turno abierto (`SHIFT_ALREADY_OPEN`); el período debe existir y estar activo; la caja debe existir **en su sucursal** y estar activa; y **ninguna otra cajera** puede tenerla abierta (`CASH_REGISTER_IN_USE`). Mientras no exista el cierre de turno (Sprint 3), un turno abierto sigue ocupando su caja.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400) · `SHIFT_ALREADY_OPEN` (409) · `SHIFT_PERIOD_REFERENCE_NOT_FOUND` (400) · `CASH_REGISTER_REFERENCE_NOT_FOUND` (400) · `CASH_REGISTER_INACTIVE` (400) · `CASH_REGISTER_IN_USE` (409).
+
+**`GET /shifts/active`** ✅ — el turno abierto de la cajera: `data: { shift }`, con `shift: null` si no tiene (no es un error).
+
+**Errores propios:** ninguno (solo los comunes de [§5.2](#52-autenticación-y-autorización)).
+
+**`POST /shifts/close`** 🔲 Sprint 3 — cierra el turno y genera el arqueo con el desglose del [PDR §2.6](../business/pdr.md). La respuesta de abajo es el contrato objetivo.
+
+```json
+{ "countedAmount": 1450 }
+```
+
+```json
+{
+  "data": {
+    "shift": {
+      "id": "uuid-shift-1", "status": "CLOSED",
+      "openingAmount": "200", "closingAmount": "1450", "expectedAmount": "1455", "discrepancy": "-5",
+      "totals": {
+        "sales": "1255", "byMethod": { "cash": "1100", "card": "155", "vale": "0" },
+        "expenses": "30", "vouchers": "60", "cancellations": { "count": 1, "amount": "36" }
       }
+    }
+  }
+}
+```
+
+Al cerrar, las órdenes `DELIVERED` del turno pasan a `CLOSED`, se extinguen las `DiscountAuthorization` del turno, se libera la caja y se escribe `CLOSE_SHIFT` en `AuditLog`.
+
+## 6.6 Productos y variantes — Sprint 1
+
+Globales (sin sucursal). Objetos:
+
+```json
+{ "id": "uuid-product-medio", "name": "Pollo Broaster 1/2", "basePrice": "45", "category": "Plato principal", "description": "2 presas + porción mixto", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…" }
+```
+
+```json
+{ "id": "uuid-variant-medio-mixto", "productId": "uuid-product-medio", "name": "1/2 mixto", "components": [ { "type": "presa", "count": 4 }, { "type": "acompanamiento", "name": "mixto", "count": 1 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" }
+```
+
+Una respuesta de **producto** incluye además `variants` (arreglo de variantes), **salvo el alta**, que devuelve el producto sin ellas.
+
+**`POST /products`** ✅ — `201 { product }`.
+
+| Campo | Regla |
+|---|---|
+| `name` | obligatorio, 3–80 caracteres, **único** (comparación exacta, distingue mayúsculas) |
+| `basePrice` | obligatorio, número ≥ 0.01 con hasta 2 decimales |
+| `category` | obligatorio, texto libre |
+| `description` | opcional, hasta 500 caracteres |
+| `isSellable`, `isInventoryItem` | opcionales, por defecto `true` |
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `DUPLICATE_PRODUCT_NAME` (400).
+
+**`GET /products`** ✅ — `data: { products, total }` por nombre ascendente, con `variants`. **`ADMIN` ve todos** (con todas sus variantes, para poder reactivarlas); **`CASHIER` solo los productos `active` e `isSellable`, con sus variantes activas** (es lo que consume el POS).
+
+**`GET /products/{id}`** ✅ (`ADMIN`) — `200 { product }` con sus variantes.
+
+**Errores propios:** `PRODUCT_NOT_FOUND` (404).
+
+**`PATCH /products/{id}`** ✅ — cualquiera de `name`, `basePrice`, `category`, `description` (acepta `null`), `isSellable`, `isInventoryItem`; **no cambia `active`**. El precio no se acepta sin revalidar y **editarlo no recalcula las órdenes ya cobradas** (cada ítem conserva su `unitPrice` y su `snapshot`). `200 { product }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `PRODUCT_NOT_FOUND` (404) · `DUPLICATE_PRODUCT_NAME` (400).
+
+**`PATCH /products/{id}/toggle-active`** ✅ — retira el producto del POS sin tocar las órdenes ya creadas. `200 { product }`.
+
+**Errores propios:** `PRODUCT_NOT_FOUND` (404).
+
+**`POST /variants`** ✅ — `{ productId, name, components, isDefault? }`. `components` es un arreglo de **al menos un** `{ type: "presa" | "acompanamiento" | "bebida" | "extra", name?, count }` con `count` entero ≥ 1. `201 { variant }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `PRODUCT_REFERENCE_NOT_FOUND` (400).
+
+**`GET /variants`** ✅ — `?productId=` (UUID) opcional. `data: { variants, total }` por nombre, **incluidas las inactivas** (es la vista de gestión; el POS recibe solo las activas dentro de cada producto).
+
+**`PATCH /variants/{id}`** ✅ — `name`, `components`, `isDefault`; no cambia `active`. Editar `components` no altera las órdenes históricas (conservan su `snapshot`). `200 { variant }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `VARIANT_NOT_FOUND` (404).
+
+**`PATCH /variants/{id}/toggle-active`** ✅ — la variante desaparece del POS y el historial queda.
+
+**Errores propios:** `VARIANT_NOT_FOUND` (404).
+
+## 6.7 Clientes — Sprint 1 y Sprint 4
+
+Globales (sin sucursal). Objeto `customer`; el de los lookups no trae `birthDate`, el del resto de los endpoints sí:
+
+```json
+{ "id": "uuid-customer-1", "ci": "8351427", "nit": "120558027", "firstName": "MARCO", "lastName": "ORTEGA GUTIERREZ", "sex": "HOMBRE", "birthDate": "1990-03-14T00:00:00.000Z", "phone": "71234567", "email": "marco.ortega@example.com", "active": true, "createdAt": "…", "updatedAt": "…" }
+```
+
+**`GET /customers/by-ci/{ci}`** y **`GET /customers/by-nit/{nit}`** ✅ — lookup **exacto** de un cliente **activo** (`CASHIER`, `ADMIN`). El POS lo usa al tipear el CI (o el NIT) y presionar Enter. `200 { customer }`. Un valor de menos de 3 caracteres, uno inexistente o un cliente desactivado responden `404 CUSTOMER_NOT_FOUND` (no se revela la existencia de desactivados).
+
+**Errores propios:** `CUSTOMER_NOT_FOUND` (404).
+
+**`POST /customers`** ✅ — alta rápida desde el POS (atajo F9), **antes de cobrar**. `201 { customer }`; `passwordHash` nunca se expone.
+
+| Campo | Regla |
+|---|---|
+| `ci` | obligatorio, **solo dígitos, 4 a 20**, **único** en toda la base (la primera registración gana) |
+| `nit` | opcional, solo dígitos, 3 a 20; si viene, **único** |
+| `firstName`, `lastName` | obligatorios, 1–80 caracteres |
+| `sex` | obligatorio: `HOMBRE` o `MUJER` |
+| `birthDate` | opcional, `YYYY-MM-DD` |
+| `phone` | opcional, hasta 30 caracteres |
+| `email` | opcional, correo válido |
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `CUSTOMER_CI_ALREADY_EXISTS` (400) · `CUSTOMER_NIT_ALREADY_EXISTS` (400).
+
+**`GET /customers`** ✅ (`ADMIN`) — lista administrativa **paginada** de todos los clientes.
+
+| Query | Significado |
+|---|---|
+| `search` | texto libre, hasta 80 caracteres: **cada palabra** debe aparecer en el nombre, apellido, CI o NIT (sin distinguir mayúsculas) |
+| `status` | `active` \| `inactive` \| `all` (por defecto `all`) |
+| `from`, `to` | fecha de **alta**, `YYYY-MM-DD`, ambas inclusivas |
+| `page`, `pageSize` | paginación ([§5.3](#53-estructura-de-respuesta-estándar)) |
+
+`data: { customers, total, page, pageSize }`, del más reciente al más antiguo.
+
+**Errores propios:** `VALIDATION_ERROR` (400).
+
+**`GET /customers/{id}`** ✅ (`CASHIER`, `ADMIN`) — `200 { customer }`. La cajera solo ve clientes **activos** (404 si está desactivado); el ADMIN ve también los desactivados.
+
+**Errores propios:** `CUSTOMER_NOT_FOUND` (404).
+
+**`PATCH /customers/{id}`** ✅ (`CASHIER`, `ADMIN`) — `firstName`, `lastName`, `sex`, `birthDate`, `phone`, `email`; `birthDate`, `phone` y `email` aceptan `null` para borrarse. **`ci` y `nit` no se editan** (se rechazan con `400`): son su identidad para buscarlo y facturarlo. Un body vacío da `NO_FIELDS_TO_UPDATE`. La cajera no puede editar un cliente desactivado. Editar al cliente **no altera** el `customerName` de sus pedidos pasados (es un snapshot). `200 { customer }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `CUSTOMER_NOT_FOUND` (404) · `NO_FIELDS_TO_UPDATE` (400).
+
+**`PATCH /customers/{id}/toggle-active`** ✅ (`ADMIN`) — el cliente desactivado deja de aparecer en las búsquedas del POS; sus pedidos conservan el nombre. `200 { customer }`.
+
+**Errores propios:** `CUSTOMER_NOT_FOUND` (404).
+
+**`GET /customers/{id}/orders`** ✅ (`ADMIN`) — historial de pedidos del cliente en **todas** las sucursales, paginado (`?page=&pageSize=`), del más reciente al más antiguo. `data: { orders, total, page, pageSize }`; cada pedido tiene la forma de la lista de [§6.11](#611-pedidos--sprint-1-a-3) más `branchId` y `branchName`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `CUSTOMER_NOT_FOUND` (404).
+
+## 6.8 Inventario — Sprint 2
+
+Local por sucursal ([§5.6](#56-alcance-por-rol-y-sucursal)). Objeto `inventoryItem`:
+
+```json
+{ "id": "uuid-item-pecho", "productCode": "PRESA-PECHO", "name": "Presa de pecho", "unit": "PRESA", "type": "PECHO", "currentStock": 40, "unitMeasure": null, "salePrice": "12", "active": true, "branchId": "uuid-branch-1", "createdAt": "…", "updatedAt": "…" }
+```
+
+**`POST /inventory/items`** ✅ (`ADMIN`; `SUPER_ADMIN` con `branchId`) — `201 { inventoryItem }`.
+
+| Campo | Regla |
+|---|---|
+| `productCode` | obligatorio, 1–50 caracteres de `A-Z a-z 0-9 _ -`, **único por sucursal** |
+| `name` | obligatorio, 1–120 caracteres |
+| `unit` | obligatorio, uno de `InventoryUnit` |
+| `type` | obligatorio, uno de `InventoryItemType` |
+| `unitMeasure` | opcional, hasta 30 caracteres |
+| `salePrice` | opcional, ≥ 0 con hasta 2 decimales; **solo** para `PECHO`, `ALA`, `PIERNA` y `ENTREPIERNA` (se rechaza en los demás) |
+| `initialStock` | opcional, entero ≥ 0 |
+| `branchId` | solo `SUPER_ADMIN` (obligatorio para él); un ADMIN no lo manda |
+
+Con `initialStock > 0`, el alta **crea además la `InventoryTransaction` `RECEPTION`** (`note: "Carga inicial de inventario"`) **en la misma transacción**: `currentStock` es un cache del libro y nunca se escribe sin rastro. Cargarlo con `adjust` aparte obligaría a dos llamadas y dejaría el ítem en 0 sin constancia del ingreso.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `INVENTORY_ITEM_CODE_ALREADY_EXISTS` (400) · `SALE_PRICE_NOT_ALLOWED_FOR_TYPE` (400) · `USER_WITHOUT_BRANCH` (400) · `BRANCH_REQUIRED` (400) · `BRANCH_REFERENCE_NOT_FOUND` (400) · `FORBIDDEN` (403) · `BRANCH_OUT_OF_SCOPE` (403).
+
+**`GET /inventory/items`** ✅ (`ADMIN`, `COOK`) — `data: { inventoryItems, total }` por tipo y nombre. Filtros: `?type=`, `?active=true|false` (otro valor da `400`), `?search=` (parcial por nombre o código, hasta 120 caracteres) y, solo `SUPER_ADMIN`, `?branchId=`. Alimenta el selector de insumos de consumos manuales (FR-017) y la vista de stock del cocinero (FR-008).
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400) · `FORBIDDEN` (403) · `BRANCH_OUT_OF_SCOPE` (403).
+
+**`PATCH /inventory/items/{id}`** ✅ (`ADMIN`) — edita **solo** `name`, `unit`, `unitMeasure` y `salePrice` (`null` borra el precio). `productCode`, `type` y **`currentStock` no se editan** (se rechazan con `400`): el stock solo se mueve con el alta o con `adjust`. `200 { inventoryItem }`.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `INVENTORY_ITEM_NOT_FOUND` (404) · `SALE_PRICE_NOT_ALLOWED_FOR_TYPE` (400) · `USER_WITHOUT_BRANCH` (400).
+
+**`PATCH /inventory/items/{id}/toggle-active`** ✅ (`ADMIN`) — no borra el ítem ni toca su stock. `200 { inventoryItem }`.
+
+**Errores propios:** `INVENTORY_ITEM_NOT_FOUND` (404) · `USER_WITHOUT_BRANCH` (400).
+
+**`POST /inventory/adjust`** ✅ (`ADMIN`; `SUPER_ADMIN` en cualquier sucursal) — movimiento manual **con motivo**: la única vía, junto con el alta, que cambia `currentStock`.
+
+```json
+{ "inventoryItemId": "uuid-item-pecho", "delta": 5, "reason": "RECEPTION", "note": "Compra del día a proveedor" }
+```
+
+| Campo | Regla |
+|---|---|
+| `inventoryItemId` | UUID de un ítem de la sucursal |
+| `delta` | **entero distinto de 0**, de −1.000.000 a 1.000.000: positivo suma, negativo resta. **No puede dejar el stock en negativo** |
+| `reason` | `ADJUSTMENT` (corrección de stock, merma) o `RECEPTION` (ingreso de mercadería). Los demás motivos los escribe la operación que los causa |
+| `note` | **obligatoria**, hasta 200 caracteres: queda en el libro y en la auditoría |
+
+En **una sola transacción** actualiza el stock, escribe la fila del libro y la auditoría `ADJUST_INVENTORY`. El chequeo de stock es parte del propio `UPDATE`, así que dos ajustes simultáneos no pueden dejarlo en negativo.
+
+```json
+{
+  "data": {
+    "transaction": { "id": "uuid-tx-1", "inventoryItemId": "uuid-item-pecho", "delta": 5, "reason": "RECEPTION", "note": "Compra del día a proveedor", "referenceId": null, "timestamp": "…", "user": { "id": "uuid-user-admin", "firstName": "Jhonny", "lastName": "Hurtado Zardan" } },
+    "inventoryItem": { "id": "uuid-item-pecho", "currentStock": 45 }
+  }
+}
+```
+
+(`inventoryItem` es el objeto completo, con el stock nuevo.)
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `INVENTORY_ITEM_NOT_FOUND` (404) · `INSUFFICIENT_STOCK` (409) · `USER_WITHOUT_BRANCH` (400).
+
+**`GET /inventory/dashboard`** ✅ (`ADMIN`, `COOK`; `SUPER_ADMIN` con `?branchId=`) — **dashboard de stock cocido** (FR-006): una entrada por tipo de presa, siempre las cuatro.
+
+```json
+{
+  "data": {
+    "shift": { "id": "uuid-shift-1", "startAt": "2026-05-01T12:00:00.000Z" },
+    "pieces": [
+      { "type": "PECHO", "items": 1, "currentStock": 100, "delta": { "sold": 9, "adjusted": 0, "received": 30, "net": 21 } },
+      { "type": "ALA", "items": 1, "currentStock": 193, "delta": { "sold": 3, "adjusted": 0, "received": 34, "net": 31 } }
     ]
   }
 }
 ```
 
-## 5.4 Reglas del contrato
+- `items` cuenta los ítems **activos** de ese tipo y `currentStock` suma su stock actual.
+- **Ventana del delta:** desde el inicio del turno **abierto más antiguo** de la sucursal (`shift`). Sin turno abierto, `shift` es `null` y todos los deltas son 0.
+- `sold` es la suma de las salidas `SALE` (en positivo), `adjusted` la de los `ADJUSTMENT`, `received` la de las `RECEPTION`, y `net` la de **todos** los motivos.
+- Mientras el pago de una venta no descuente inventario (🔲 Sprint 2), `sold` solo refleja lo ya registrado en el libro.
 
-- Frontend valida flujo con `isSuccess`.
-- `error` será singular.
-- `details` será **siempre** un array (vacío si no hay detalle por campo). Cada elemento es `{ field, message }`; `field` es la ruta del campo en el body (`items[0].quantity`).
-- El `status` HTTP lo decide el **catálogo** `src/common/errors/error-codes.ts` (cada `code` tiene un único status y un mensaje por defecto). Los services lanzan `new BusinessException({ code })`; el `message` puede sobrescribirse para incluir el valor involucrado. Convención de nombres: `X_NOT_FOUND` = recurso de la URL (404); `X_REFERENCE_NOT_FOUND` = recurso referenciado desde el body (400).
-- Los errores que lanza Nest por sí mismo (id con formato inválido, ruta inexistente) salen con un código genérico: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`.
-- `code` será string estable: `VALIDATION_ERROR`, `NOT_FOUND`, `FORBIDDEN`, `INSUFFICIENT_STOCK`, `DISCOUNT_NOT_AVAILABLE` (descuento inactivo o fuera de su ventana de disponibilidad — rechaza la creación de la orden completa), `DISCOUNT_NOT_AUTHORIZED` (la sesión de cajera no tiene autorización vigente para ese descuento), etc. *Nota: no existe `DISCOUNT_ALREADY_APPLIED` — con un único campo `discountId` por ítem en el payload de creación, el apilamiento es **irrepresentable por construcción** (no hay estado inválido que validar).*
-- En NestJS se implementará con `ValidationPipe` + excepciones HTTP + `ExceptionFilter` global para mantener este contrato en todos los endpoints.
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400) · `FORBIDDEN` (403) · `BRANCH_OUT_OF_SCOPE` (403).
 
----
+## 6.9 Consumos manuales y ciclo crudo — Sprint 2
 
-# 6. JSON payloads de ejemplo (request/response por endpoint)
+🔲 Roles `COOK`. Dos registros que el cocinero anota al cierre de su turno (FR-017): los **insumos consumidos** (bolsas de papa, envases de arroz…) y el **ciclo crudo de presas** (PDR §2.3). Ambos se ligan al `Shift` y escriben en el libro de inventario en la misma transacción.
 
-> Los requests son **ejemplos representativos**; los DTOs definitivos se validan con `class-validator`. Las notas por endpoint dicen solo el dato **propio** de ese endpoint — los principios transversales (actor/turno derivados, precios calculados por el backend, referencias no copias) viven en [§5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza).
+> **Decisión abierta (a cerrar antes de Sprint 2):** el cocinero no abre turno, así que el contrato necesita decir **a qué turno** anota. Se propone `shiftId` explícito en el body (la cocina elige entre los turnos abiertos de su sucursal), con validación de que pertenezca a ella. Está registrada en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
 
-## 6.0 AuthLoginResponse
+**`POST /inventory/manual-consumption`** — `201`.
 
-**`POST /api/v1/auth/login`** — **público**. Devuelve el JWT que el resto de llamadas envía como `Bearer`.
-
-Request:
 ```json
-{ "email": "roxana@wonderchicken.com", "password": "12345678" }
+{ "shiftId": "uuid-shift-1", "entries": [ { "inventoryItemId": "uuid-bolsa-papa", "quantity": 3 }, { "inventoryItemId": "uuid-envase-arroz", "quantity": 45 } ] }
 ```
-Response (200):
+
+`entries` tiene al menos un elemento; `quantity` es un entero ≥ 1 y los ítems deben ser de la sucursal. Por cada entrada se crea una `DailyManualConsumption` y una `InventoryTransaction` con `reason = MANUAL_CONSUMPTION` y `delta` negativo; un consumo que dejaría el stock en negativo se rechaza completo.
+
+```json
+{ "data": { "shiftId": "uuid-shift-1", "entries": [ { "id": "uuid-consumption-1", "inventoryItemId": "uuid-bolsa-papa", "quantity": 3, "recordedAt": "…" } ] } }
+```
+
+**`GET /inventory/shift-chicken-log/{shiftId}`** — el ciclo crudo del turno, **una fila por tipo de presa** (siempre las cuatro). Si todavía no se registró, `reprocessRaw` viene **autopoblado** con el `rawLeftover` del último turno cerrado de la sucursal (continuidad `rawLeftover(T) → reprocessRaw(T+1)`) y el resto en `0`.
+
 ```json
 {
-  "isSuccess": true,
-  "message": "Login exitoso",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-> La contraseña es el **CI** del usuario (se compara contra `passwordHash`, hash bcrypt del CI). Sin token o token expirado/inválido en el resto de endpoints → **401**. Rol no autorizado → **403** (`FORBIDDEN`).
-
-## 6.1 ProductCreateResponse (éxito)
-```json
-{
-  "isSuccess": true,
-  "message": "Producto creado correctamente",
-  "data": {
-    "id": "uuid-product-porcion-media",
-    "name": "Porción Media",
-    "basePrice": 30.00,
-    "category": "Plato principal",
-    "description": "2 presas + porción mixto",
-    "active": true
+    "shiftId": "uuid-shift-2", "closed": false,
+    "pieces": [
+      { "pieceType": "PECHO", "reprocessRaw": 64, "processedRaw": 0, "rawLeftover": 0, "cookedLeftover": 0, "cooked": 64 }
+    ]
   }
 }
 ```
 
-## 6.2 VariantCreateResponse (éxito)
+`cooked` es **derivado** (`reprocessRaw + processedRaw − rawLeftover`) y no se guarda.
+
+**`POST /inventory/shift-chicken-log`** — registra o actualiza el ciclo del turno (upsert por `shiftId` + `pieceType`; un log cerrado no se modifica). `200` con la misma forma del `GET`.
+
+```json
+{ "shiftId": "uuid-shift-2", "pieces": [ { "pieceType": "PECHO", "reprocessRaw": 64, "processedRaw": 120, "rawLeftover": 30, "cookedLeftover": 8 } ] }
+```
+
+Todos los números son enteros ≥ 0; `pieceType` es uno de `PECHO`, `ALA`, `PIERNA`, `ENTREPIERNA`.
+
+**`POST /inventory/shift-chicken-log/{shiftId}/close`** — cierra el ciclo y **reconcilia contra las ventas**: para cada tipo, el sobrante cocido esperado es `cooked − vendido_cocido_del_turno` (las salidas `SALE` del turno) y se compara con el `cookedLeftover` anotado.
+
+```json
+{ "data": { "shiftId": "uuid-shift-2", "closed": true, "pieces": [ { "pieceType": "PECHO", "cooked": 154, "sold": 140, "expectedCookedLeftover": 14, "cookedLeftover": 8, "discrepancy": -6 } ] } }
+```
+
+Una discrepancia distinta de 0 se informa; **no bloquea** el cierre. Cierra con `closedAt` y nace inmutable.
+
+## 6.10 POS — Sprint 1 a 3
+
+**`GET /pos/context`** ✅ (`CASHIER`) — el POS carga **en una sola llamada liviana** (solo datos activos, sin históricos). El backend manda y el POS pinta lo que recibe: no filtra ni calcula nada.
+
 ```json
 {
-  "isSuccess": true,
-  "message": "Variante creada correctamente",
+  "message": "Contexto POS",
   "data": {
-    "id": "uuid-variant-porcion-media-mixto",
-    "productId": "uuid-product-porcion-media",
-    "name": "Porción Media - Mixto",
-    "components": [
-      {"type":"presa","count":2},
-      {"type":"acompanamiento","name":"mixto","count":1}
-    ],
-    "isDefault": true
+    "shift": { "id": "uuid-shift-1", "status": "OPEN", "openingAmount": "200", "lastOrderNumber": 4, "startAt": "…", "branchId": "uuid-branch-1", "cashier": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "cashRegister": { "id": "…", "name": "Caja 1" }, "period": { "id": "…", "name": "Mañana", "displayOrder": 1 } },
+    "shiftPeriods": [ { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00", "active": true } ],
+    "products": [
+      { "id": "uuid-product-medio", "name": "Pollo Broaster 1/2", "basePrice": "45", "category": "Plato principal", "description": "…", "active": true, "isSellable": true, "isInventoryItem": true, "createdAt": "…", "updatedAt": "…",
+        "variants": [ { "id": "uuid-variant-medio-mixto", "productId": "uuid-product-medio", "name": "1/2 mixto", "components": [ { "type": "presa", "count": 4 } ], "isDefault": true, "active": true, "createdAt": "…", "updatedAt": "…" } ] }
+    ]
   }
 }
 ```
 
-## 6.2a CustomerCreateResponse / CustomerLookupResponse
-> Alta de cliente para factura nominada (el cliente puede dictar CI o NIT). Los lookups exactos (`GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`) devuelven el mismo shape de `data` que `POST /customers` (un objeto `customer`). En Sprint 4 se suma `GET /customers/{id}` para detalle administrativo.
+- `shift` es `null` si la cajera no tiene turno abierto: no es un error, el front muestra la pantalla de apertura.
+- `products` son los **activos y vendibles** con sus variantes activas (los mismos de `GET /products` para `CASHIER`); `shiftPeriods`, los períodos activos.
+- 🔲 Sprint 2 suma `piecePrices` (`[{ "type": "PECHO", "salePrice": "12" }, …]`, el `salePrice` de las presas activas) para que el POS calcule en el cliente el **precio sugerido** de una venta custom.
+- 🔲 Sprint 3 suma `discounts`, **ya filtrados** por el backend para esta sesión (activos + ventana vigente + autorización del turno si corresponde): `[{ "id": "…", "name": "Descuento personal", "fixedAmount": "7", "availability": "END_OF_SHIFT" }]`.
 
-Request (`POST /customers` — `nit`, `birthDate`, `phone` y `email` opcionales):
-```json
-{ "ci": "8351427", "nit": "120558027", "firstName": "MARCO", "lastName": "ORTEGA GUTIERREZ",
-  "sex": "HOMBRE", "birthDate": "1990-03-14", "phone": "71234567", "email": "marco.ortega@example.com" }
-```
-Response (201):
+**Errores propios:** ninguno (solo los comunes de [§5.2](#52-autenticación-y-autorización)).
+
+## 6.11 Pedidos — Sprint 1 a 3
+
+Alcance por sucursal ([§5.6](#56-alcance-por-rol-y-sucursal)): todos los roles ven los pedidos de su sucursal; el `SUPER_ADMIN`, los de todas. Reglas de estado y efectos: [§4](#4-máquina-de-estados-de-pedidos-transaccional).
+
+Objeto `order` (detalle: crear, pagar, cancelar y `GET /orders/{id}`):
+
 ```json
 {
-  "isSuccess": true,
-  "message": "Cliente registrado correctamente",
-  "data": {
-    "id": "uuid-customer-001",
-    "ci": "8351427",
-    "nit": "120558027",
-    "firstName": "MARCO",
-    "lastName": "ORTEGA GUTIERREZ",
-    "sex": "HOMBRE",
-    "birthDate": "1990-03-14",
-    "phone": "71234567",
-    "email": "marco.ortega@example.com",
-    "active": true
-  }
+  "id": "uuid-order-1", "orderNumber": 5, "type": "MESA", "tableNumber": "70",
+  "customerId": "uuid-customer-1", "customerName": "MARCO ORTEGA GUTIERREZ",
+  "status": "PREPARING", "paymentStatus": "PAID", "paymentMethod": "CASH",
+  "originalAmount": "90", "total": "90", "isCustom": false,
+  "createdById": "uuid-user-cashier", "shiftId": "uuid-shift-1",
+  "publicToken": "a3f9c2e81b4d7f60a9e35c8d2b1f4a7e",
+  "paidAt": null, "readyAt": null, "deliveredAt": null, "deliveredById": null,
+  "cancelledAt": null, "cancelReason": null, "cancelDetails": null,
+  "createdAt": "2026-05-01T12:10:00.000Z",
+  "createdBy": { "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez" },
+  "shift": { "id": "uuid-shift-1", "branchId": "uuid-branch-1", "lastOrderNumber": 5, "cashier": { "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "period": { "id": "uuid-period-manana", "name": "Mañana" } },
+  "items": [
+    {
+      "id": "uuid-item-1", "productId": "uuid-product-medio", "variantId": "uuid-variant-medio-mixto",
+      "quantity": 2, "unitPrice": "45", "totalPrice": "90",
+      "snapshot": { "productName": "Pollo Broaster 1/2", "productBasePrice": 45, "variantName": "1/2 mixto", "variantComponents": [ { "type": "presa", "count": 4 } ], "quantity": 2, "selectedPieces": [], "substitutions": [ { "from": "mixto", "to": "arroz" } ], "extras": [], "drinks": [] },
+      "substitutions": [ { "from": "mixto", "to": "arroz" } ], "selectedPieces": null, "customPieces": null, "extras": null, "drinks": null,
+      "notes": null, "createdAt": "2026-05-01T12:10:00.000Z"
+    }
+  ]
 }
 ```
 
-## 6.3 OrderCreateResponse (mesa, pagado, con sustitución)
+- `orderNumber` es **correlativo dentro del turno** (empieza en 1 en cada turno); el `id` es el identificador global.
+- Los arreglos opcionales de cada línea (`substitutions`, `selectedPieces`, `customPieces`, `extras`, `drinks`) son `null` cuando no se enviaron; `snapshot` guarda siempre la copia de lo vendido (nombre y precio vigentes), base de la impresión y la auditoría.
+- `customerName` es una **copia** del nombre del cliente al momento de la venta; cambia solo si se crea otro pedido.
+- `publicToken` es la credencial de la vista pública del cliente ([§6.16](#616-vistas-públicas-e-impresión--sprint-4)).
+- Hoy `paidAt` queda `null` en una venta pagada al registrarla; solo lo completa `POST /orders/{id}/pay` ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
 
-Request (`POST /orders` — datos mínimos según §5.0; `customerId` opcional = venta anónima "S/N"; el ítem que lleva descuento manda su `discountId`):
+**`POST /orders`** ✅ (`CASHIER`) — registra el pedido **pagado o pendiente** en una sola llamada; `201 { order }` con el mensaje "Pedido obtenido correctamente". El pedido nace en `PREPARING`. **El front manda referencias y cantidades; el backend decide los precios** ([§5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza)).
+
 ```json
 {
   "type": "MESA",
   "tableNumber": "70",
-  "customerId": "uuid-customer-001",
-  "paymentStatus": "paid",
-  "paymentMethod": "cash",
+  "customerId": "uuid-customer-1",
+  "paymentStatus": "PAID",
+  "paymentMethod": "CASH",
   "items": [
-    {
-      "productId": "uuid-product-wonder",
-      "variantId": "uuid-variant-wonder",
-      "quantity": 2,
-      "selectedPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":2} ],
-      "substitutions": [ {"from":"mixto","to":"arroz"} ]
-    },
-    { "productId": "uuid-product-fanta", "quantity": 1 }
-  ]
-}
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Pedido creado y pagado correctamente",
-  "data": {
-    "id": "uuid-order-001",
-    "type": "MESA",
-    "tableNumber": "70",
-    "customerName": "GOMEZ",
-    "customerId": "uuid-customer-001",
-    "publicToken": "a3f9c2e81b4d7f60a9e35c8d2b1f4a7e",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "paymentMethod": "cash",
-    "items": [
-      {
-        "productId": "uuid-product-wonder",
-        "variantId": "uuid-variant-wonder",
-        "quantity": 2,
-        "unitPrice": 36.00,
-        "totalPrice": 72.00,
-        "substitutions": [
-          {"from":"mixto","to":"arroz"}
-        ],
-        "selectedPieces": [
-          {"type":"pecho","qty":2},
-          {"type":"ala","qty":2}
-        ]
-      },
-      {
-        "productId": "uuid-product-fanta",
-        "quantity": 1,
-        "unitPrice": 8.00,
-        "totalPrice": 8.00
-      }
-    ],
-    "total": 80.00,
-    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "paidAt": "2026-05-01T22:10:00"
-  }
-}
-```
-
-## 6.4 OrderCreateResponse (llevar, pendingPayment)
-```json
-{
-  "isSuccess": true,
-  "message": "Pedido creado en estado pendiente de pago",
-  "data": {
-    "id": "uuid-order-002",
-    "type": "LLEVAR",
-    "customerName": "MARCO ORTEGA",
-    "status": "preparing",
-    "paymentStatus": "pending",
-    "items": [
-      {
-        "productId": "uuid-product-porcion-media",
-        "quantity": 3,
-        "unitPrice": 30.00,
-        "totalPrice": 90.00,
-        "selectedPieces": [
-          {"type":"pecho","qty":1},{"type":"ala","qty":1},
-          {"type":"pierna","qty":2},{"type":"entrepierna","qty":2}
-        ]
-      }
-    ],
-    "total": 90.00,
-    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
-  }
-}
-```
-
-## 6.4b PayOrderResponse (confirmar pago de un pendiente)
-
-**`POST /api/v1/orders/{id}/pay`** — transita `pendingPayment` → `paid`; **acá** se descuenta inventario y se contabiliza el ingreso (§4.1).
-
-Request:
-```json
-{ "paymentMethod": "cash" }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Pago confirmado; inventario descontado",
-  "data": {
-    "id": "uuid-order-002",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "paymentMethod": "cash",
-    "total": 90.00,
-    "paidAt": "2026-05-01T20:50:00"
-  }
-}
-```
-
-## 6.5 CustomOrderCreateResponse (orden LLEVAR custom — presas surtidas, vía `POST /api/v1/orders/custom`)
-
-Request (la **única** excepción de precio de §5.0: el `unitPrice` es el **confirmado por la cajera**; el sugerido lo calculó el POS con los `piecePrices` de §6.12):
-```json
-{
-  "type": "LLEVAR",
-  "paymentStatus": "paid",
-  "paymentMethod": "cash",
-  "items": [
-    {
-      "customPieces": [ {"type":"pecho","qty":2}, {"type":"ala","qty":1} ],
-      "extras": [ {"name":"papa","qty":1} ],
-      "drinks": [ {"productId":"uuid-coca-500","qty":1} ],
-      "quantity": 1,
-      "unitPrice": 35.00
-    }
-  ]
-}
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Pedido custom creado correctamente",
-  "data": {
-    "id": "uuid-order-003",
-    "type": "LLEVAR",
-    "isCustom": true,
-    "customerName": "JUAN PEREZ",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "items": [
-      {
-        "customPieces": [
-          {"type":"pecho","qty":2},
-          {"type":"ala","qty":1}
-        ],
-        "extras": [
-          {"name":"papa","qty":1}
-        ],
-        "drinks": [
-          {"productId":"uuid-coca-500","qty":1}
-        ],
-        "quantity": 1,
-        "unitPrice": 35.00,
-        "totalPrice": 35.00
-      }
-    ],
-    "total": 35.00,
-    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "paidAt": "2026-05-01T13:20:00"
-  }
-}
-```
-
-## 6.6 OrderCreateWithDiscountResponse (descuento al personal POR PLATO en la creación — una sola llamada)
-> El descuento viaja como **`discountId` en cada ítem** del request de `POST /orders` — **no existe llamada separada** para aplicarlo (§5.0, principio 6). El backend valida (disponibilidad + autorización), congela el snapshot por unidad y deriva los totales en la misma transacción. Acá: 3 Porciones Media (2 ítems: uno con qty 2 y otro con qty 1), las 3 con "Descuento personal" (7 Bs por plato, `endOfShift`) → `total = 90 − 21 = 69`. Los productos reales se registran tal cual y el inventario descuenta las presas reales.
-
-Request (lo único que el front decide: referencias + cantidades):
-```json
-{
-  "type": "MESA",
-  "paymentStatus": "paid",
-  "paymentMethod": "cash",
-  "items": [
-    {
-      "productId": "uuid-product-porcion-media",
-      "quantity": 2,
-      "discountId": "uuid-discount-personal",
-      "selectedPieces": [ {"type":"pierna","qty":2}, {"type":"entrepierna","qty":2} ]
-    },
-    {
-      "productId": "uuid-product-porcion-media",
-      "quantity": 1,
-      "discountId": "uuid-discount-personal",
-      "selectedPieces": [ {"type":"pecho","qty":1}, {"type":"ala","qty":1} ]
-    }
+    { "productId": "uuid-product-medio", "variantId": "uuid-variant-medio-mixto", "quantity": 2, "substitutions": [ { "from": "mixto", "to": "arroz" } ] },
+    { "productId": "uuid-product-coca", "quantity": 1, "notes": "Sin hielo" }
   ]
 }
 ```
 
-Response (todo calculado por el backend, listo para pintar):
+| Campo | Regla |
+|---|---|
+| `type` | `MESA` o `LLEVAR` (una venta custom **no** es un tipo: usa `isCustom`) |
+| `tableNumber` | opcional, texto no vacío; solo informativo |
+| `customerId` | opcional: sin él es una venta anónima "S/N" (`customerId` y `customerName` quedan `null`). Debe existir y estar activo |
+| `paymentStatus` | `PAID` o `PENDING` |
+| `paymentMethod` | `CASH`, `CARD` o `VALE`. **Obligatorio con `PAID`** y **prohibido con `PENDING`** |
+| `items` | al menos una línea |
+
+Cada línea de `items`:
+
+| Campo | Regla |
+|---|---|
+| `productId` | obligatorio; debe existir, estar activo y ser vendible |
+| `variantId` | opcional; debe estar activa y **pertenecer al producto** |
+| `quantity` | entero ≥ 1 |
+| `selectedPieces` | opcional: `[{ type: pecho \| ala \| pierna \| entrepierna, qty ≥ 1 }]` |
+| `substitutions` | opcional, **máximo 1**: `{ from: "mixto", to: arroz \| papa \| smiles \| mixto }`. **No cambia el precio** ([PDR §2.1](../business/pdr.md#21-precios-y-sustituciones)) |
+| `extras` | opcional: `[{ type: texto, qty ≥ 1 }]` |
+| `drinks` | opcional: `[{ productId, qty ≥ 1 }]` |
+| `notes` | opcional, texto |
+
+**El total lo calcula el backend:** `total = Σ(basePrice × quantity)` con el `basePrice` vigente de cada producto (el dato que llegue del front nunca se usa). `selectedPieces`, `extras` y `drinks` **se guardan tal cual y no suman al precio**: una bebida o un extra que se cobra va como **línea propia** (`productId` del producto bebida o extra). Se rechazan con `400` los campos que el contrato no define, como `unitPrice`, `total` o `customerName` ([§5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza)).
+
+El pedido nace dentro de **una transacción**: número correlativo del turno, `publicToken`, líneas con su `snapshot`, componentes de la variante y —si ya está pagado— la auditoría `CREATE_SALE`. Si algo falla no queda nada a medias.
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400) · `NO_ACTIVE_SHIFT` (409) · `PAYMENT_METHOD_REQUIRED` (400) · `PAYMENT_METHOD_NOT_ALLOWED` (400) · `MULTIPLE_SUBSTITUTIONS_NOT_ALLOWED` (400) · `INVALID_SUBSTITUTION_TARGET` (400) · `PRODUCT_REFERENCE_NOT_FOUND` (400) · `PRODUCT_INACTIVE` (400) · `VARIANT_REFERENCE_NOT_FOUND` (400) · `CUSTOMER_REFERENCE_NOT_FOUND` (400) · `CUSTOMER_INACTIVE` (400).
+
+**`POST /orders/{id}/pay`** ✅ (`CASHIER`) — confirma el pago de un pedido **pendiente**.
+
 ```json
-{
-  "isSuccess": true,
-  "message": "Pedido creado y pagado correctamente",
-  "data": {
-    "id": "uuid-order-004",
-    "type": "MESA",
-    "status": "preparing",
-    "paymentStatus": "paid",
-    "originalAmount": 90.00,
-    "items": [
-      {
-        "productId": "uuid-product-porcion-media",
-        "quantity": 2,
-        "unitPrice": 30.00,
-        "discountId": "uuid-discount-personal",
-        "discountAmount": 7.00,
-        "totalPrice": 46.00,
-        "selectedPieces": [
-          {"type":"pierna","qty":2},
-          {"type":"entrepierna","qty":2}
-        ]
-      },
-      {
-        "productId": "uuid-product-porcion-media",
-        "quantity": 1,
-        "unitPrice": 30.00,
-        "discountId": "uuid-discount-personal",
-        "discountAmount": 7.00,
-        "totalPrice": 23.00,
-        "selectedPieces": [
-          {"type":"pecho","qty":1},
-          {"type":"ala","qty":1}
-        ]
-      }
-    ],
-    "total": 69.00,
-    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
-  }
-}
+{ "paymentMethod": "CASH" }
 ```
 
-## 6.6b DiscountCreateResponse (catálogo — admin)
+`201 { order }` (con `paymentStatus: "PAID"`, el `paymentMethod` y `paidAt`); el `status` no cambia. Escribe `CREATE_SALE`. 🔲 Sprint 2: descuenta el inventario en la misma transacción y, si no alcanza el stock, rechaza el pago y avisa qué falta.
 
-Request (`POST /discounts`):
-```json
-{ "name": "Compensación al cliente", "fixedAmount": 7.00, "availability": "always",
-  "requiresAuthorization": true, "active": true }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Descuento creado correctamente",
-  "data": {
-    "id": "uuid-discount-compensacion",
-    "name": "Compensación al cliente",
-    "fixedAmount": 7.00,
-    "availability": "always",
-    "requiresAuthorization": true,
-    "active": true
-  }
-}
-```
+**Errores propios:** `VALIDATION_ERROR` (400) · `ORDER_NOT_FOUND` (404) · `FORBIDDEN` (403) · `ORDER_FROM_OTHER_BRANCH` (403) · `ORDER_ALREADY_PAID` (409) · `ORDER_CANCELLED` (409) · `USER_WITHOUT_BRANCH` (400).
 
-## 6.6c DiscountAuthorizationResponse (admin autoriza a la sesión de cajera por turno)
+**`POST /orders/{id}/cancel`** ✅ (`CASHIER`) — cancela un pedido **pendiente de pago**: manual y **sin body ni motivo** ([PDR §2.5](../business/pdr.md#25-pedidos-delivery-y-pago-pendiente)). `201 { order }` con `status: "CANCELLED"` y `cancelledAt`. Cancelar un pedido **ya cancelado** no falla y refresca `cancelledAt` ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
 
-Request (`POST /discounts/{id}/authorize` — solo `cashierId`; `shiftId` se deriva del turno activo de esa cajera, §5.0):
-```json
-{ "cashierId": "uuid-user-roxana" }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Cajera autorizada para el descuento en este turno",
-  "data": {
-    "id": "uuid-auth-001",
-    "discountId": "uuid-discount-compensacion",
-    "shiftId": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "authorizedBy": { "id": "uuid-user-admin", "firstName": "Admin", "lastName": "Sistema" },
-    "authorizedAt": "2026-06-06T15:05:00"
-  }
-}
-```
+**Errores propios:** `ORDER_NOT_FOUND` (404) · `FORBIDDEN` (403) · `ORDER_FROM_OTHER_BRANCH` (403) · `ORDER_ALREADY_PAID_USE_ANULL` (409) · `USER_WITHOUT_BRANCH` (400).
 
-## 6.7 VoucherCreateResponse
+**`POST /orders/{id}/cancel`** 🔲 Sprint 2 — **anulación de un pedido pagado**, con motivo y detalle obligatorios (FR-011b). Reemplaza el error `ORDER_ALREADY_PAID_USE_ANULL` de arriba para un pedido pagado.
 
-Request (`POST /vouchers` — el `amount` **NO se envía**: el backend lo deriva de `productId` menos el snapshot del `discountId` si viene; `discountId` opcional):
-```json
-{ "workerName": "MARIA LOPEZ", "productId": "uuid-product-porcion-media", "discountId": "uuid-discount-personal" }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Vale registrado correctamente",
-  "data": {
-    "id": "uuid-voucher-001",
-    "code": "V-20260501-001",
-    "workerName": "MARIA LOPEZ",
-    "productName": "Porción Media",
-    "originalAmount": 30.00,
-    "discountId": "uuid-discount-personal",
-    "discountAmount": 7.00,
-    "amount": 23.00,
-    "issuedBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "issuedAt": "2026-05-01T14:30:00",
-    "shiftId": "uuid-shift-001",
-    "status": "issued"
-  }
-}
-```
-
-## 6.8 InventoryAdjustResponse (éxito)
-```json
-{
-  "isSuccess": true,
-  "message": "Ajuste de inventario registrado correctamente",
-  "data": {
-    "id": "uuid-invtx-001",
-    "inventoryItemId": "uuid-inv-pecho",
-    "delta": -2,
-    "reason": "sale",
-    "referenceId": "uuid-order-123",
-    "userId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" }
-  }
-}
-```
-
-## 6.9 ManualConsumptionResponse (cierre turno cocina)
-```json
-{
-  "isSuccess": true,
-  "message": "Consumos manuales registrados",
-  "data": {
-    "shiftId": "uuid-shift-001",
-    "entries": [
-      {"inventoryItemId":"uuid-bolsa-papa","quantity":3},
-      {"inventoryItemId":"uuid-bolsa-smile","quantity":1},
-      {"inventoryItemId":"uuid-envase-arroz","quantity":45}
-    ]
-  }
-}
-```
-
-## 6.10 CashOpenResponse (éxito)
-
-Request (`POST /shifts/open` — el `periodId` viene preseleccionado en la pantalla como sugerencia **editable**, [PDR §13.3](../business/pdr.md#133-decisiones-residuales-pendientes-de-cierre-antes-de-v1); nunca inferido del reloj):
-```json
-{ "openingAmount": 200.00, "cashRegisterId": "uuid-caja-1", "periodId": "uuid-period-manana" }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Caja abierta correctamente",
-  "data": {
-    "id": "uuid-shift-001",
-    "cashierId": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
-    "period": { "id": "uuid-period-manana", "name": "Mañana" },
-    "openingAmount": 200.00,
-    "startAt": "2026-05-01T09:00:00"
-  }
-}
-```
-
-## 6.10b CashCloseResponse (arqueo)
-
-**`POST /api/v1/shifts/close`** — cierra el turno y genera el arqueo con el desglose de §2.6 (PDR).
-
-Request:
-```json
-{ "countedAmount": 1450.00 }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Caja cerrada; arqueo generado",
-  "data": {
-    "id": "uuid-shift-001",
-    "openingAmount": 200.00,
-    "closingAmount": 1450.00,
-    "expectedAmount": 1455.00,
-    "discrepancy": -5.00,
-    "totals": {
-      "sales": 1255.00,
-      "byMethod": { "cash": 1100.00, "card": 155.00, "vale": 0.00 },
-      "expenses": 30.00,
-      "vouchers": 60.00,
-      "cancellations": { "count": 1, "amount": 36.00 }
-    }
-  }
-}
-```
-
-## 6.11 CancelOrderResponse (anulación de pedido pagado)
-
-Request (`POST /orders/{id}/cancel` — `reason` y `details` obligatorios, FR-011b):
 ```json
 { "reason": "Cliente cambió de opinión", "details": "Se devolvió el dinero en efectivo. Sin factura emitida." }
 ```
-Response:
+
+`201 { order }` con `status: "CANCELLED"`, `cancelReason`, `cancelDetails` y `cancelledAt`. En una transacción: **revierte el inventario** (`InventoryTransaction` `CANCELLATION_REVERT`), queda en el arqueo bajo `anulaciones` y escribe `CANCEL_SALE`.
+
+**`GET /orders/{id}`** ✅ (`CASHIER`, `DISPATCHER`, `ADMIN`; `SUPER_ADMIN` en cualquier sucursal) — `200 { order }`.
+
+**Errores propios:** `ORDER_NOT_FOUND` (404) · `FORBIDDEN` (403) · `ORDER_FROM_OTHER_BRANCH` (403).
+
+**`GET /orders`** ✅ (`CASHIER`, `DISPATCHER`, `ADMIN`; `SUPER_ADMIN` ve todas las sucursales) — alimenta el panel de despacho y el historial. **Sin paginación**, del más reciente al más antiguo.
+
+| Query | Significado |
+|---|---|
+| `status` | un `OrderStatus` |
+| `date` | un día `YYYY-MM-DD` (día calendario del servidor) |
+| `createdBy` | UUID del usuario que registró el pedido |
+| `table` | número de mesa exacto |
+| `customerId` | UUID del cliente |
+
+`data: { orders, total }`. Cada pedido de la lista trae los **mismos campos que el detalle, salvo `shift` y el detalle de las líneas**: `items` solo con `id`, `quantity`, `unitPrice` y `totalPrice`. El `SUPER_ADMIN` no puede filtrar por sucursal ni la lista indica a cuál pertenece cada pedido ([implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas)).
+
+**Errores propios:** `VALIDATION_ERROR` (400) · `USER_WITHOUT_BRANCH` (400).
+
+**`POST /orders/custom`** 🔲 Sprint 2 (`CASHIER`) — venta `LLEVAR` de **presas surtidas**. Es la **única excepción** de precio de [§5.0](#50-principios-de-diseño-de-la-api-el-backend-manda-el-frontend-renderiza): el `unitPrice` es el **confirmado por la cajera**; el sugerido lo calculó el POS con `piecePrices` ([§6.10](#610-pos--sprint-1-a-3)) y ella puede pisarlo.
+
 ```json
 {
-  "isSuccess": true,
-  "message": "Pedido anulado correctamente",
-  "data": {
-    "id": "uuid-order-001",
-    "status": "cancelled",
-    "cancelReason": "Cliente cambió de opinión",
-    "cancelDetails": "Se devolvió el dinero en efectivo. Sin factura emitida.",
-    "cancelledAt": "2026-05-01T22:30:00",
-    "inventoryReverted": true
-  }
+  "type": "LLEVAR", "paymentStatus": "PAID", "paymentMethod": "CASH",
+  "items": [ { "customPieces": [ { "type": "pecho", "qty": 2 }, { "type": "ala", "qty": 1 } ], "extras": [ { "type": "papa", "qty": 1 } ], "drinks": [ { "productId": "uuid-product-coca", "qty": 1 } ], "quantity": 1, "unitPrice": 35 } ]
 }
 ```
 
-## 6.11b OrderStatusUpdateResponse (despacho)
+`201 { order }` con `isCustom: true`, `type: "LLEVAR"` y la línea con `customPieces`, `quantity`, `unitPrice` y `totalPrice` (`"35"`). Al pagar, el inventario descuenta **exactamente** las presas y bebidas indicadas. Misma auditoría `CREATE_SALE`.
 
-**`PATCH /api/v1/orders/{id}/status`** — la despachadora marca `ready` / `delivered`.
+**`PATCH /orders/{id}/status`** 🔲 Sprint 4 (`DISPATCHER`) — la despachadora marca el avance.
 
-Request:
 ```json
-{ "status": "ready" }
-```
-Response:
-```json
-{ "isSuccess": true, "message": "Estado actualizado",
-  "data": { "id": "uuid-order-001", "status": "ready", "readyAt": "2026-05-01T22:15:00" } }
+{ "status": "READY" }
 ```
 
-## 6.12 PosContextResponse (carga del POS en una llamada)
-> `GET /api/v1/pos/context` — el POS carga con **una sola llamada liviana** (solo datos activos, sin históricos; el menú completo son ~15 productos → pocos KB). Los `discounts` ya vienen **filtrados por el backend** para esta sesión (activos + ventana vigente + autorización si corresponde): el POS pinta lo que recibe, no filtra nada (§5.0). Con `piecePrices` el POS calcula el **precio sugerido custom en el cliente**, sin más llamadas.
+`status` es `READY` o `DELIVERED`, y solo se permite la transición siguiente (`PREPARING → READY → DELIVERED`). `200 { order }` con `readyAt` (o `deliveredAt` y `deliveredById`). Al pasar a `READY` el número aparece en la pantalla pública ([§6.16](#616-vistas-públicas-e-impresión--sprint-4)).
+
+## 6.12 Descuentos — Sprint 3
+
+🔲 Globales (sin sucursal). Un descuento es un **monto fijo en Bs por plato** (no un porcentaje en V1) y es puramente monetario: no cambia el inventario ([PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). Objeto `discount`:
+
 ```json
-{
-  "isSuccess": true,
-  "message": "Contexto POS",
-  "data": {
-    "shift": { "id": "uuid-shift-001", "orderCount": 27, "startAt": "2026-05-01T09:00:00",
-               "period": { "id": "uuid-period-manana", "name": "Mañana" } },
-    "shiftPeriods": [
-      { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00" },
-      { "id": "uuid-period-noche", "name": "Noche", "displayOrder": 2, "referenceStart": "16:00", "referenceEnd": "23:00" }
-    ],
-    "products": [
-      {
-        "id": "uuid-product-porcion-media",
-        "name": "Porción Media",
-        "basePrice": 30.00,
-        "category": "Plato principal",
-        "variants": [
-          { "id": "uuid-variant-pm-mixto", "name": "Porción Media - Mixto",
-            "components": [ {"type":"presa","count":2}, {"type":"acompanamiento","name":"mixto","count":1} ],
-            "isDefault": true }
-        ]
-      },
-      { "id": "uuid-product-coca-500", "name": "Coca Cola 500 ml", "basePrice": 8.00, "category": "Bebida", "variants": [] }
-    ],
-    "discounts": [
-      { "id": "uuid-discount-personal", "name": "Descuento personal", "fixedAmount": 7.00, "availability": "endOfShift" }
-    ],
-    "piecePrices": [
-      { "type": "pecho", "salePrice": 12.00 },
-      { "type": "ala", "salePrice": 10.00 },
-      { "type": "pierna", "salePrice": 11.00 },
-      { "type": "entrepierna", "salePrice": 11.00 }
-    ]
-  }
-}
+{ "id": "uuid-discount-personal", "name": "Descuento personal", "fixedAmount": "7", "availability": "END_OF_SHIFT", "requiresAuthorization": false, "active": true, "createdAt": "…", "updatedAt": "…" }
 ```
 
-## 6.13 ExpenseCreateResponse (gasto desde caja — FR-009)
-> `POST /api/v1/expenses` — sin turno abierto → error claro (§5.0 para los derivados).
+**`POST /discounts`** (`ADMIN`) — `201 { discount }`. `name` obligatorio; `fixedAmount` número ≥ 0.01 con hasta 2 decimales; `availability` es `ALWAYS` (todo el turno) o `END_OF_SHIFT` (solo a fin de turno); `requiresAuthorization` (por defecto `false`) y `active` (por defecto `true`) opcionales.
 
-Request:
+**`GET /discounts`** (`ADMIN`) — `data: { discounts, total }`; filtros `?availability=` y `?active=`.
+
+**`PATCH /discounts/{id}`** (`ADMIN`) — cualquiera de los campos del alta. `200 { discount }`. **No altera las ventas pasadas**: cada línea conserva el monto que tenía al venderse.
+
+**`POST /discounts/{id}/authorize`** (`ADMIN`) — habilita a una cajera para un descuento que lo exige, **durante su turno actual**. El `shiftId` se deriva del turno abierto de esa cajera; el `ADMIN` solo autoriza a cajeras de su sucursal. El acto queda auditado (`AUTHORIZE_DISCOUNT`).
+
 ```json
-{ "description": "Compra de arroz", "amount": 35.50, "paidBy": "cash" }
-```
-Response:
-```json
-{
-  "isSuccess": true,
-  "message": "Gasto registrado correctamente",
-  "data": {
-    "id": "uuid-expense-001",
-    "description": "Compra de arroz",
-    "amount": 35.50,
-    "paidBy": "cash",
-    "shiftId": "uuid-shift-001",
-    "createdBy": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-    "createdAt": "2026-05-01T11:20:00"
-  }
-}
+{ "cashierId": "uuid-user-cashier" }
 ```
 
-## 6.14 AuditLogsByShiftResponse (consulta del rastro por turno — admin)
-> `POST /api/v1/audit-logs/shift` — body mínimo `{ date, periodId, cashRegisterId? }`, **sin paginación** (un turno son ~50-80 filas). Resolución por **FK directa** (`Shift` por fecha+período+caja → `AuditLog.shiftId IN`), sin ventanas horarias. Filas **tal cual** están en `audit_logs` (rastro crudo), con `user` resuelto (§5.0), orden `timestamp DESC`. La respuesta **ecoa lo resuelto** (`period`, `shifts` con su caja) para transparencia.
+```json
+{ "data": { "authorization": { "id": "uuid-auth-1", "discountId": "uuid-discount-compensacion", "shiftId": "uuid-shift-1", "cashier": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "authorizedBy": { "id": "…", "firstName": "Jhonny", "lastName": "Hurtado Zardan" }, "authorizedAt": "…" } } }
+```
 
-Request (`cashRegisterId` opcional — omitido = todas las cajas de ese período):
+Una autorización por descuento, cajera y turno; **se extingue al cerrar el turno** y no pasa al siguiente.
+
+**`GET /discounts/authorizations`** (`ADMIN`) — las autorizaciones vigentes de los turnos abiertos de su sucursal: `data: { authorizations, total }`.
+
+**Descuento en el pedido.** Se aplica **por plato, en la misma llamada que crea el pedido**: no existe una llamada aparte. Cada línea de `POST /orders` y `POST /orders/custom` admite `discountId`:
+
+```json
+{ "productId": "uuid-product-medio", "quantity": 2, "discountId": "uuid-discount-personal" }
+```
+
+El backend valida (activo, ventana `END_OF_SHIFT`, autorización del turno si la exige) y congela el monto **por unidad**. En la línea de la respuesta aparecen `discountId` y `discountAmount` (`"7"`: monto **por unidad**), `totalPrice = (unitPrice − discountAmount) × quantity`, el pedido trae `originalAmount` (suma sin descuento) y `total` (con descuento), y los descuentos aplicados van en el `details` de la auditoría `CREATE_SALE`. Si un `discountId` no se puede aplicar, **se rechaza el pedido entero**, sin crear nada parcial (`DISCOUNT_NOT_AVAILABLE`, `DISCOUNT_NOT_AUTHORIZED`).
+
+## 6.13 Vales — Sprint 3
+
+🔲 Un vale es un consumo del personal que se descuenta de la nómina: **no suma a la caja** pero sí descuenta inventario (`reason = VALE`) y entra al arqueo ([PDR §2.4](../business/pdr.md#24-vales-ventas-internas--descuento-por-nómina)). El `amount` **no se envía**: lo deriva el backend.
+
+**`POST /vouchers`** (`CASHIER`) — `201 { voucher }`. Requiere un turno abierto.
+
+```json
+{ "workerName": "MARIA LOPEZ", "productId": "uuid-product-medio", "discountId": "uuid-discount-personal", "note": "Almuerzo" }
+```
+
+| Campo | Regla |
+|---|---|
+| `workerId` o `workerName` | **al menos uno**: el trabajador es un usuario del sistema (`workerId`) o texto libre |
+| `productId` | obligatorio, producto activo |
+| `discountId` | opcional: el "Descuento personal" |
+| `note` | opcional |
+
+```json
+{ "data": { "voucher": { "id": "uuid-voucher-1", "code": "V-20260501-001", "workerId": null, "workerName": "MARIA LOPEZ", "productId": "uuid-product-medio", "productName": "Pollo Broaster 1/2", "originalAmount": "45", "discountAmount": "7", "amount": "38", "status": "ISSUED", "note": "Almuerzo", "issuedAt": "…", "shiftId": "uuid-shift-1", "issuedBy": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" } } } }
+```
+
+`amount = originalAmount − discountAmount`; el `code` es correlativo diario. Escribe `CREATE_VOUCHER`.
+
+**`GET /vouchers`** (`CASHIER`, `ADMIN`) — `data: { vouchers, total }` del más reciente al más antiguo, con filtros `?shiftId=`, `?status=` y `?from=&to=`. La cajera ve los de su turno; el `ADMIN`, los de su sucursal.
+
+## 6.14 Gastos — Sprint 3
+
+🔲 Un gasto es dinero que la cajera paga **desde la caja** (imprevistos). Entra al arqueo bajo `totals.expenses`. **No genera auditoría** (no es una acción crítica, [§4.3](#43-auditoría--implementación-v1)).
+
+**`POST /expenses`** (`CASHIER`) — `201 { expense }`. Requiere un turno abierto: el `shiftId` y el autor se derivan de la sesión, no se envían.
+
+```json
+{ "description": "Compra de arroz", "amount": 35.5, "paidBy": "CASH" }
+```
+
+`description` es obligatoria; `amount`, número ≥ 0.01 con hasta 2 decimales; `paidBy` es `CASH` o `REGISTER`.
+
+```json
+{ "data": { "expense": { "id": "uuid-expense-1", "description": "Compra de arroz", "amount": "35.5", "paidBy": "CASH", "shiftId": "uuid-shift-1", "createdBy": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "createdAt": "…" } } }
+```
+
+> **Decisión abierta:** el PDR solo pide "gastos" en el arqueo; hay que definir qué distingue `REGISTER` de `CASH` en el cálculo del monto esperado antes de implementar el cierre. Registrada en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
+
+## 6.15 Reportes — Sprint 3
+
+🔲 `ADMIN` de su sucursal (el `SUPER_ADMIN` indica `?branchId=`). Todos aceptan el rango `?from=&to=` (`YYYY-MM-DD`, inclusivo; por defecto, el día de hoy) y `?format=csv` para exportar (el CSV **no** va dentro del envelope). Cada consulta escribe `GENERATE_REPORT` con `entityId` legible (`sales:2026-07`).
+
+**`GET /reports/sales`** (FR-010a) — ventas por turno y total del rango.
+
+```json
+{ "data": { "from": "2026-07-01", "to": "2026-07-07", "totals": { "orders": 212, "sales": "9840", "byMethod": { "cash": "6100", "card": "3200", "vale": "540" } }, "shifts": [ { "shiftId": "uuid-shift-1", "date": "2026-07-07", "period": { "id": "…", "name": "Noche" }, "cashRegister": { "id": "…", "name": "Caja 1" }, "orders": 31, "sales": "1255" } ] } }
+```
+
+**`GET /reports/inventory-presas`** (FR-010b) — presas vendidas y restantes por tipo, consolidando ambos turnos.
+
+```json
+{ "data": { "from": "2026-07-01", "to": "2026-07-07", "pieces": [ { "type": "PECHO", "sold": 410, "currentStock": 40 } ] } }
+```
+
+**`GET /reports/cash-audit`** (FR-010c) — el arqueo de cada turno del rango, con la forma del cierre de turno ([§6.5](#65-turnos-y-períodos-de-turno--sprint-1)): `data: { shifts: [ { shift, totals } ] }`.
+
+**`GET /reports/branches-summary`** ⏸️ aplazado (`SUPER_ADMIN`) — resumen consolidado de todas las sucursales; se hace al final, junto con el dashboard.
+
+## 6.16 Vistas públicas e impresión — Sprint 4
+
+**Vistas públicas** 🔲 — sin autenticación. Devuelven **solo campos seguros** y nunca exponen el `id` interno, el CI ni el NIT.
+
+**`GET /public/orders/{token}`** — la comanda del cliente, por el `publicToken` del pedido (128 bits, no adivinable: un token desconocido, o el `id` interno, responde `404`).
+
+```json
+{ "data": { "order": { "orderNumber": 5, "type": "MESA", "status": "PREPARING", "paymentStatus": "PAID", "total": "90", "createdAt": "…", "items": [ { "productName": "Pollo Broaster 1/2", "variantName": "1/2 mixto", "quantity": 2 } ] }, "todayOrders": [ { "orderNumber": 3, "status": "READY", "total": "45" } ] } }
+```
+
+Si el pedido tiene `customerId`, `todayOrders` lista **los otros pedidos del mismo cliente del día** (la identidad agrupa; el **token** da el acceso, el NIT nunca es llave); en una venta anónima "S/N" es `[]`.
+
+**`GET /public/ready-orders?branchId=`** — la pantalla de "turnos de banco" (FR-007): **solo los números** de los pedidos en `READY` de la sucursal, sin nombre ni mesa ([PDR §2.8](../business/pdr.md#28-comandas-tickets-factura-y-notificaciones)). Al marcarse `DELIVERED`, el número desaparece.
+
+```json
+{ "data": { "orderNumbers": [12, 15, 18] } }
+```
+
+> **Decisión abierta:** `orderNumber` es correlativo **por turno**, y una sucursal con dos cajas abiertas repite números (el pedido 12 de cada caja). La pantalla necesita un criterio para no mostrar dos "12" (por ejemplo, prefijo de caja). Registrada en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
+
+**Impresión** 🔲 (`CASHIER`):
+
+**`POST /print/invoice`** — imprime la factura térmica de un pedido propio. `{ "orderId": "uuid-order-1" }` → `200` con `data: { printed: true }`. La venta anónima "S/N" es válida hasta Bs 1.000; por encima exige un cliente con CI o NIT ([PDR §2.12](../business/pdr.md#212-clientes-y-facturación-nominada)).
+
+**`GET /print/invoice/{orderId}/pdf`** — la misma factura como PDF (`application/pdf`, **fuera del envelope**): alternativa cuando la impresora no responde.
+
+## 6.17 Auditoría — Sprint 5
+
+🔲 `ADMIN` de su sucursal (el `SUPER_ADMIN` indica `branchId` en el body). Consulta el rastro de [§4.3](#43-auditoría--implementación-v1) **como lo piensa el negocio** y **sin paginación**. Las filas salen **tal cual** están en `audit_logs` (rastro crudo), con el `user` resuelto, de la más reciente a la más antigua. La consulta **no** crea filas de auditoría.
+
+**`POST /audit-logs/shift`** — el rastro de un turno (~50–80 filas). Se resuelve por FK directa: `Shift` por fecha + período + caja → `AuditLog` con ese `shiftId`.
+
 ```json
 { "date": "2026-07-07", "periodId": "uuid-period-noche" }
 ```
 
-Response:
+`cashRegisterId` es opcional: omitido, trae **todas las cajas** de ese período. La respuesta **ecoa lo resuelto** (período y turnos con su caja).
+
 ```json
 {
-  "isSuccess": true,
-  "message": "Registros de auditoría del turno",
   "data": {
     "date": "2026-07-07",
     "period": { "id": "uuid-period-noche", "name": "Noche" },
-    "shifts": [
-      { "id": "uuid-shift-002",
-        "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" },
-        "cashier": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" } }
-    ],
+    "shifts": [ { "id": "uuid-shift-2", "cashRegister": { "id": "uuid-caja-1", "name": "Caja 1" }, "cashier": { "id": "uuid-user-cashier", "firstName": "Mariela", "lastName": "Sanchez Sanchez" } } ],
     "count": 2,
     "rows": [
-      {
-        "id": "uuid-audit-002",
-        "entity": "Order",
-        "entityId": "uuid-order-004",
-        "action": "CREATE_SALE",
-        "user": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-        "timestamp": "2026-07-07T21:42:00",
-        "details": {
-          "total": 69.00,
-          "paymentMethod": "cash",
-          "discounts": [ { "discountId": "uuid-discount-personal", "amount": 7.00, "items": 3 } ]
-        }
-      },
-      {
-        "id": "uuid-audit-003",
-        "entity": "Shift",
-        "entityId": "uuid-shift-002",
-        "action": "CLOSE_SHIFT",
-        "user": { "id": "uuid-user-roxana", "firstName": "Roxana", "lastName": "Fernández" },
-        "timestamp": "2026-07-07T23:05:00",
-        "details": { "expected": 1455.00, "counted": 1450.00, "difference": -5.00 }
-      }
+      { "id": "uuid-audit-2", "entity": "Order", "entityId": "uuid-order-4", "action": "CREATE_SALE", "user": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "timestamp": "2026-07-07T21:42:00.000Z", "details": { "total": 69, "paymentMethod": "CASH" } },
+      { "id": "uuid-audit-3", "entity": "Shift", "entityId": "uuid-shift-2", "action": "CLOSE_SHIFT", "user": { "id": "…", "firstName": "Mariela", "lastName": "Sanchez Sanchez" }, "timestamp": "2026-07-07T23:05:00.000Z", "details": { "expected": 1455, "counted": 1450, "difference": -5 } }
     ]
   }
 }
 ```
 
-**`POST /api/v1/audit-logs/month`** — misma forma de fila, ventana = mes calendario:
+**`POST /audit-logs/month`** — misma forma de fila, ventana de un **mes calendario**.
 
-Request / response (resumen):
 ```json
 { "month": "2026-07" }
 ```
-```json
-{ "isSuccess": true, "message": "Registros de auditoría del mes",
-  "data": { "month": "2026-07", "count": 3180, "rows": [ "..." ] } }
-```
-> Día sin turnos en el período pedido → `shifts: []`, `rows: []` (no es error). `/month` incluye también los logs con `shiftId = null` (acciones de admin fuera de turno), que no aparecen en `/shift`. Un **año** completo no se consulta por acá: es un export CSV de reportes (V2).
 
-**`GET /api/v1/shifts/shift-periods`** — catálogo para la pantalla de apertura y el admin:
 ```json
-{ "isSuccess": true, "message": "Períodos de turno",
-  "data": [
-    { "id": "uuid-period-manana", "name": "Mañana", "displayOrder": 1, "referenceStart": "09:00", "referenceEnd": "16:00", "active": true },
-    { "id": "uuid-period-noche", "name": "Noche", "displayOrder": 2, "referenceStart": "16:00", "referenceEnd": "23:00", "active": true }
-  ] }
+{ "data": { "month": "2026-07", "count": 3180, "rows": [ "…" ] } }
 ```
+
+- Un día sin turnos en el período pedido devuelve `shifts: []` y `rows: []` (no es un error).
+- `/month` incluye también las filas con `shiftId = null` (acciones de administración fuera de turno, como `ADJUST_INVENTORY`), que **no** aparecen en `/shift`.
+- Un **año** completo no se consulta acá: es una exportación CSV de reportes (V2).
 
 ---
 
-# 7. OpenAPI skeleton (recomendación)
+# 7. OpenAPI y Postman (generados)
 
-El LLM debe generar `openapi: 3.0.3` con:
-- `securitySchemes` JWT Bearer
-- `paths` para todos los endpoints listados en §5.1
-- `tags` para agrupar requests (Products, Orders, Pos, Inventory, Shifts, Expenses, Vouchers, Discounts, Reports, Audit, Print)
-- `components/schemas` con los DTOs de request y response
-- Ejemplos de request/response basados en los payloads de §6
+La documentación ejecutable de la API **sale del código**, no se escribe a mano:
+
+- **Swagger UI:** `http://localhost:4000/api/docs`, y el documento OpenAPI 3 crudo en `http://localhost:4000/swagger.json`. En producción están ocultos salvo `SWAGGER_ENABLED_PRODUCTION=true` ([§1.1](#11-configuración-por-entorno)).
+- **`docs/swagger-postman/swagger.json`:** copia **versionada** del documento; la API la reescribe en cada arranque **solo con `APP_ENV=development`**.
+- **`docs/swagger-postman/wonder-chicken.postman_collection.json`:** la colección de Postman, generada del anterior con `pnpm postman:sync --no-push` (deterministica: sin ids y con ejemplos fijos). Trae un login por rol del seed, guarda el token solo y usa ids que existen en la base sembrada. Detalle y subida a Postman: [sincronizar-swagger-postman.md](sincronizar-swagger-postman.md).
+
+**Qué documenta cada endpoint** (decoradores en `src/common/swagger/`): el `data` real de éxito con el mensaje y el código HTTP (`@ApiOkEnvelope`), los errores propios con sus códigos (`@ApiErrors`) y los comunes de autenticación (`@ApiAuthErrors`), con ejemplos por rol. Los modelos de respuesta viven en `src/<módulo>/entities/`.
+
+**Regla para cualquier cambio de la API:** si cambia un DTO, un controller o un ejemplo, se regeneran `swagger.json` y la colección **en el mismo commit**, y se actualiza esta guía ([§5.1](#51-endpoints-principales) y [§6](#6-contratos-por-módulo-requestresponse)). Un campo de fecha o un `enum` lleva `example` (y `format: 'date'` si es solo fecha) para que la colección no cambie sola. Cuando hay una diferencia, **el código manda** y esta guía se corrige.
+
+**Red de seguridad mientras no hay tests:** `pnpm seed` + `pnpm api:snapshot` ejecuta ~200 pasos contra la API y compara estado HTTP y cuerpo normalizado con `scripts/api-snapshot/baseline.json`. Se corre antes de cerrar un cambio y cada diferencia se revisa; se acepta con `--update` solo si era esperada. El seed borra la base: se niega a correr fuera de `APP_ENV=development` o con una `DATABASE_URL` que no sea `localhost`.
 
 ---
 
 # 8. Test cases E2E (casos prioritarios)
 
-1. Crear producto + variante → aparece en POS.
-2. Registrar venta MESA con sustitución → precio NO cambia; inventario decrementa al confirmar pago.
-2b. Pedido estándar con bebida agregada y extras opcionales: `items = [Porción Media (30, sin bebida incluida), Bebida 2L (16)]` → `total = 46` (suma de ítems). Agregar también Porción de Papas (12) → `total = 58`. Un pedido de solo el plato (sin extras ni bebidas) → `total = 30`. Extras y bebidas sueltas son **opcionales**; cada uno es un `Product` y el backend calcula `Σ(unitPrice × quantity)`.
-3. Registrar venta LLEVAR `pendingPayment` → comanda se prepara; inventario NO decrementa hasta confirmar pago.
-4. Pedido `pendingPayment` cancelado manualmente por la cajera → inventario nunca tocado, ingreso nunca contabilizado, no requiere motivo. (No existe auto-cancelación por tiempo.)
-5. Crear orden custom LLEVAR vía `POST /api/v1/orders/custom` (item con `customPieces`: 2 pechos + 1 ala + 1 papa + 1 cocacola) → el sistema devuelve un **precio sugerido** = `2×salePrice(pecho) + 1×salePrice(ala) + precio papa + precio cocacola`; la cajera lo **pisa** con un precio distinto → se persiste el precio **confirmado**, no la sugerencia. Al pagar, decrementa exactamente 2 pechos, 1 ala y 1 cocacola. La orden queda con `type = LLEVAR` y `isCustom = true` (no existe `type = CUSTOM`).
-6. Abrir caja → registrar ventas (incl. vale, anulación, orden con descuento) → cerrar caja → arqueo correcto con desglose por método, vales y descuentos.
-7. Emitir vale → el front manda `productId` (sin `amount`) → el backend deriva `originalAmount` del producto y el `amount` = original; aparece en arqueo y en listado de vales; decrementa inventario.
-7b. Emitir vale con "Descuento personal": front manda `productId` + `discountId` → backend calcula `amount = originalAmount − discountAmount` (ej. 30 − 7 = 23, snapshot del descuento); el inventario descuenta las presas reales (no el equivalente al precio); el vale registra `originalAmount`, `discountAmount` y `amount`. Fuera de la ventana `endOfShift` el descuento no se ofrece.
-8. Pedido `preparing` → comanda digital aparece en panel despacho → marcar `ready` → pantalla pública muestra → marcar `delivered`.
-9. Cliente accede a `GET /public/orders/{token}` con el `publicToken` de su pedido → ve su comanda; probar un token aleatorio o el `id` interno → **404** (el token es no adivinable, FR-015).
-9b. Registrar cliente nuevo vía `POST /customers` → queda buscable por CI **y** por NIT vía `GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`. Crear orden con ese `customerId` → al abrir el `publicToken` de uno de sus pedidos, la vista lista **todos sus pedidos del día** (agrupados por `customerId` + fecha). Acceder con el NIT crudo en la URL → no funciona (el NIT no es llave; FR-019).
-9c. Venta anónima "S/N" (sin `customerId`) → su `publicToken` muestra **solo ese pedido**; no hay vista del día porque no hay identidad para agrupar.
-10. Cliente pide factura → impresora térmica imprime; impresora desconectada → PDF se descarga.
-11. Anular pedido pagado → motivo y detalles obligatorios → inventario revertido → aparece en arqueo.
-12. Reconciliación diaria: comparar `InventoryTransaction` vs `InventoryItem.currentStock`.
-13. Descuento al personal POR PLATO en **una sola llamada**: `POST /orders` con 3 Porciones Media (30 Bs c/u) donde cada ítem lleva `discountId` del "Descuento personal" (7 Bs por plato, `endOfShift`) → la orden se crea con `originalAmount = 90`, cada ítem con `discountAmount = 7` (snapshot por unidad) y `total = 90 − 21 = 69`, todo en la misma transacción (sin segunda llamada); los productos reales e inventario (6 presas) descuentan correcto; caja cuadra; el audit `CREATE_SALE` incluye los descuentos en `details`. Mandar `discountId` solo en 2 de los 3 platos → descuento 14, `total = 76`. Fuera de la ventana de fin de turno, la creación se rechaza completa con `DISCOUNT_NOT_AVAILABLE` (no se crea orden parcial).
-13b. Descuento que requiere autorización: sin `DiscountAuthorization`, `POST /orders` con ítems que llevan `discountId` de "Compensación al cliente" (7 Bs por plato, `always`, `requiresAuthorization`) se rechaza con `DISCOUNT_NOT_AUTHORIZED`. El admin autoriza la sesión de cajera vía `POST /discounts/{id}/authorize` (queda `AuditLog`) → la cajera crea **una o varias órdenes** del turno con ese `discountId` en los platos afectados, sin renovar la autorización por orden ni por plato. Al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente.
-13c. Snapshot del monto: crear una orden con platos a 7 Bs de descuento → el admin luego edita el `Discount` a 10 Bs (`PATCH /discounts/{id}`) → los ítems viejos conservan `discountAmount = 7`; una orden nueva toma 10.
-13d. Contexto POS: `GET /pos/context` con sesión de cajera autorizada para "Compensación al cliente" → `discounts` incluye ambas instancias vigentes; sin autorización → "Compensación al cliente" NO aparece (el backend filtra, el POS no); fuera de la ventana de fin de turno → "Descuento personal" NO aparece. `piecePrices` trae los 4 `salePrice` y el precio sugerido custom se calcula en el cliente sin llamadas adicionales.
-14. Cocinero registra consumos manuales al cierre → se vinculan al `Shift` y aparecen en reporte diario.
-14b. Ciclo crudo de presas — continuidad entre turnos: al cierre del turno mañana, cocinero registra `ShiftChickenLog` con `rawLeftover = 64` para cada `pieceType`. Al abrir el turno noche, `GET /api/v1/inventory/shift-chicken-log/{shiftIdNoche}` devuelve `reprocessRaw = 64` autopoblado por `pieceType`. Cocinero confirma o ajusta. Al cerrar el turno noche, el sistema reconcilia `(reprocessRaw + processedRaw − rawLeftover) − vendido_cocido_del_turno` vs `cookedLeftover` anotado y reporta discrepancia si existe.
-15. Usuario logueado como CASHIER intenta logear como DISPATCHER en mismo turno → falla.
-16. Registro de gastos (FR-009): `POST /expenses` con `{ description, amount, paidBy }` → el gasto queda ligado al turno activo de la cajera (`shiftId` derivado, no enviado) y aparece en el arqueo del cierre bajo `totals.expenses`; intentar registrar sin turno abierto → error claro; el gasto NO genera `AuditLog` (no es acción crítica §2.9).
-17. Consulta de auditoría por turno (FK directa): generar ventas en turno Mañana y turno Noche del mismo día → `POST /audit-logs/shift` con `{ date, periodId: noche }` devuelve **solo** los logs con `shiftId` de ese turno (los de la mañana no aparecen), orden `timestamp DESC`, con `user`, `period` y `shifts` (con su `cashRegister`) resueltos; con **dos cajas** abiertas en el mismo período, agregar `cashRegisterId` al body separa los logs por caja y omitirlo devuelve ambas; día sin turnos → `shifts: []`, `rows: []` (no error); la respuesta NO tiene `page`/`pageSize` (sin paginación). Un `ADJUST_INVENTORY` del admin (sin turno, `shiftId = null`) NO aparece en `/shift` pero SÍ en `POST /audit-logs/month`. Con token de CASHIER → **403**. La consulta en sí NO crea filas de audit.
-17b. Catálogo de períodos sin migración: el admin crea el período "Tarde" vía `POST /shifts/shift-periods` → aparece en `GET /shifts/shift-periods` y en `pos/context.shiftPeriods` → una cajera abre turno con ese `periodId` → `POST /audit-logs/shift` con ese período lo consulta normalmente. Todo sin tocar schema ni código. Los horarios de referencia son informativos: editarlos (`PATCH /shifts/shift-periods/{id}`) no reclasifica ningún turno existente. Desactivar el período (`active: false`) lo retira de las opciones de apertura sin tocar los turnos históricos que ya lo referencian.
-17c. El período se declara, no se infiere: abrir un turno a las 20:00 declarando `periodId = Mañana` → el sistema lo acepta (el reloj NO clasifica); `shifts/open` sin `periodId` → `VALIDATION_ERROR`.
-18. **Maestros creados por API sin seeder (criterio de aceptación del flujo §9)**: con la base vacía, `SUPER_ADMIN` crea sucursal y usuarios → `ADMIN` crea períodos, cajas, catálogo e ítems de inventario → `CASHIER` crea cliente, abre turno y registra venta pagada. Ningún paso requiere `pnpm seed` ni SQL directo. Si alguno lo necesita, es que falta un endpoint de alta.
-19. **Caja por sucursal**: `POST /cash-registers` con `name` repetido en la misma sucursal → `400 CASH_REGISTER_ALREADY_EXISTS`; el mismo `name` en **otra** sucursal → `201` (unicidad `@@unique([branchId, name])`); `PATCH /cash-registers/{id}/toggle-active` desactiva y reactiva sin borrar los turnos que referencian la caja; `POST /shifts/open` con caja inexistente, de otra sucursal o inactiva → `400` sin crear turno. `CASHIER` que intente `POST /cash-registers` → `403`.
-20. **Stock inicial con rastro**: `POST /inventory/items` con `initialStock: 40` para una presa → el ítem queda con `currentStock: 40` **y** existe una `InventoryTransaction` con `delta: 40`, `reason: RECEPTION`, `note: "Carga inicial de inventario"` ligada a ese ítem, creada en la MISMA transacción del alta (si el alta falla, no hay transacción). `productCode` repetido en la misma sucursal → `400 INVENTORY_ITEM_CODE_ALREADY_EXISTS`; en otra sucursal → `201`. `salePrice` en un ítem de tipo `INSUMO` → `400` (solo aplica a presas); `initialStock` negativo → `400`. `PATCH /inventory/items/{id}` con `currentStock` en el body → `400 VALIDATION_ERROR` (el stock solo se mueve por el alta o por `/inventory/adjust`, que exige motivo). `GET /inventory/items` responde `200` para `ADMIN` y para `COOK` (FR-008/FR-017) y `403` para `CASHIER`.
-21. **Baja de catálogo sin perder historial**: `PATCH /products/{id}/toggle-active` desactiva un producto → deja de aparecer en `GET /products` con token de `CASHIER` y en `GET /pos/context`; las órdenes históricas que lo consumieron se conservan con su `unitPrice` y su `snapshot` intactos; `PATCH /products/{id}` para cambiar el `basePrice` NO recalcula los totales ya cobrados. Editar con un `name` duplicado → `400 DUPLICATE_PRODUCT_NAME`. Mismo criterio para variantes (`PATCH /variants/{id}/toggle-active`): la variante desaparece del POS, el historial queda.
-22. **Alta de cliente en el POS**: `POST /customers` con `ci`, nombres y `sex` válidos → `201` con el cliente disponible de inmediato en `GET /customers/by-ci/{ci}` y `by-nit/{nit}`; `ci` repetido (incluso desde otra sucursal, porque el `Customer` es global) → `400 CUSTOMER_CI_ALREADY_EXISTS`; `nit` repetido → `400 CUSTOMER_NIT_ALREADY_EXISTS`; `sex` fuera del enum o `ci` con letras → `400 VALIDATION_ERROR`; `birthDate` válida (`YYYY-MM-DD`) se persiste, inválida → `400`. La respuesta **nunca** expone `passwordHash`. `DISPATCHER` y `COOK` attempting `POST /customers` → `403`.
-23. **Cliente en la orden (identidad ≠ copia)**: `POST /orders` con `customerId` válido y **sin** `customerName` → la orden persiste el `customerName` resuelto desde la base como snapshot; con `customerId` inexistente → `400 CUSTOMER_NOT_FOUND` **sin crear la orden**; con `customerId` de un cliente inactivo → `400 CUSTOMER_INACTIVE`; sin `customerId` → la orden queda como venta anónima "S/N" (`customerId: null`, `customerName: null`).
+Escenarios que la V1 debe cumplir de punta a punta. Cada caso indica su estado: ✅ ya se puede ejecutar contra la API actual, 🔲 queda para el sprint indicado. Los códigos son los del [catálogo de §5.5](#55-catálogo-de-códigos-de-error). Mientras no existan tests automatizados ([AGENTS.md](../../AGENTS.md)), se ejecutan a mano o con `pnpm api:snapshot`.
+
+## Ventas y pedidos
+
+1. ✅ **Catálogo → POS.** Crear un producto y una variante activos → aparecen en `GET /pos/context` con token de `CASHIER`.
+2. ✅ **Sustitución sin cambio de precio.** `POST /orders` con `substitutions: [{ from: "mixto", to: "arroz" }]` → el `total` es el mismo que sin sustitución. 🔲 Sprint 2: el inventario decrementa al confirmar el pago.
+   - **2b. ✅ Total multi-ítem.** `items = [Porción Media (30), Bebida 2L (16)]` → `total = "46"`; sumar Porción de Papas (12) → `"58"`; solo el plato → `"30"`. Extras y bebidas sueltas son **opcionales y cada uno es un `Product`**: el backend calcula `Σ(basePrice × quantity)`. Un `unitPrice` o `total` enviado por el front → `400 VALIDATION_ERROR`.
+   - **2c. ✅ Reglas de ítem.** Dos sustituciones en un ítem → `MULTIPLE_SUBSTITUTIONS_NOT_ALLOWED`; `from` distinto de `mixto` o `to` fuera de la lista → `INVALID_SUBSTITUTION_TARGET`; variante de otro producto → `VARIANT_REFERENCE_NOT_FOUND`; producto inactivo → `PRODUCT_INACTIVE`.
+3. ✅ **Pedido pendiente.** `POST /orders` con `paymentStatus: "PENDING"` (sin `paymentMethod`) → nace en `PREPARING` con `paymentStatus: "PENDING"`, sin auditoría. Con `paymentMethod` → `PAYMENT_METHOD_NOT_ALLOWED`; `PAID` sin método → `PAYMENT_METHOD_REQUIRED`. 🔲 Sprint 2: el inventario no decrementa hasta pagar.
+4. ✅ **Cancelación manual del pendiente.** `POST /orders/{id}/cancel` → `status: "CANCELLED"` sin pedir motivo; sobre un pedido pagado → `ORDER_ALREADY_PAID_USE_ANULL`. No existe auto-cancelación por tiempo.
+   - **4b. ✅ Pago del pendiente.** `POST /orders/{id}/pay` con `paymentMethod` → `paymentStatus: "PAID"` y `paidAt`; repetirlo → `ORDER_ALREADY_PAID`; sobre uno cancelado → `ORDER_CANCELLED`.
+5. 🔲 **Orden custom (Sprint 2).** `POST /orders/custom` con `customPieces` (2 pechos + 1 ala), 1 papa y 1 coca → el POS sugiere `2×salePrice(pecho) + salePrice(ala) + papa + coca` con `piecePrices`; la cajera lo **pisa** con otro precio → se persiste el **confirmado**. Al pagar decrementa exactamente 2 pechos, 1 ala y 1 coca. Queda `type: "LLEVAR"` e `isCustom: true`.
+6. 🔲 **Turno completo (Sprint 3).** Abrir caja ✅ → ventas (incluido un vale, una anulación y una orden con descuento) → `POST /shifts/close` → arqueo correcto con desglose por método, vales y descuentos.
+7. 🔲 **Vales (Sprint 3).** `POST /vouchers` con `productId` y sin `amount` → el backend deriva `originalAmount` y `amount`; aparece en el arqueo y en `GET /vouchers`; descuenta inventario con `reason = VALE`.
+   - **7b.** Con `discountId` ("Descuento personal"): `amount = originalAmount − discountAmount` (45 − 7 = 38) con el monto congelado; el inventario descuenta las presas reales; fuera de la ventana `END_OF_SHIFT` el descuento no se ofrece.
+8. 🔲 **Despacho (Sprint 4).** Pedido `PREPARING` → aparece en el panel (`GET /orders`) → `PATCH /orders/{id}/status` a `READY` → la pantalla pública muestra su número → `DELIVERED`.
+9. 🔲 **Vista pública (Sprint 4).** `GET /public/orders/{token}` con el `publicToken` → ve su comanda; con un token cualquiera o con el `id` interno → `404`.
+   - **9b.** Cliente con `customerId`: el `publicToken` de un pedido muestra también **todos sus pedidos del día**; con el NIT crudo en la URL no funciona (el NIT no es llave).
+   - **9c.** Venta anónima "S/N": el `publicToken` muestra **solo ese pedido** (`todayOrders: []`).
+10. 🔲 **Factura (Sprint 4).** `POST /print/invoice` imprime en la térmica; con la impresora desconectada, `GET /print/invoice/{orderId}/pdf` descarga el PDF.
+11. 🔲 **Anulación de un pagado (Sprint 2).** `POST /orders/{id}/cancel` con `reason` y `details` obligatorios → inventario revertido (`CANCELLATION_REVERT`) → aparece en el arqueo bajo anulaciones.
+12. ✅ **Reconciliación.** Sumar las `InventoryTransaction` de un ítem coincide con su `currentStock` (hoy: alta con stock inicial y ajustes; 🔲 Sprint 2 suma las ventas).
+
+## Descuentos (Sprint 3)
+
+13. 🔲 **Descuento por plato en una sola llamada.** `POST /orders` con 3 Porciones Media (45 Bs c/u) donde cada línea lleva el `discountId` del "Descuento personal" (7 Bs por plato, `END_OF_SHIFT`) → `originalAmount = "135"`, cada línea con `discountAmount = "7"` y `total = "114"`, todo en la misma transacción; el inventario descuenta las presas reales; `CREATE_SALE` incluye los descuentos en `details`. Con `discountId` solo en 2 de las 3 → `total = "121"`. Fuera de la ventana, se rechaza el pedido completo con `DISCOUNT_NOT_AVAILABLE` (nada parcial).
+   - **13b. Autorización.** Sin `DiscountAuthorization`, un `discountId` de "Compensación al cliente" → `DISCOUNT_NOT_AUTHORIZED`. El admin autoriza con `POST /discounts/{id}/authorize` (queda `AUTHORIZE_DISCOUNT`) → la cajera crea todas las órdenes que quiera del turno sin renovarla; al cerrar el turno deja de valer y **no pasa al siguiente**.
+   - **13c. Snapshot.** Editar el descuento de 7 a 10 (`PATCH /discounts/{id}`) → las líneas viejas conservan `discountAmount = "7"`; una orden nueva toma 10.
+   - **13d. Contexto POS.** Con la sesión autorizada, `GET /pos/context` trae ambos descuentos; sin autorización "Compensación al cliente" **no aparece** (el backend filtra); fuera de la ventana `END_OF_SHIFT`, "Descuento personal" tampoco. `piecePrices` trae los 4 `salePrice`.
+
+## Cocina (Sprint 2)
+
+14. 🔲 **Consumos manuales.** El cocinero registra insumos al cierre → se ligan al `Shift`, bajan el stock con `reason = MANUAL_CONSUMPTION` y aparecen en el reporte diario; un consumo que dejaría el stock en negativo se rechaza completo con `INSUFFICIENT_STOCK`.
+   - **14b. Continuidad del ciclo crudo.** Al cierre del turno mañana, `rawLeftover = 64` por tipo de presa → `GET /inventory/shift-chicken-log/{shiftNoche}` devuelve `reprocessRaw = 64` autopoblado; el cocinero confirma o ajusta; al cerrar el turno noche el sistema reconcilia `(reprocessRaw + processedRaw − rawLeftover) − vendido_cocido` contra `cookedLeftover` y reporta la discrepancia.
+
+## Sesión, gastos y auditoría
+
+15. 🔲 **Sesión única (Sprint 5).** Una cajera logueada intenta iniciar sesión otra vez en el mismo turno → falla.
+16. 🔲 **Gastos (Sprint 3).** `POST /expenses` con `{ description, amount, paidBy }` → queda ligado al turno activo (`shiftId` derivado) y aparece en `totals.expenses` del cierre; sin turno abierto → `NO_ACTIVE_SHIFT`; el gasto **no** genera auditoría.
+17. 🔲 **Auditoría por turno (Sprint 5).** Ventas en turno Mañana y Noche del mismo día → `POST /audit-logs/shift` con `{ date, periodId: noche }` devuelve **solo** los logs de ese turno, de la más reciente a la más antigua, con `user`, `period` y `shifts` resueltos; con dos cajas abiertas, `cashRegisterId` las separa y omitirlo devuelve ambas; un día sin turnos → `shifts: []`, `rows: []`; sin `page`/`pageSize`. Un `ADJUST_INVENTORY` del admin (`shiftId = null`) **no** aparece en `/shift` pero **sí** en `/month`. Con token de `CASHIER` → `403`. La consulta no crea filas de auditoría.
+   - **17b. ✅ Períodos sin migración.** El admin crea "Tarde" con `POST /shifts/shift-periods` → aparece en `GET /shifts/shift-periods` y en `pos/context.shiftPeriods` → una cajera abre turno con ese `periodId`. Editar sus horarios (`PATCH`) no reclasifica ningún turno; desactivarlo lo retira de las opciones sin tocar los turnos históricos y el admin lo ve con `?includeInactive=true`. 🔲 Sprint 5: consultar su auditoría.
+   - **17c. ✅ El período se declara.** Abrir un turno a las 20:00 declarando `periodId = Mañana` → se acepta (el reloj no clasifica); `POST /shifts/open` sin `periodId` → `400 VALIDATION_ERROR`; con un período inexistente → `SHIFT_PERIOD_REFERENCE_NOT_FOUND`.
+
+## Maestros y administración
+
+18. ✅ **Maestros por API, sin seeder** (criterio de aceptación de [§9](#9-despliegue-backups-y-sincronización)). Con la base vacía, `pnpm bootstrap:admin` crea al `SUPER_ADMIN` → este crea una sucursal y su `ADMIN` → el `ADMIN` crea el personal, los períodos, las cajas, el catálogo y los ítems de inventario → una `CASHIER` crea un cliente, abre turno y registra una venta pagada. Ningún paso requiere `pnpm seed` ni SQL. Si alguno lo necesita, falta un endpoint de alta.
+19. ✅ **Caja por sucursal.** `POST /cash-registers` con un `name` repetido en la misma sucursal → `CASH_REGISTER_ALREADY_EXISTS`; el mismo nombre en **otra** sucursal → `201`; `toggle-active` desactiva y reactiva sin borrar los turnos que la referencian. `POST /shifts/open` con una caja inexistente o de otra sucursal → `CASH_REGISTER_REFERENCE_NOT_FOUND`, inactiva → `CASH_REGISTER_INACTIVE`, y sin crear turno. Un `CASHIER` que intenta `POST /cash-registers` → `403`.
+20. ✅ **Stock inicial con rastro.** `POST /inventory/items` con `initialStock: 40` para una presa → `currentStock: 40` **y** una `InventoryTransaction` `delta: 40`, `reason: RECEPTION`, `note: "Carga inicial de inventario"`, creada en la **misma transacción**. `productCode` repetido en la sucursal → `INVENTORY_ITEM_CODE_ALREADY_EXISTS` (en otra sucursal, `201`); `salePrice` en un tipo que no es presa → `SALE_PRICE_NOT_ALLOWED_FOR_TYPE`; `initialStock` negativo → `400`. `PATCH /inventory/items/{id}` con `currentStock` → `400 VALIDATION_ERROR`. `GET /inventory/items` responde `200` para `ADMIN` y `COOK` y `403` para `CASHIER`.
+21. ✅ **Baja de catálogo sin perder historial.** `toggle-active` de un producto → deja de aparecer en `GET /products` (con `CASHIER`) y en `GET /pos/context`; sus órdenes históricas conservan `unitPrice` y `snapshot`; cambiar el `basePrice` no recalcula lo ya cobrado. Un `name` duplicado → `DUPLICATE_PRODUCT_NAME`. Igual para variantes.
+22. ✅ **Alta de cliente en el POS.** `POST /customers` válido → `201` y disponible en `by-ci` y `by-nit`; `ci` repetido (incluso de otra sucursal: el cliente es global) → `CUSTOMER_CI_ALREADY_EXISTS`; `nit` repetido → `CUSTOMER_NIT_ALREADY_EXISTS`; `sex` fuera del enum o `ci` con letras → `400 VALIDATION_ERROR`; la respuesta **nunca** expone `passwordHash`. `DISPATCHER` y `COOK` → `403`.
+23. ✅ **Cliente en la orden (identidad ≠ copia).** `POST /orders` con `customerId` válido → persiste el `customerName` resuelto desde la base; inexistente → `CUSTOMER_REFERENCE_NOT_FOUND` (sin crear la orden); inactivo → `CUSTOMER_INACTIVE`; sin `customerId` → venta anónima "S/N" (`customerId` y `customerName` en `null`).
+
+## Alcance, sesión y reglas de turno
+
+24. ✅ **Login y perfil.** `POST /auth/login` con el correo y la CI → `accessToken`; `GET /auth/me` devuelve el perfil con `branchId` y `branchName`; con credenciales incorrectas → `INVALID_CREDENTIALS`; sin token → `TOKEN_REQUIRED`; token alterado → `TOKEN_INVALID`; usuario desactivado con token vigente → `USER_INACTIVE`.
+25. ✅ **Rol y sucursal salen de la base.** Cambiar el rol o la sucursal de un usuario (sin turno abierto) tiene efecto **en su siguiente request**, sin que vuelva a loguearse; desactivarlo corta su sesión de inmediato.
+26. ✅ **Alcance de usuarios.** `ADMIN` crea `CASHIER`/`DISPATCHER`/`COOK` en su sucursal; intentar `ADMIN` o `SUPER_ADMIN` → `ROLE_NOT_ALLOWED`; mandar otra sucursal → `BRANCH_OUT_OF_SCOPE`; leer o editar a alguien de otra sucursal → `404`. `SUPER_ADMIN` crea cualquier rol y elige la sucursal; sin `branchId` para un rol que lo exige → `BRANCH_REQUIRED_FOR_ROLE`.
+27. ✅ **Alcance de pedidos.** El `ADMIN` y el resto solo ven los pedidos de su sucursal (`GET /orders/{id}` de otra → `ORDER_FROM_OTHER_BRANCH`); el `SUPER_ADMIN` ve todas.
+28. ✅ **Reglas de turno.** Una cajera con un turno abierto que intenta abrir otro → `SHIFT_ALREADY_OPEN`; una caja ya abierta por otra cajera → `CASH_REGISTER_IN_USE`; vender sin turno → `NO_ACTIVE_SHIFT`; cambiar el rol o la sucursal de alguien con turno abierto → `USER_HAS_OPEN_SHIFT`.
+29. ✅ **Administración de clientes.** `GET /customers` pagina y filtra por `search`, `status` y rango de alta; `PATCH /customers/{id}` edita nombres, sexo, nacimiento y contacto pero **no** `ci` ni `nit` (`400`) y no altera el `customerName` de pedidos pasados; `toggle-active` lo oculta de los lookups; `GET /customers/{id}/orders` lista sus pedidos de **todas** las sucursales.
+30. ✅ **Ajuste y dashboard de inventario.** `POST /inventory/adjust` con `delta = −5` sobre un stock de 3 → `INSUFFICIENT_STOCK` sin cambios; con `delta: 0` o sin `note` → `400`; un ajuste válido actualiza el stock, escribe la transacción y `ADJUST_INVENTORY` juntos. `GET /inventory/dashboard` devuelve siempre las 4 presas; sin turno abierto, `shift: null` y deltas en 0.
 
 ---
 
 # 9. Despliegue, backups y sincronización
 
-- **Modo inicial (V1):** Servidor local (Windows 10) ejecutando aplicación web; **PostgreSQL local**. Código multiplataforma (también funciona en Linux).
-- **Distribución (V1):** Aplicación web local. **Docker Compose opcional** para portabilidad pero no requerido.
-- **Sincronización (V2):** Operación local en V1; sincronización a nube en **V2** (fase posterior).
-- **Backups (V2):** Copia diaria automática de BD + opción de backup manual disponible para administrador.
-- **Conflictos de sincronización (V2):** Priorizar cambios locales recientes; registrar conflictos para resolución manual.
+- **Modo inicial (V1):** servidor local (Windows 10) con la aplicación web y **PostgreSQL local**. Código multiplataforma (también corre en Linux).
+- **Distribución (V1):** aplicación web local. **Docker Compose opcional** para portabilidad, no requerido.
+- **Entornos:** `APP_ENV` (`development`, `qa`, `production`) es obligatorio y elige el perfil de configuración ([§1.1](#11-configuración-por-entorno)). En producción: `JWT_SECRET` propio, `CORS_ORIGINS` explícito y Swagger oculto salvo `SWAGGER_ENABLED_PRODUCTION=true`.
+- **Primer arranque:** `pnpm bootstrap:admin` crea al `SUPER_ADMIN` inicial (idempotente; variables en [§1.1](#11-configuración-por-entorno)); desde ahí todo se da de alta por API, sin seeder ([caso 18](#8-test-cases-e2e-casos-prioritarios)). `pnpm seed` es **solo de desarrollo**: borra la base.
+- **Documentación compartida:** `docs/` es un subtree que se comparte con el repositorio del frontend (`pnpm docs:pull` / `docs:push` / `docs:check`).
+- **Sincronización (V2):** operación local en V1; sincronización a la nube en **V2**.
+- **Backups (V2):** copia diaria automática de la base y backup manual para el administrador.
+- **Conflictos de sincronización (V2):** priorizar los cambios locales recientes y registrar los conflictos para resolución manual.
 
 ---
 
 # 10. Mapeo Negocio → Técnica
 
-Tabla de referencia rápida entre los conceptos del PDR y su contraparte técnica en este documento.
+Referencia rápida entre los conceptos del PDR y su contraparte técnica.
 
 | Concepto de negocio (PDR) | Contraparte técnica |
 |---------------------------|---------------------|
-| Pedido estándar multi-ítem (§2.2 / FR-002) | `Order.items[]` con N `Product` (platos + extras + bebidas, por `category`), cada uno con `quantity`; `total = Σ(unitPrice × quantity)`, `unitPrice` tomado de `Product.basePrice` por el backend |
-| Venta custom de presas surtidas (§2.10) | Endpoint `POST /api/v1/orders/custom`; flag `Order.isCustom = true`; ítem con `customPieces: JSON` |
-| Tipo de pedido (MESA / LLEVAR) (§2.8) | `Order.type: enum(MESA, LLEVAR)` — CUSTOM **no** es un valor de `type` |
-| Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions: JSON` con `{from, to}`; sin campo de ajuste de precio |
-| Feature de descuentos — catálogo (§2.11 / FR-016) | Entidad `Discount`; CRUD vía `/api/v1/discounts` |
-| Aplicar descuento POR PLATO (§2.11 / FR-016) | `discountId?` por ítem en `POST /orders[/custom]` (una llamada, §5.0 princ. 6) → `OrderItem.discountAmount` (snapshot) + totales derivados |
-| Instancias: descuento al personal / compensación al cliente (§2.11) | Filas del catálogo `Discount` referenciadas vía `OrderItem.discountId` (configs en [PDR §2.11](../business/pdr.md#211-descuentos-sobre-la-orden-incluye-descuento-al-personal)). Los antiguos `Order.internalDiscount`/`discountId`/`discountAmount` quedan **eliminados** |
-| Autorización de descuentos por turno (§2.11 / FR-016b) | `DiscountAuthorization`; `POST /discounts/{id}/authorize`; se extingue al cerrar turno; acto auditado |
-| Precio sugerido en venta custom (§2.10) — **V1** | `InventoryItem.salePrice` por presa cocida (config admin vía `PATCH /inventory/{id}/sale-price`); cálculo `sum(customPieces[].qty × salePrice) + extras + bebidas`; la cajera puede pisarlo, se persiste el confirmado |
-| Pedido con pago pendiente (§2.5) | `Order.status = pendingPayment` + `paymentStatus = pending`; cancelación solo manual |
-| Confirmación de pago | Endpoint `POST /api/v1/orders/{id}/pay`; transición a `paid` + decremento atómico de inventario |
-| Anulación de pedido pagado (FR-011b) | Endpoint `POST /api/v1/orders/{id}/cancel` con `reason` + `details`; reversión de `InventoryTransaction` |
-| Notificación de pedido listo (§2.8 / FR-007) | `Order.readyAt` registrado; pantalla pública lee órdenes con `status = ready` |
-| Entrega del pedido | `Order.deliveredAt` + `Order.deliveredBy` |
-| Inventario por presas (§2.3) | `InventoryItem.type ∈ {pecho, ala, pierna, entrepierna}`; decremento vía `InventoryTransaction` con `reason = sale` |
-| Consumos manuales por turno (FR-017) | `DailyManualConsumption` ligado a `Shift` |
-| Ciclo crudo de presas por turno — plano crudo (§2.3, FR-017) | `ShiftChickenLog` ligado a `Shift`; campos `reprocessRaw`, `processedRaw`, `rawLeftover`, `cookedLeftover` por `pieceType`; regla de continuidad entre turnos: `rawLeftover(T) → reprocessRaw(T+1)` vía autopoblado en `GET /shift-chicken-log/{shiftId}` |
-| Vales (§2.4) | Entidad `Voucher`; `amount` **derivado** de `productId` (`originalAmount`) menos `discountAmount` si lleva "Descuento personal" (`discountId`, snapshot); `InventoryTransaction.reason = vale`; NO suma al ingreso de `Shift` |
-| Apertura/cierre de caja por turno (§2.6) | Entidad `Shift` con `openingAmount`, `closingAmount`, `expectedAmount`, `discrepancy` |
-| Caja = 1 cajera por turno (§2.7) | `Shift.cashierId` único activo por `cashRegisterId` |
-| Sesión única por turno (FR-008b) | Constraint a nivel servicio: 1 sesión activa por `userId` por `shiftId` |
-| Roles funcionales (§2.7) | `User.role: enum(ADMIN, CASHIER, DISPATCHER, COOK)` — enforcement por rol en el backend vía `RolesGuard` + `@Roles` (V1, FR-018); ver §5.2 |
-| Auditoría de acciones críticas (§2.9) | `AuditLog` (+`shiftId?`: el log nace sabiendo su turno); consulta sin paginación vía `POST /audit-logs/shift` y `/month` (§4.3, §6.14) |
-| Turnos del día y tercer turno futuro (§13.3 PDR) | Catálogo `ShiftPeriod` (no enum); `Shift.periodId` **declarado al abrir**, nunca inferido del reloj |
-| Registro de gastos desde caja (§2.6 / FR-009) | `POST /expenses`; `shiftId`/`createdBy` derivados (§5.0); aparece en arqueo y reportes |
-| Clientes y facturación nominada (§2.12 / FR-019) | Entidad `Customer` (`ci` único, `nit?`, datos personales); lookup exacto por CI/NIT vía `GET /customers/by-ci/{ci}` y `GET /customers/by-nit/{nit}`; `Order.customerId` opcional (anónimo = "S/N", legal ≤ Bs 1.000) |
-| Vista del cliente — por pedido y pedidos del día (§7.4 / FR-015 / FR-019) | `Order.publicToken` no adivinable; `GET /public/orders/{token}` (público); identidad (`customerId`) **agrupa** los pedidos del día, el **token** da acceso — el NIT no es llave |
-| Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total se calcula automáticamente con `InventoryItem.salePrice` (ya definido en V1), sin intervención de la cajera |
-| Visión V2: cuenta de cliente (§2.12 / §7.4) | Auto-registro + login del cliente; `GET /me/orders` seguro por auth, sin token por pedido |
+| Pedido estándar multi-ítem (§2.2 / FR-002) | `Order.items[]` con N `Product` (platos, extras y bebidas por `category`), cada uno con `quantity`; `total = Σ(unitPrice × quantity)` con el `unitPrice` tomado de `Product.basePrice` **por el backend** |
+| Venta custom de presas surtidas (§2.10) | 🔲 `POST /orders/custom`; `Order.isCustom = true`; línea con `customPieces` |
+| Tipo de pedido (MESA / LLEVAR) (§2.8) | `Order.type: MESA \| LLEVAR`; custom **no** es un valor de `type` |
+| Sustitución de acompañamiento sin afectar precio (§2.1) | `OrderItem.substitutions` (`{ from, to }`, máximo 1); sin campo de ajuste de precio |
+| Catálogo de descuentos (§2.11 / FR-016) | 🔲 Entidad `Discount`; `/discounts` |
+| Descuento POR PLATO (§2.11) | 🔲 `discountId?` en cada línea de `POST /orders[/custom]` (una sola llamada) → `OrderItem.discountAmount` (monto congelado) y totales derivados |
+| Autorización de descuentos por turno (§2.11 / FR-016b) | 🔲 `DiscountAuthorization`; `POST /discounts/{id}/authorize`; se extingue al cerrar el turno; acto auditado |
+| Precio sugerido en venta custom (§2.10) | 🔲 `InventoryItem.salePrice` por presa (✅ editable en `PATCH /inventory/items/{id}`); el POS suma con `piecePrices`; la cajera puede pisarlo y se persiste el confirmado |
+| Pedido con pago pendiente (§2.5) | ✅ `paymentStatus = PENDING` con `status = PREPARING`; cancelación solo manual |
+| Confirmación de pago | ✅ `POST /orders/{id}/pay`; 🔲 Sprint 2 suma el descuento atómico de inventario |
+| Anulación de pedido pagado (FR-011b) | 🔲 `POST /orders/{id}/cancel` con `reason` + `details`; reversión con `CANCELLATION_REVERT` |
+| Notificación de pedido listo (§2.8 / FR-007) | 🔲 `Order.readyAt`; pantalla pública con `GET /public/ready-orders` |
+| Entrega del pedido | 🔲 `Order.deliveredAt` + `deliveredById` |
+| Inventario por presas (§2.3) | ✅ `InventoryItem.type ∈ PECHO, ALA, PIERNA, ENTREPIERNA`; todo movimiento es una `InventoryTransaction` con su `reason`; 🔲 las ventas descuentan con `SALE` |
+| Ajustes manuales con motivo (§2.3) | ✅ `POST /inventory/adjust` (`ADJUSTMENT` / `RECEPTION`, con `note`); `ADJUST_INVENTORY` en auditoría |
+| Stock cocido del turno (FR-006) | ✅ `GET /inventory/dashboard` |
+| Consumos manuales por turno (FR-017) | 🔲 `DailyManualConsumption` ligado a `Shift` |
+| Ciclo crudo de presas (§2.3, FR-017) | 🔲 `ShiftChickenLog` por turno y tipo de presa; continuidad `rawLeftover(T) → reprocessRaw(T+1)` |
+| Vales (§2.4) | 🔲 `Voucher`; `amount` **derivado** (`originalAmount − discountAmount`); `InventoryTransaction.reason = VALE`; no suma a la caja |
+| Apertura de caja por turno (§2.6) | ✅ `Shift` con `openingAmount`, el período **declarado** y la caja |
+| Cierre de caja y arqueo (§2.6) | 🔲 `closingAmount`, `expectedAmount`, `discrepancy` |
+| Caja = 1 cajera a la vez; cajera = 1 turno abierto (§2.7) | ✅ validado por la aplicación al abrir: `SHIFT_ALREADY_OPEN` y `CASH_REGISTER_IN_USE` |
+| Sesión única por turno (FR-008b) | 🔲 Sprint 5, a nivel de servicio |
+| Roles funcionales (§2.7 / FR-018) | ✅ `User.role` (`SUPER_ADMIN`, `ADMIN`, `CASHIER`, `DISPATCHER`, `COOK`; el cliente es la entidad `Customer`, no un rol); `AuthGuard` + `RolesGuard` + `@Roles`; alcance por sucursal en [§5.6](#56-alcance-por-rol-y-sucursal) |
+| Multi-sucursal (§2.7 / §2.12) | ✅ `Branch`; usuarios, cajas, inventario, turnos y pedidos son por sucursal; productos y clientes son globales |
+| Auditoría de acciones críticas (§2.9) | ✅ `AuditLog` (con `shiftId?`); 🔲 consulta sin paginación con `POST /audit-logs/shift` y `/month` ([§4.3](#43-auditoría--implementación-v1), [§6.17](#617-auditoría--sprint-5)) |
+| Turnos del día y tercer turno futuro (§13.3) | ✅ Catálogo `ShiftPeriod` (no un enum); `Shift.periodId` declarado al abrir |
+| Gastos desde caja (§2.6 / FR-009) | 🔲 `POST /expenses`; `shiftId` y autor derivados |
+| Clientes y facturación nominada (§2.12 / FR-019) | ✅ `Customer` global (`ci` único, `nit?`); lookup exacto por `GET /customers/by-ci/{ci}` y `by-nit/{nit}`; `Order.customerId` opcional (anónimo = "S/N", legal hasta Bs 1.000) |
+| Vista del cliente (§7.4 / FR-015 / FR-019) | 🔲 `Order.publicToken` (✅ ya se genera); `GET /public/orders/{token}`; el `customerId` agrupa los pedidos del día, el **token** da el acceso |
+| Visión V2: auto-servicio (§2.10) | El cliente arma su pedido custom; el total sale de `InventoryItem.salePrice`, sin la cajera |
+| Visión V2: cuenta de cliente (§2.12 / §7.4) | Auto-registro y login del cliente; `GET /me/orders` seguro por autenticación |
 
 ---
 
 ## Notas finales
 
-- Este documento se mantiene sincronizado con el PDR. Cuando una regla de negocio cambia, esta guía se actualiza en consecuencia, **nunca al revés**.
-- Las **decisiones residuales** (umbral de discrepancia de arqueo, política contable de vales, etc.) están en [PDR §13.3 / §14](../business/pdr.md) — no se duplican aquí.
-- Las **decisiones de scope V1 vs V2** están en [PDR §13](../business/pdr.md) — este documento solo refleja **detalles técnicos** de cada decisión.
-
-
+- Este documento se mantiene sincronizado con el [PDR](../business/pdr.md): cuando una regla de negocio cambia, esta guía se actualiza en consecuencia, **nunca al revés**. Cuando el código y esta guía difieren, el código manda y la guía se corrige en el mismo cambio.
+- Las **decisiones residuales** (umbral de discrepancia del arqueo, política contable de vales, etc.) están en [PDR §13.3 / §14](../business/pdr.md) y no se duplican aquí.
+- Las **decisiones de alcance V1 vs V2** están en [PDR §13](../business/pdr.md); esta guía solo refleja los detalles técnicos.
+- Lo que falta construir, las decisiones abiertas y la deuda técnica conocida: [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).

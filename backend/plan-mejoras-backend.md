@@ -1,28 +1,34 @@
 # Plan — Mejoras del backend (duplicación, contrato, tipos y entornos)
 
-> **Fecha:** 2026-10-05 · **Estado:** ✅ **ejecutado** (pasos 0 a 6; ver §8) · Rama: `feature_sprint1_integrate_front`
+> **Fecha:** 2026-10-05 · **Estado:** ✅ **ejecutado y verificado** (§1) · Rama: `feature_sprint1_integrate_front`
 > **Origen:** revisión del backend (2026-10-05) y entrevista de decisiones, una pregunta por vez.
-> **Relación con otros planes:** complementa [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (§4: cambios #1 a #16 del backend). Si hay conflicto de orden, manda la sección 5 de este documento.
+> **Relación con otros documentos:** complementa [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (cómo conecta el front con el API). Lo que quedó **pendiente** vive en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas).
 > **Convención:** el código, los identificadores y las referencias a código en la documentación van en **inglés**; la documentación en sí, en español.
 
 ---
 
-## 1. Por qué
+## 1. ¿Se cumplió el propósito? Verificación (2026-10-05)
 
-La revisión midió, sobre 74 archivos y ~6.200 líneas de `src/`:
+El plan nació de medir problemas concretos del backend. Se **volvieron a medir** sobre el código actual (no se confió en el historial de commits):
 
-| Hallazgo | Medición |
-|---|---|
-| Respuestas de éxito armadas a mano | 40 literales `{ isSuccess: true, ... }`, 38 mensajes distintos |
-| Errores de negocio sin código estable | 37 de 72 salen como `"Bad Request"` / `"Not Found"` |
-| `resolveUserBranchId()` | 4 copias **idénticas** (cash-registers, inventory, orders, shifts) |
-| `@Transform` para recortar texto | 33, todos con la misma lógica (2 variantes) |
-| `orders.service.create()` | 226 líneas en un solo método |
-| Errores de lint de `src/` | 22, todos `no-unsafe-*` |
-| `@ApiResponse` sin tipo de `data` | 123 (ninguno declara `type`) |
-| Swagger en producción | `/api/docs` y `/swagger.json` públicos, con emails de usuarios del seed y `password123` |
+| Problema | Antes | Ahora | Cómo se verifica |
+|---|---|---|---|
+| Respuestas de éxito armadas a mano | 40 literales, 38 mensajes distintos | **0** literales: todo pasa por `ok(message, data)` (47 usos en services) | `rg "isSuccess: true" src` solo da `api-result.ts` |
+| Errores de negocio sin código estable | 37 de 72 salían como `"Bad Request"` / `"Not Found"` | **0** excepciones sueltas de Nest en services y guards: 90 `BusinessException`, 58 códigos en un catálogo | `rg "new (BadRequest\|NotFound\|Conflict\|Forbidden\|Unauthorized)Exception" src` |
+| `resolveUserBranchId()` | 4 copias idénticas | **0**: `requireBranchId(actor)` lee la sucursal que el guard ya resolvió | `rg resolveUserBranchId src` |
+| `@Transform` para recortar texto | 33 | **0** en DTOs; 37 usos de `@Trim()` | `rg "@Transform" src --glob "*.dto.ts"` |
+| `orders.create()` | 226 líneas | **41 líneas**, una receta de pasos con nombre | conteo del método |
+| Errores de lint de `src/` | 22 | **0** | `pnpm exec eslint "src/**/*.ts"` |
+| `@ApiResponse` sin tipo de `data` | 123 | **0** escritos a mano; las **50** operaciones de `swagger.json` tienen su 2xx tipado | `swagger.json` |
+| Swagger en producción | público, con los usuarios y la clave del seed | **oculto** salvo `SWAGGER_ENABLED_PRODUCTION=true` | se levantó la app en `production`, `qa` y `development` |
+| `AuthGuard` sin consultar la base | un usuario desactivado seguía operando hasta que vencía el token | **`401 USER_INACTIVE`** al instante; rol y sucursal siempre vigentes | prueba manual: desactivar → 401 → reactivar → 200 |
 
-Además se detectó que el `AuthGuard` **no consulta la base**: un usuario desactivado con un token vigente sigue operando hasta que el token vence (2 h en `development`, 8 h en `production`).
+**Resultado: el propósito se cumplió.** Quedan dos excepciones conocidas y deliberadas, ambas anotadas en [implementation_guide.md §10](implementation_guide.md#10-mejoras-del-backend-pendientes-y-decisiones-abiertas):
+
+- `AuditService.log` todavía lanza un `BadRequestException` (es un error de programación, no del cliente; debería ser un `Error`).
+- `PrismaService` todavía lee `DATABASE_URL` de `process.env` en vez de la configuración validada.
+
+**Red de seguridad:** `pnpm api:snapshot` (200 pasos) da cero diferencias en corridas consecutivas. La colección de Postman se genera idéntica dos veces seguidas (55 requests, 211 respuestas de ejemplo).
 
 ---
 
@@ -31,19 +37,28 @@ Además se detectó que el `AuthGuard` **no consulta la base**: un usuario desac
 | # | Tema | Decisión |
 |---|---|---|
 | 1 | Respuesta de éxito | Helper explícito `ok(message, data)`. Devuelve `{ isSuccess: true, message, data, error: null }`. |
-| 2 | Contrato final | **Errores como la guía** (`details` = array `[{ field, message }]`); **éxito como el código** (`error: null`, 38 de 38 respuestas hoy). Se corrige la guía. |
+| 2 | Contrato final | **Errores como la guía** (`details` = array `[{ field, message }]`); **éxito como el código** (`error: null`). Se corrigió la guía (§5.3 y §5.4). |
 | 3 | Excepción de negocio | Una clase `BusinessException` con `code` obligatorio. |
-| 4 | Códigos de error | Catálogo central `ErrorCode`. |
-| 5 | Status HTTP | Lo declara el catálogo (cada código tiene su status). `BusinessException` no recibe `status`. Un decorador `@ApiErrors(...)` genera los `@ApiResponse` desde el mismo catálogo. |
-| 6 | Sucursal del usuario | El `AuthGuard` resuelve el usuario **una vez por request** (existe, está activo, sucursal vigente) y la deja en `request.user`. Los services leen `actor.branchId`. |
+| 4 | Códigos de error | Catálogo central `ERRORS` en `src/common/errors/error-codes.ts`. |
+| 5 | Status HTTP | Lo declara el catálogo (cada código tiene **un** status). `BusinessException` no recibe `status`. `@ApiErrors(...)` genera los `@ApiResponse` desde el mismo catálogo. |
+| 6 | Usuario, rol y sucursal | El `AuthGuard` consulta la base **una vez por request** (existe, está activo) y deja en `request.user` el **rol y la sucursal vigentes** (los del token se descartan; el token solo aporta `sub`). Los services leen `actor.branchId` con `requireBranchId(actor)`. |
 | 7 | Dividir `orders.create()` | Pasos con nombre dentro del módulo (métodos privados y funciones puras en `orders.helpers.ts`). Sin clases nuevas ni DI nueva. |
 | 8 | Red de seguridad | Script de "foto" de la API en `scripts/api-snapshot/`. No es Jest ni `*.spec.ts`; se puede convertir en E2E real al cerrar V1. |
-| 9 | Tipos de éxito en Swagger | Incremental por módulo, empezando por los que consume el front. Decorador genérico `@ApiOkEnvelope(Dto)`. Los endpoints nuevos nacen tipados. |
-| 10 | Swagger en producción | Oculto en `production`. Variable `SWAGGER_ENABLED_PRODUCTION` para encenderlo a propósito. El archivo en `docs/` se escribe solo en `development`. |
-| 11 | Superadmin en producción | `bootstrap:admin` se niega con `APP_ENV=production` si `SUPER_ADMIN_CI` falta, es la de por defecto (`password123`) o es corta. |
-| 12 | Idioma | Código y referencias a código en docs: inglés. Lo nuevo y lo que se toca se escribe en inglés, sin traducción masiva. La documentación de `docs/` sigue en español. |
+| 9 | Tipos de éxito en Swagger | Decorador `@ApiOkEnvelope(message, data, status?)` y entidades de respuesta en `src/<módulo>/entities/`. Los endpoints nuevos nacen tipados. |
+| 10 | Swagger en producción | Oculto en `production`; `SWAGGER_ENABLED_PRODUCTION=true` lo enciende a propósito. El archivo en `docs/` se reescribe solo en `development`. |
+| 11 | Superadmin en producción | `bootstrap:admin` se niega con `APP_ENV=production` si `SUPER_ADMIN_CI` falta, es la de por defecto (`password123`) o tiene menos de 12 caracteres. |
+| 12 | Idioma | Código y referencias a código en docs: inglés. Lo nuevo y lo que se toca se escribe en inglés. La documentación de `docs/` sigue en español. |
 
-Sin decisión (mecánicos): decorador `Trim()`, los 22 errores de lint, extraer `setupSwagger()`.
+### Decisiones tomadas durante la ejecución
+
+| # | Tema | Decisión |
+|---|---|---|
+| 13 | Un código, un status | `X_NOT_FOUND` = el recurso va en la URL (404); `X_REFERENCE_NOT_FOUND` = va referenciado en el body (400). Ningún status HTTP cambió respecto del comportamiento anterior. |
+| 14 | Usuarios por rol y sucursal | SUPER_ADMIN crea cualquier rol; ADMIN solo `CASHIER`, `DISPATCHER` y `COOK` de **su** sucursal. `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN (**sin** repositorio global de empleados: `null` significa "acceso global" y nada más). Cambiar la sucursal de alguien (traslado) es solo de SUPER_ADMIN. |
+| 15 | Un turno, una caja | Una cajera no puede tener dos turnos abiertos (`SHIFT_ALREADY_OPEN`) y una caja no puede estar abierta por dos cajeras (`CASH_REGISTER_IN_USE`). |
+| 16 | ADMIN no ve otras sucursales | Ni en usuarios ni en pedidos. Única excepción deliberada: el historial de pedidos de un cliente (PDR §2.12). |
+| 17 | `sale-price` | No se crea `PATCH /inventory/:id/sale-price`: `PATCH /inventory/items/:id` ya acepta `salePrice`. |
+| 18 | Aplazado | `branches-summary` (#16): el dashboard con datos resumen es lo último que se hace en la aplicación. Token de renovación: más adelante. `CORS_ORIGINS`: al pasar a QA o producción. |
 
 ---
 
@@ -52,234 +67,175 @@ Sin decisión (mecánicos): decorador `Trim()`, los 22 errores de lint, extraer 
 ### 3.1 Contrato de respuesta
 
 ```jsonc
-// Success (as the code already emits it)
+// Success
 { "isSuccess": true, "message": "Caja creada correctamente", "data": { "cashRegister": {} }, "error": null }
 
-// Error (as the guide specifies)
+// Error
 {
   "isSuccess": false,
   "message": "Error de validación",
   "data": null,
   "error": {
     "code": "VALIDATION_ERROR",
-    "details": [{ "field": "name", "message": "..." }]
+    "details": [{ "field": "items[0].quantity", "message": "..." }]
   }
 }
 ```
 
-- Los errores de validación (`ValidationPipe`) se convierten a `details` con el nombre del campo mediante un `exceptionFactory` (hoy salen como `{ fields: string[] }`, sin saber qué campo falló).
-- Los errores de negocio de un solo campo (`{ name }`, `{ ci }`, `{ type }`) pasan a `[{ field, message }]`. Los que no corresponden a un campo llevan `details: []`.
+- Los errores de validación pasan por `validationExceptionFactory` (`ValidationPipe`): un `{ field, message }` por regla fallida, con la ruta del campo (`items[0].quantity`). El mensaje de nivel superior es el primero.
+- Los errores de un solo campo (`{ name }`, `{ ci }`, `{ type }`) también salen como `[{ field, message }]`. Los que no corresponden a un campo llevan `details: []`.
+- Los errores que lanza Nest por sí mismo (id con formato inválido, ruta inexistente) salen con un código genérico: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`.
 
 ### 3.2 Catálogo y excepción
 
 ```ts
-// src/common/errors/error-codes.ts: the single source of truth
+// src/common/errors/error-codes.ts: the single source of truth (58 codes)
 export const ERRORS = {
-  CASH_REGISTER_NOT_FOUND:      { status: 404, message: 'Caja registradora no encontrada' },
-  CASH_REGISTER_ALREADY_EXISTS: { status: 400, message: 'Ya existe una caja con ese nombre' },
-  ORDER_ALREADY_PAID:           { status: 409, message: 'El pedido ya está pagado' },
-} as const satisfies Record<string, { status: number; message: string }>;
-export type ErrorCode = keyof typeof ERRORS;
+  CASH_REGISTER_NOT_FOUND: { status: 404, message: 'Caja registradora no encontrada' },
+  ORDER_ALREADY_PAID:      { status: 409, message: 'La orden ya está pagada' },
+  // ...
+} as const satisfies Record<string, ErrorEntry>;
 
 // service
 throw new BusinessException({ code: 'CASH_REGISTER_NOT_FOUND' });
+throw new BusinessException({ code: 'CUSTOMER_CI_ALREADY_EXISTS', message: `…"${ci}"`, details: [{ field: 'ci', message: 'CI ya registrada' }] });
+
 // controller: Swagger and Postman come from the same catalog
-@ApiErrors('CASH_REGISTER_NOT_FOUND')
+@ApiErrors('CASH_REGISTER_NOT_FOUND', 'VALIDATION_ERROR')
 ```
 
-**Por qué el status sale del catálogo:** hoy se lanzan 75 errores (400×44, 404×20, 403×5, 409×4, 401×2) y el 41 % no es 400. Swagger y Postman **no detectan** un status equivocado: la colección de Postman tiene 123 respuestas de ejemplo, idénticas una por una a los 123 `@ApiResponse` escritos a mano. Con un `400` por defecto, olvidar el status de un "no encontrado" lo convertiría en 400 sin aviso. Ya hay deriva hoy: `shifts.controller.ts` lanza 409 y no lo documenta.
+**Por qué el status sale del catálogo:** Swagger y Postman **no detectan** un status equivocado (la colección de Postman repetía uno a uno los `@ApiResponse` escritos a mano). Con un `400` por defecto, olvidar el status de un "no encontrado" lo convertía en 400 sin aviso. Antes del plan, el 41 % de los errores no eran 400.
 
-### 3.3 Sucursal y usuario activo
+### 3.3 Usuario, rol y sucursal por request
 
 ```ts
-// auth.guard.ts: once per request
-const user = await prisma.user.findUnique({
+// src/common/guards/auth.guard.ts: once per request
+const payload = await this.verifyToken(token);               // signature + expiry, or TOKEN_INVALID
+const user = await this.prisma.user.findUnique({
   where: { id: payload.sub },
-  select: { active: true, branchId: true, role: true },
+  select: { active: true, role: true, branchId: true },
 });
 if (!user?.active) throw new BusinessException({ code: 'USER_INACTIVE' }); // 401
-request.user = { ...payload, branchId: user.branchId };
+request.user = { ...payload, role: user.role, branchId: user.branchId };
 
 // service: no query, no copy
-const { branchId } = actor;
+const branchId = requireBranchId(actor);     // USER_WITHOUT_BRANCH for SUPER_ADMIN
 ```
 
-- Una sola creación de pedido resuelve hoy la sucursal al menos 2 veces; `pay`, `cancel`, `findById` y `list` repiten la consulta.
-- `SUPER_ADMIN` tiene `branchId: null`: los services que lo necesiten responden con un error del catálogo (relacionado con el cambio #5 del plan de integración: `?branchId=` solo para SA).
-- Costo: 1 consulta por clave primaria por request autenticado, despreciable con PostgreSQL local.
+- Costo: una consulta por clave primaria por request autenticado, despreciable con PostgreSQL local.
+- Efecto: desactivar a alguien, cambiarle el rol o trasladarlo aplica **al instante**, sin esperar a que venza el token. El token sigue llevando `sub`, `email`, `role` y `branchId`, pero el guard no los usa para decidir.
+- Alcance por sucursal (`src/common/auth/branch-scope.ts`): `readableBranchId(actor, requested?)` para lecturas (SUPER_ADMIN elige con `?branchId=` o ve todas; los demás ven la suya y reciben `BRANCH_OUT_OF_SCOPE` si nombran otra) y `resolveWriteBranchId(prisma, actor, requested?)` para altas (SUPER_ADMIN debe indicar `branchId`; los demás usan la suya).
 
 ### 3.4 `orders.create()` como receta
 
 ```ts
 async create(dto, actor) {
   assertPaymentConsistency(dto);                                   // pure
+  requireBranchId(actor);
   const shift = await this.shiftsService.findActiveForUserOrThrow(actor);
-  validateSubstitutions(dto.items);
+  validateSubstitutions(dto.items);                                // pure
 
   const orderId = await this.prisma.$transaction(async (tx) => {
     const products = await this.loadSellableProducts(tx, dto.items);
     const variants = await this.loadVariants(tx, dto.items);
     const rows     = priceItems(dto.items, products, variants);    // pure
-    const customer = await this.resolveCustomerName(tx, dto.customerId);
-    const order    = await this.persistOrder(tx, { dto, shift, actor, rows, customer });
-    await this.persistItems(tx, order.id, rows);
+    const total    = rows.reduce((sum, row) => sum + row.totalPrice, 0);
+    const customerName = await this.resolveCustomerName(tx, dto.customerId);
+    const id = await this.persistOrder(tx, { dto, shiftId: shift.id, actorId: actor.sub, customerName, total });
+    await this.persistItems(tx, id, rows);
     // Sprint 2: await this.inventory.decrementForOrder(tx, rows);
-    await this.auditSale(tx, /* ... */);
-    return order.id;
+    if (dto.paymentStatus === 'PAID') await this.auditSale(tx, { /* ... */ });
+    return id;
   });
   return this.findById(orderId, actor);
 }
 ```
 
-La guía ya planifica sumar a esta transacción el descuento de inventario (Sprint 2) y la validación de descuentos por ítem (Sprint 3): el método iba a crecer a ~300 líneas. Cada paso nuevo será una línea más en la receta.
+La guía ya planifica sumar a esta transacción el descuento de inventario (Sprint 2) y la validación de descuentos por ítem (Sprint 3): cada paso nuevo es una línea más en la receta, no 70 líneas más en un método.
 
-### 3.5 Swagger por entorno
+### 3.5 Swagger y archivos de `docs/` por entorno
 
 | Valor | development | qa | production |
 |---|---|---|---|
 | `/api/docs` y `/swagger.json` | sí | sí | **no** (salvo `SWAGGER_ENABLED_PRODUCTION=true`) |
-| Escribir `docs/swagger-postman/swagger.json` al arrancar | sí | no | no |
+| Reescribe `docs/swagger-postman/swagger.json` al arrancar | sí | no | no |
 
-**Por qué ocultarlo en producción:** Swagger no es una vulnerabilidad por sí mismo (la protección real es la autenticación y los roles), pero entrega el reconocimiento hecho: lista cada ruta, campo, regla y rol (por ejemplo, anuncia que `POST /users` acepta `role`, justo la brecha del cambio #2). Y hoy publica los emails del seed y `password123`. Como `pnpm bootstrap:admin` crea `superadmin@gmail.com` con `password123` si nadie define `SUPER_ADMIN_CI`, el documento público podría anunciar el usuario y la clave de un SUPER_ADMIN (de ahí la decisión 11). Quitar solo la descripción no alcanza: el email y la clave también están en el **esquema** y en los ejemplos del body del login, que se fijan al cargar el código. Ocultar Swagger es más simple y seguro que depurar el documento.
+**Por qué ocultarlo en producción:** Swagger no es una vulnerabilidad por sí mismo (la protección real es la autenticación y los roles), pero entrega el reconocimiento hecho: lista cada ruta, campo, regla y rol, y los ejemplos traen los usuarios del seed y `password123`. Quitar solo la descripción no alcanza: el email y la clave también están en el **esquema** y en los ejemplos del body del login. Ocultar Swagger es más simple y seguro que depurar el documento. El front y Postman trabajan con el `swagger.json` **versionado** en `docs/swagger-postman/`, no con el del servidor.
 
-El front y Postman trabajan con el `swagger.json` **versionado** en `docs/swagger-postman/`, no con el del servidor, así que en producción la interfaz no aporta nada.
+### 3.6 Swagger tipado
+
+- `@ApiOkEnvelope('Caja creada correctamente', { cashRegister: CashRegisterEntity }, 201)` describe `data` con el sobre estándar; las clases viven en `src/<módulo>/entities/*.entity.ts` y llevan `example` fijo (`SEED_IDS`, `SEED_TIMESTAMP`) para que la colección de Postman salga **determinística**.
+- `@ApiErrors('CODE', …)` agrupa por status y genera un ejemplo por código. `@ApiAuthErrors()` (a nivel de controller) documenta los 401 y el 403 comunes.
 
 ---
 
 ## 4. Red de seguridad: foto de la API
 
-Los cambios tocan casi todos los endpoints y el proyecto no tiene tests (regla de `AGENTS.md`: se hacen al cerrar V1). Para este caso excepcional se usa un script, no Jest:
+El proyecto no tiene tests (regla de `AGENTS.md`: se hacen al cerrar V1). Para los refactors de este plan se usó un script, no Jest.
 
-- `scripts/api-snapshot/` con 3 archivos chicos: la lista de endpoints, la normalización (ids, fechas, tokens, número de pedido) y el comparador.
-- Contra la base **sembrada** (`pnpm seed`) y la API levantada, se loguea por rol, recorre ~40 endpoints y guarda **status + forma** de cada respuesta.
-- La **línea base se commitea antes de cualquier refactor**; después de cada paso se corre de nuevo y las diferencias son exactamente lo que cambió. Las esperadas se revisan una por una y se actualiza la base a propósito.
-- No valida reglas de negocio: solo detecta cambios.
+**Cómo funciona** (`scripts/api-snapshot/`: `endpoints.ts`, `normalize.ts`, `compare.ts`, `run.ts` y `baseline.json`):
 
-**Por qué no un E2E real ahora:** necesita una base de pruebas **separada** (el seed borra la base de desarrollo) y una configuración de Jest en ESM que no está comprobada; además la forma de las respuestas va a cambiar de todos modos.
+```bash
+pnpm seed                    # datos conocidos (resetea la base)
+pnpm start                   # API corriendo
+pnpm api:snapshot            # compara con la línea base (sale con 1 si hay diferencias)
+pnpm api:snapshot --update   # acepta las respuestas actuales como nueva línea base
+```
+
+- Se loguea por cada rol, recorre **200 pasos** y guarda **status + cuerpo normalizado** (ids nuevos, fechas, tokens y números de pedido se reemplazan por marcadores; las listas largas se recortan).
+- Los pasos **crean y modifican filas**: hay que correr `pnpm seed` antes de cada corrida. El seed es reproducible (`faker.seed(42)`; se corrigió `chance()`, que usaba `Math.random()`).
+- Se niega a correr contra un host que no sea local.
+- La línea base se commitea; después de cada cambio las diferencias son **exactamente** lo que cambió y se revisan una por una. No valida reglas de negocio: solo detecta cambios.
+- Para agregar un caso: sumar un `step(...)` en `endpoints.ts` (acepta ids guardados por pasos anteriores, como `{branch}`, en la ruta y en el body).
+
+**Por qué no un E2E real ahora:** necesita una base de pruebas **separada** (el seed borra la base de desarrollo) y una configuración de Jest en ESM no comprobada. Al cerrar V1 el script se puede convertir en E2E real.
 
 ---
 
-## 5. Orden de ejecución
+## 5. Ejecución
 
-Un commit por paso. La foto después de cada uno.
+Las diferencias esperadas se compararon con la foto después de cada paso.
 
-| Paso | Qué | Diferencias esperadas en la foto |
+| Paso | Qué | Resultado |
 |---|---|---|
-| 0 | Script de foto y línea base (**antes de tocar nada**) | — |
-| 1 | `Trim()` y los 22 errores de lint (tipar `orders.helpers.ts`, `current-user.decorator.ts`, extraer `setupSwagger()` con handler tipado) | Ninguna |
-| 2 | `ErrorCode`, `BusinessException`, filtro, `exceptionFactory` del `ValidationPipe` y `ok()`, **módulo por módulo** (un commit por módulo). Actualizar la guía §5.3 y §5.4 | `details` como array y los 37 códigos nuevos |
-| 3 | `AuthGuard` con sucursal y usuario activo; eliminar las 4 copias de `resolveUserBranchId` | Solo los usuarios desactivados reciben 401 |
-| 4 | Dividir `orders.create()` | **Cero** |
-| 5 | `@ApiOkEnvelope` y `@ApiErrors`, módulo por módulo (primero los que consume el front: branches, users, cash-registers, shifts, products, variants, inventory, customers; después orders, pos, auth) | Ninguna en runtime; la colección de Postman gana respuestas |
-| 6 | Swagger por entorno (`SWAGGER_ENABLED_PRODUCTION`), escritura en `docs/` solo en development, guard de `bootstrap:admin` en producción | Ninguna en development |
+| 0 | Script de foto y línea base, **antes de tocar nada** | ✅ |
+| 1 | `Trim()`, 22 errores de lint a 0, `setupSwagger()` extraído | ✅ foto sin diferencias |
+| 2 | `ERRORS`, `BusinessException`, `ok()`, `exceptionFactory`, filtro simplificado; guía §5.3 y §5.4 | ✅ solo `details` como array y códigos nuevos |
+| 3 | `AuthGuard` con usuario activo, rol y sucursal; `requireBranchId` | ✅ solo los desactivados reciben 401 |
+| 4 | Dividir `orders.create()` | ✅ cero diferencias |
+| 5 | `@ApiOkEnvelope` y `@ApiErrors`, entidades de respuesta | ✅ cero diferencias de runtime; Postman de 123 a 211 respuestas |
+| 6 | Swagger por entorno, `docs/` solo en development, guard de `bootstrap:admin` | ✅ verificado levantando la app en cada entorno |
 
-Durante todos los pasos: lo nuevo y lo que se toca se escribe (y sus comentarios se traducen) en inglés.
+### Desviaciones respecto del plan original
 
-### Interacción con el plan de integración (§4)
-
-| Cambio del plan de integración | Efecto |
-|---|---|
-| #7 (códigos de error estables) | **Absorbido** por el paso 2 |
-| #5 (`?branchId=` para SA) y #2 (alcance de `/users`) | Van **después** del paso 3: el guard les da el rol y la sucursal vigentes |
-| #1, #4, #3, #12, #15 | Se implementan con los patrones nuevos: errores del catálogo y respuestas tipadas desde el primer día |
-
-### Impacto en el front
-
-El formato de `error.details` cambia (de objeto `{ fields: string[] }` a array `[{ field, message }]`): hay que ajustar el mapa de errores del plan del front (`docs/frontend/plan-front-cruds-feature-test-cruds.md`, paso 1) para usar el nombre del campo en los formularios.
-
----
-
-## 6. Archivos nuevos o modificados (estimado)
-
-- **Nuevos:** `src/common/errors/error-codes.ts`, `src/common/errors/business.exception.ts`, `src/common/http/api-result.ts` (`ok()`), `src/common/swagger/api-ok-envelope.decorator.ts`, `src/common/swagger/api-errors.decorator.ts`, `src/common/decorators/trim.decorator.ts`, `src/common/swagger/setup-swagger.ts`, `scripts/api-snapshot/*`.
-- **Modificados:** `http-exception.filter.ts`, `main.ts` (`exceptionFactory`, `setupSwagger`), `auth.guard.ts`, `src/config/app.config.ts` (perfil `swagger`), `scripts/bootstrap-superadmin.ts`, los 12 services y controllers, los DTOs con `@Transform`, `technical_guide.md` §5.3 y §5.4.
-
----
-
-## 7. Decisiones que siguen pendientes
-
-1. ~~Si un ADMIN puede crear otro ADMIN~~ — **resuelto**: no. SUPER_ADMIN crea cualquier rol; ADMIN solo CASHIER, DISPATCHER y COOK de su sucursal; `branchId` sigue siendo obligatorio para todo rol salvo SUPER_ADMIN (sin repositorio global de empleados) y el traslado es solo de SUPER_ADMIN.
-2. ~~Si se hacen `branches-summary` (#16) y el toggle de inventario (#6)~~ — **resuelto**: #6 hecho; #16 postergado, el dashboard (datos resumen) es lo último que se hace en la aplicación.
-3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. **Decidido: más adelante se hará un token de renovación** (token de acceso corto + token de renovación, que además emite el nuevo token con los datos frescos). Mientras tanto, para trabajar sin cortes en local alcanza con `JWT_EXPIRES_IN=8h` en el `.env`. Pendiente de diseñar: dónde se guarda el token de renovación, su vida útil y cómo se revoca.
-4. **Decidido: se define cuando se cambie a QA o producción.** Si el front llama directo al API hay que fijar `CORS_ORIGINS` (sin eso, `qa` y `production` no aceptan ningún origen externo); si pasa por el proxy de Next no hace falta.
-5. `PrismaService` todavía lee `DATABASE_URL` de `process.env` directamente; migrarlo a la configuración validada.
-
----
-
-## 8. Ejecución (2026-10-05)
-
-Los pasos 0 a 6 están hechos, en la misma rama. Después de cada uno se corrió la foto (`pnpm seed` + `pnpm api:snapshot`) y las diferencias fueron exactamente las esperadas. Los pasos 1, 3, 4, 5 y 6 terminaron sin diferencias de runtime salvo las previstas.
-
-| Paso | Resultado |
-|---|---|
-| 0 | `scripts/api-snapshot/` (4 archivos) y línea base de 109 pasos. Para que fuera reproducible hubo que corregir `chance()` del seeder, que usaba `Math.random()` y rompía el `faker.seed(42)`. |
-| 1 | `@Trim()` reemplaza 32 `@Transform`; lint de `src/` de 22 errores a 0; `setupSwagger()` extraído. |
-| 2 | `ERRORS`, `BusinessException`, `ok()`, `exceptionFactory` y filtro simplificado. Los 81 `throw` y los 40 literales de éxito migrados; el formato viejo se eliminó del filtro. Guía §5.3 y §5.4 actualizadas. |
-| 3 | `AuthGuard` resuelve usuario activo, rol y sucursal una vez por request. `requireBranchId(actor)` reemplaza las 4 copias. Un usuario desactivado recibe `401 USER_INACTIVE` (verificado a mano). |
-| 4 | `orders.create()` pasó de 226 líneas a una receta de ~35; las reglas puras viven en `orders.helpers.ts`. Foto: cero diferencias. |
-| 5 | `@ApiOkEnvelope` y `@ApiErrors` en los 10 controllers; 10 entidades de respuesta; la colección de Postman pasó de 123 a 169 respuestas de ejemplo y sigue siendo determinística. |
-| 6 | `SWAGGER_ENABLED_PRODUCTION`; Swagger oculto en producción y `swagger.json` solo se reescribe en `development`; `bootstrap:admin` se niega en producción con CI faltante, por defecto o de menos de 12 caracteres. Verificado levantando la app en cada entorno. |
-
-### Desviaciones respecto del plan
-
-- **Commits por lote, no por módulo** en los pasos 2 y 5 (el catálogo `error-codes.ts` es un solo archivo compartido). Hay un commit por lote de módulos.
-- **Un código, un status.** Se encontró que `CASH_REGISTER_NOT_FOUND`, `SHIFT_PERIOD_NOT_FOUND`, `PRODUCT_NOT_FOUND` y `VARIANT_NOT_FOUND` salían con **404** cuando el id va en la URL y con **400** cuando va en el body (`POST /shifts/open`, `POST /orders`, `POST /variants`). Como el catálogo asigna un solo status por código, se adoptó la convención `X_NOT_FOUND` (URL, 404) / `X_REFERENCE_NOT_FOUND` (body, 400). **Ningún status HTTP cambió.**
-- ```@UseGuards(AuthGuard)``` se quitó de `POST /auth/logout`: el guard ya es global y se ejecutaría dos veces.
+- **Commits por lote, no por módulo** en los pasos 2 y 5 (el catálogo `error-codes.ts` es un solo archivo compartido).
+- **La foto creció:** 4 archivos (no 3) y 200 pasos (no ~40). Guarda el cuerpo normalizado, no solo la "forma".
+- **Un código, un status** (decisión 13): se encontró que `CASH_REGISTER_NOT_FOUND`, `SHIFT_PERIOD_NOT_FOUND`, `PRODUCT_NOT_FOUND` y `VARIANT_NOT_FOUND` salían con **404** cuando el id va en la URL y con **400** cuando va en el body.
+- `@UseGuards(AuthGuard)` se quitó de `POST /auth/logout`: el guard ya es global y se ejecutaba dos veces.
 - `GET /orders`, `POST /orders/:id/pay` y `/cancel` documentan el status que **realmente** devuelven (201, no 200).
 
-### Cambios de códigos que afectan al front
+### Interacción con el plan de integración
 
-| Antes | Ahora |
-|---|---|
-| `error.details` = `{ fields: [...] }` o `{ name: "..." }` | siempre un array `[{ field, message }]` (vacío si no hay campo) |
-| `POST /shifts/open`: `SHIFT_PERIOD_NOT_FOUND`, `CASH_REGISTER_NOT_FOUND` | `SHIFT_PERIOD_REFERENCE_NOT_FOUND`, `CASH_REGISTER_REFERENCE_NOT_FOUND` |
-| `POST /orders`: `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `CUSTOMER_NOT_FOUND` | `PRODUCT_REFERENCE_NOT_FOUND`, `VARIANT_REFERENCE_NOT_FOUND`, `CUSTOMER_REFERENCE_NOT_FOUND` |
-| 401: `Unauthorized` | `INVALID_CREDENTIALS`, `TOKEN_REQUIRED`, `TOKEN_INVALID`, y nuevo `USER_INACTIVE` |
-| 404 sin código (`Not Found`) en branches, users, orders, turnos | `BRANCH_NOT_FOUND`, `USER_NOT_FOUND`, `ORDER_NOT_FOUND`, `SHIFT_NOT_FOUND` |
-| `Bad Request` en duplicados de users y productos | `USER_EMAIL_ALREADY_EXISTS`, `USER_CI_ALREADY_EXISTS`, `USER_PHONE_ALREADY_EXISTS`, `DUPLICATE_PRODUCT_NAME` |
-| `Bad Request`/`Forbidden` genéricos | `BAD_REQUEST` (ids con formato inválido) y `FORBIDDEN` |
+Los cambios de backend que pidió la integración con el front (`GET /auth/me`, alcance de usuarios y pedidos, `?branchId=` para el SUPER_ADMIN en cajas e inventario, períodos inactivos, administración de clientes, ajuste y dashboard de inventario, y los datos derivados de sucursales) se implementaron **sobre** estos patrones (errores del catálogo, respuestas tipadas, alcance por guard) y están hechos. `branches-summary` se aplazó (decisión 18).
 
-La lista completa y vigente es `src/common/errors/error-codes.ts`.
+---
 
-### Hallazgos que NO se tocaron (fuera del alcance del plan)
+## 6. Archivos nuevos o modificados
 
-1. ~~`POST /shifts/open` no valida que la cajera ya tenga un turno abierto~~ — **corregido después**: ahora responde `409 SHIFT_ALREADY_OPEN` (una cajera, un turno abierto a la vez).
-2. **Un pedido creado ya pagado queda con `paidAt: null`**; solo `/pay` lo completa.
-3. **`POST /orders/:id/pay` y `/cancel` responden 201** en vez de 200 (falta `@HttpCode(200)`; el Swagger anterior decía 200). Corregirlo cambia el status que ve el front.
-4. `AuditService.log` lanza `BadRequestException` ante una acción desconocida: es un error de programación, no del cliente; debería ser un `Error` (500).
-5. El ejemplo de `pnpm api:snapshot` necesita `pnpm seed` antes de cada corrida (los pasos crean y modifican filas).
+- **Nuevos, comunes:** `src/common/errors/{error-codes,business.exception}.ts`, `src/common/http/{api-result,error-response.dto,pagination-query.dto}.ts`, `src/common/swagger/{api-ok-envelope.decorator,api-errors.decorator,setup-swagger}.ts`, `src/common/decorators/{trim,to-boolean}.decorator.ts`, `src/common/auth/{require-branch-id,branch-scope}.ts`, `src/common/validation/validation-exception.factory.ts`.
+- **Nuevos, por módulo:** `src/<módulo>/entities/*.entity.ts` (entidades de respuesta) y los DTOs de consulta y edición de cada endpoint nuevo.
+- **Nuevos, herramientas:** `scripts/api-snapshot/*`.
+- **Modificados:** `http-exception.filter.ts` (ahora corto y sin formatos viejos), `main.ts`, `auth.guard.ts`, `roles.guard.ts`, `src/config/app.config.ts` (perfil `swagger`), `src/common/bootstrap/super-admin.ts`, `validation-messages.ts`, todos los services y controllers, y los DTOs con `@Transform`.
+- **Docs:** `technical_guide.md` (§5.3, §5.4, endpoints, permisos), `README.md` (variables y tabla por entorno), `sincronizar-swagger-postman.md`, `seeders.md`.
 
-### Después de la ejecución: alcance de usuarios y pedidos (cambio #2)
+---
 
-- `POST/GET/PATCH /users` y `toggle-active` respetan el rol y la sucursal de quien llama. Fuera de alcance responde **404** (no se revela que existe); asignar un rol o sucursal no permitido responde **403** (`ROLE_NOT_ALLOWED`, `BRANCH_OUT_OF_SCOPE`).
-- Traslado o cambio de rol con un turno abierto: **409** `USER_HAS_OPEN_SHIFT`.
-- Arreglados: `PATCH ci` ahora actualiza la CI (y la contraseña, que es la CI); `phone: null` borra el teléfono; `branchId: null` ya no da 500; `null` en campos obligatorios da 400.
-- Se quitó el código `USER_TOGGLE_NOT_ALLOWED`: un ADMIN que apunta a un ADMIN o SUPER_ADMIN ahora recibe `USER_NOT_FOUND`.
-- `GET /orders` y `GET /orders/:id` ya no dejan al ADMIN ver otras sucursales (solo SUPER_ADMIN).
+## 7. Reglas de alcance y autorización
 
-### Después de la ejecución: `GET /auth/me` e inventario (cambios #1 y #6)
+Las reglas vigentes de alcance por rol y sucursal (usuarios, sucursales, cajas, inventario, pedidos, clientes y turnos) están en [technical_guide.md §5.6](technical_guide.md#56-alcance-por-rol-y-sucursal); las decisiones que las originaron, en la §2 de este documento (14, 15 y 16).
 
-- `GET /auth/me` devuelve el perfil fresco desde la base (`branchName` incluido) para cualquier rol.
-- `PATCH /inventory/items/:id/toggle-active` (ADMIN, de su sucursal): el negocio no borra, desactiva.
+---
 
-### Después de la ejecución: alcance de SUPER_ADMIN, períodos y sucursales (cambios #5, #4 y #3)
+## 8. Qué cambia para el front
 
-- **#5.** Cajas e inventario: el SUPER_ADMIN usa `?branchId=` (opcional; sin él ve todas las sucursales) y manda `branchId` en el body al crear (obligatorio: `BRANCH_REQUIRED`; sucursal inexistente: `BRANCH_REFERENCE_NOT_FOUND`). Edita y activa/desactiva en cualquier sucursal. Un rol de sucursal que nombre otra recibe 403 `BRANCH_OUT_OF_SCOPE`. La lógica vive en `src/common/auth/branch-scope.ts` (`readableBranchId`, `resolveWriteBranchId`, `assertBranchExists`).
-- **#4.** `GET /shifts/shift-periods?includeInactive=true` (default sin cambios; la cajera nunca ve inactivos). Un valor que no sea `true`/`false` da 400; lo mismo vale ahora para `?active=` en inventario (antes `?active=abc` se leía como `false`).
-- **#3.** `GET /branches` agrega `cashRegistersCount` y `admin` por sucursal. Se expone como `cashRegistersCount` y no como el `_count` de Prisma, para no filtrar detalles del ORM al contrato.
-
-### Después de la ejecución: clientes administrativos (cambio #12)
-
-- `GET /customers` (ADMIN) con búsqueda libre, estado, fechas de alta y paginación; `GET /customers/:id`, `PATCH /customers/:id` (sin `ci` ni `nit`), `PATCH /customers/:id/toggle-active` y `GET /customers/:id/orders`.
-- La cajera nunca ve ni edita un cliente desactivado; el ADMIN sí.
-- **Excepción deliberada al alcance por sucursal:** el historial de pedidos de un cliente (`/customers/:id/orders`) trae los de **todas** las sucursales y es solo para ADMIN, porque el PDR §2.12 define la vista del administrador sobre el cliente como cross-sucursal. Cada pedido indica su sucursal.
-- Paginación común en `src/common/http/pagination-query.dto.ts` (`?page=&pageSize=`, máximo 100), reutilizable por las listas que vengan.
-- Los rechazos de `forbidNonWhitelisted` ("property x should not exist") ahora salen en español.
-
-### Después de la ejecución: ajuste y dashboard de inventario (cambio #15)
-
-- `POST /inventory/adjust`: movimiento manual con motivo (`ADJUSTMENT` o `RECEPTION`) y nota obligatoria; no deja el stock en negativo; stock, libro y auditoría en una transacción.
-- `GET /inventory/dashboard`: stock cocido por tipo de presa y variación desde la apertura del turno.
-- **Decisión de diseño tomada sin consulta y fácil de cambiar:** la ventana del delta empieza en el turno **abierto más antiguo** de la sucursal (no por cajera). Es una regla de lectura, así que cambiarla no toca datos.
-- **`PATCH /inventory/:id/sale-price` no se creó:** `PATCH /inventory/items/:id` ya acepta `salePrice`. Si el front prefiere una ruta propia, es un alias de una línea.
-- **Sigue pendiente (Sprint 2, fuera de #15):** que pagar un pedido descuente el inventario (`decrementForOrder`, la línea que la receta de `orders.create()` ya deja prevista), los consumos manuales y el ciclo crudo. Hasta entonces, `sold` del dashboard solo refleja lo que ya está en el libro.
+El checklist para el front (errores, sesión, `GET /auth/me`, alcance, formatos) está en [plan-integracion-front-datos-reales.md §2.2](plan-integracion-front-datos-reales.md#22-contrato-que-el-front-debe-respetar) y el contrato de cada endpoint en [technical_guide.md §6](technical_guide.md#6-contratos-por-módulo-requestresponse).

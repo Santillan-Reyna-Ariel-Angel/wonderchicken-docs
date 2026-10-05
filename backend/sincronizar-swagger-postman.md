@@ -56,7 +56,7 @@ Sin `POSTMAN_API_KEY` / `POSTMAN_COLLECTION_UID` no se sube nada: solo se genera
 - **`pnpm start:dev` ya no sincroniza `docs/`**: solo **avisa** si hay novedades (ver la sección 5).
 - **`pnpm seed` tiene una guarda:** se niega a correr si `APP_ENV` no es `development` (o falta) o si `DATABASE_URL` no apunta a `localhost`, porque **borra** la base. `pnpm seed -- --force` la omite.
 - **La subida real a Postman todavía no se probó con una cuenta real.** Si falla, el error de Postman se imprime en la consola.
-- Detalle técnico y motivos (por qué un `swagger.json` no puede llevar scripts de Postman): [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md), sección 3.
+- Detalle técnico y motivos (por qué un `swagger.json` no puede llevar scripts de Postman): [plan-integracion-front-datos-reales.md §2.3](plan-integracion-front-datos-reales.md#23-swagger-y-postman).
 
 ## 5. Documentación compartida (`docs/`): aviso al arrancar
 
