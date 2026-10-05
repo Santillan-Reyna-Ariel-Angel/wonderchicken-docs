@@ -5,7 +5,7 @@ Cuando cambia la API (un DTO, un controller, un ejemplo), Postman se actualiza s
 ## 1. Configuración (una sola vez)
 
 1. **Instalar dependencias:** `pnpm install`.
-2. **Crear una API key** en Postman: *Account settings → API keys → Generate API Key*.
+2. **Crear una API key** en Postman: _Account settings → API keys → Generate API Key_.
 3. **Tener una colección en Postman** que el script pueda reemplazar (puede estar vacía) y obtener su **uid**, con el formato `<userId>-<collectionId>`. Para listarlas:
    ```bash
    curl -H "x-api-key: TU_API_KEY" https://api.getpostman.com/collections
@@ -33,11 +33,11 @@ Cambiás un DTO/controller → Nest reinicia → reescribe swagger.json
 
 ### Comandos manuales
 
-| Comando | Qué hace |
-|---|---|
-| `pnpm postman:sync` | Genera y sube la colección una vez |
+| Comando                       | Qué hace                                                                                                        |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm postman:sync`           | Genera y sube la colección una vez                                                                              |
 | `pnpm postman:sync --no-push` | Solo genera `docs/swagger-postman/wonder-chicken.postman_collection.json` (se puede importar a mano en Postman) |
-| `pnpm postman:watch` | Vigilante solo, sin levantar la API (útil con `pnpm dev`) |
+| `pnpm postman:watch`          | Vigilante solo, sin levantar la API (útil con `pnpm dev`)                                                       |
 
 Sin `POSTMAN_API_KEY` / `POSTMAN_COLLECTION_UID` no se sube nada: solo se genera el archivo.
 
@@ -62,11 +62,11 @@ Sin `POSTMAN_API_KEY` / `POSTMAN_COLLECTION_UID` no se sube nada: solo se genera
 
 `docs/` es un subtree del repo `wonderchicken-docs`, compartido con el front. `pnpm start:dev` **no lo sincroniza** (frenaba el arranque y llenaba el historial de merges): en su lugar **avisa** si el repo de docs tiene cambios que todavía no están en tu `docs/`.
 
-| Comando | Qué hace |
-|---|---|
-| `pnpm docs:check` | Solo lectura. Corre solo en cada `start:dev`. Muestra un recuadro amarillo con los archivos y commits nuevos |
-| `pnpm docs:pull` | Trae los cambios (`git subtree pull --squash`). Se niega, con un mensaje claro, si hay archivos sin commitear: git exige **todo** el árbol limpio (no solo `docs/`) |
-| `pnpm docs:push` | Sube tus commits de `docs/`. Se niega si hay cambios sin commitear en `docs/` (solo se sube lo commiteado) |
+| Comando           | Qué hace                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm docs:check` | Solo lectura. Corre solo en cada `start:dev`. Muestra un recuadro amarillo con los archivos y commits nuevos                                                        |
+| `pnpm docs:pull`  | Trae los cambios (`git subtree pull --squash`). Se niega, con un mensaje claro, si hay archivos sin commitear: git exige **todo** el árbol limpio (no solo `docs/`) |
+| `pnpm docs:push`  | Sube tus commits de `docs/`. Se niega si hay cambios sin commitear en `docs/` (solo se sube lo commiteado)                                                          |
 
 Todos los scripts de docs llevan el prefijo `docs:`.
 
