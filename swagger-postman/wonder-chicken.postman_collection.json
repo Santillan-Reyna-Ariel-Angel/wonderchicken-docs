@@ -6593,7 +6593,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+              "name": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro. · La caja ya está abierta por otra cajera",
               "originalRequest": {
                 "url": {
                   "path": [

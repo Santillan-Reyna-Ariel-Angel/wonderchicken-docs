@@ -4310,7 +4310,7 @@
             }
           },
           "409": {
-            "description": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro.",
+            "description": "Ya tiene un turno abierto. Ciérrelo antes de abrir otro. · La caja ya está abierta por otra cajera",
             "content": {
               "application/json": {
                 "schema": {
@@ -4325,6 +4325,18 @@
                       "data": null,
                       "error": {
                         "code": "SHIFT_ALREADY_OPEN",
+                        "details": []
+                      }
+                    }
+                  },
+                  "CASH_REGISTER_IN_USE": {
+                    "summary": "CASH_REGISTER_IN_USE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La caja ya está abierta por otra cajera",
+                      "data": null,
+                      "error": {
+                        "code": "CASH_REGISTER_IN_USE",
                         "details": []
                       }
                     }
