@@ -2445,9 +2445,9 @@
           }
         },
         {
-          "name": "Listar sucursales (SUPER_ADMIN)",
+          "name": "Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN)",
           "request": {
-            "name": "Listar sucursales (SUPER_ADMIN)",
+            "name": "Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN)",
             "description": {},
             "url": {
               "path": [
@@ -2519,7 +2519,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Sucursales obtenidas correctamente\",\n  \"data\": {\n    \"branches\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\"\n      }\n    ],\n    \"total\": 1\n  },\n  \"error\": null\n}",
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"Sucursales obtenidas correctamente\",\n  \"data\": {\n    \"branches\": [\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"cashRegistersCount\": 2,\n        \"admin\": {\n          \"id\": \"01900000-0000-7000-8000-000000000101\",\n          \"firstName\": \"Jhonny\",\n          \"lastName\": \"Hurtado Zardan\"\n        }\n      },\n      {\n        \"id\": \"01900000-0000-7000-8000-000000000001\",\n        \"name\": \"Sucursal Principal\",\n        \"address\": \"Av. Principal #123, Ciudad\",\n        \"phone\": \"+591 2 2223344\",\n        \"active\": true,\n        \"createdAt\": \"2026-05-01T12:00:00.000Z\",\n        \"updatedAt\": \"2026-05-01T12:00:00.000Z\",\n        \"cashRegistersCount\": 2,\n        \"admin\": {\n          \"id\": \"01900000-0000-7000-8000-000000000101\",\n          \"firstName\": \"Jhonny\",\n          \"lastName\": \"Hurtado Zardan\"\n        }\n      }\n    ],\n    \"total\": 1\n  },\n  \"error\": null\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -5707,9 +5707,9 @@
       },
       "item": [
         {
-          "name": "Listar períodos de turno activos",
+          "name": "Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados.",
           "request": {
-            "name": "Listar períodos de turno activos",
+            "name": "Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados.",
             "description": {},
             "url": {
               "path": [
@@ -5721,7 +5721,14 @@
               "host": [
                 "{{baseUrl}}"
               ],
-              "query": [],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "includeInactive",
+                  "value": "true",
+                  "description": "Incluye los períodos desactivados (para poder reactivarlos). Solo lo respetan ADMIN y SUPER_ADMIN; la cajera siempre recibe solo los activos."
+                }
+              ],
               "variable": []
             },
             "header": [
@@ -5755,7 +5762,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -5788,6 +5800,56 @@
               "_postman_previewlanguage": "json"
             },
             {
+              "name": "Error de validación",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shifts",
+                    "shift-periods"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
               "name": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
               "originalRequest": {
                 "url": {
@@ -5800,7 +5862,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -5845,7 +5912,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "includeInactive",
+                      "value": "true"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -9750,9 +9822,9 @@
       },
       "item": [
         {
-          "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+          "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN). SUPER_ADMIN: ?branchId= opcional.",
           "request": {
-            "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+            "name": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN). SUPER_ADMIN: ?branchId= opcional.",
             "description": {},
             "url": {
               "path": [
@@ -9763,7 +9835,14 @@
               "host": [
                 "{{baseUrl}}"
               ],
-              "query": [],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
+                }
+              ],
               "variable": []
             },
             "header": [
@@ -9796,7 +9875,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -9829,7 +9913,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "name": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9840,7 +9924,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -9868,7 +9957,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"El usuario no tiene una sucursal asignada. Contacte al administrador.\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"USER_WITHOUT_BRANCH\",\n    \"details\": []\n  }\n}",
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Error de validación\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"details\": [\n      {\n        \"field\": \"name\",\n        \"message\": \"El campo name debe ser un texto\"\n      }\n    ]\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -9884,7 +9973,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -9917,7 +10011,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -9928,7 +10022,12 @@
                   "host": [
                     "{{baseUrl}}"
                   ],
-                  "query": [],
+                  "query": [
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
+                    }
+                  ],
                   "variable": []
                 },
                 "header": [
@@ -9956,7 +10055,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"Acceso denegado: privilegios insuficientes\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"details\": []\n  }\n}",
+              "body": "{\n  \"isSuccess\": false,\n  \"message\": \"No tiene permisos sobre esa sucursal\",\n  \"data\": null,\n  \"error\": {\n    \"code\": \"BRANCH_OUT_OF_SCOPE\",\n    \"details\": []\n  }\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -9967,9 +10066,9 @@
           }
         },
         {
-          "name": "Crear caja registradora (ADMIN)",
+          "name": "Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
           "request": {
-            "name": "Crear caja registradora (ADMIN)",
+            "name": "Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
             "description": {},
             "url": {
               "path": [
@@ -10005,7 +10104,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Caja 3\"\n}",
+              "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -10046,7 +10145,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10067,7 +10166,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "name": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -10098,7 +10197,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10150,7 +10249,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10171,7 +10270,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -10202,7 +10301,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Caja 3\"\n}",
+                  "raw": "{\n  \"name\": \"Caja 3\",\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10928,9 +11027,9 @@
       },
       "item": [
         {
-          "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+          "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional.",
           "request": {
-            "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+            "name": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional.",
             "description": {},
             "url": {
               "path": [
@@ -10960,6 +11059,12 @@
                   "key": "search",
                   "value": "papa",
                   "description": "Búsqueda parcial por nombre o código (case-insensitive)"
+                },
+                {
+                  "disabled": true,
+                  "key": "branchId",
+                  "value": "01900000-0000-7000-8000-000000000001",
+                  "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403)."
                 }
               ],
               "variable": []
@@ -11007,6 +11112,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -11065,6 +11174,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -11123,6 +11236,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -11157,7 +11274,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11181,6 +11298,10 @@
                     {
                       "key": "search",
                       "value": "papa"
+                    },
+                    {
+                      "key": "branchId",
+                      "value": "01900000-0000-7000-8000-000000000001"
                     }
                   ],
                   "variable": []
@@ -11221,9 +11342,9 @@
           }
         },
         {
-          "name": "Crear ítem de inventario (ADMIN)",
+          "name": "Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
           "request": {
-            "name": "Crear ítem de inventario (ADMIN)",
+            "name": "Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
             "description": {},
             "url": {
               "path": [
@@ -11260,7 +11381,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+              "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -11302,7 +11423,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11323,7 +11444,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+              "name": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11355,7 +11476,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11408,7 +11529,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -11429,7 +11550,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Acceso denegado: privilegios insuficientes",
+              "name": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -11461,7 +11582,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40\n}",
+                  "raw": "{\n  \"productCode\": \"PRESA-PECHO-2\",\n  \"name\": \"Pechos cocidos\",\n  \"unit\": \"UNIDAD\",\n  \"type\": \"PECHO\",\n  \"unitMeasure\": \"1 presa\",\n  \"salePrice\": 12,\n  \"initialStock\": 40,\n  \"branchId\": \"01900000-0000-7000-8000-000000000001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

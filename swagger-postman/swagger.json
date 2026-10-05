@@ -1682,7 +1682,7 @@
                         "branches": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/BranchEntity"
+                            "$ref": "#/components/schemas/BranchListItemEntity"
                           }
                         },
                         "total": {
@@ -1789,7 +1789,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar sucursales (SUPER_ADMIN)",
+        "summary": "Listar sucursales con su cantidad de cajas y su ADMIN (SUPER_ADMIN)",
         "tags": [
           "branches"
         ]
@@ -3753,7 +3753,19 @@
     "/api/v1/shifts/shift-periods": {
       "get": {
         "operationId": "ShiftsController_listPeriods",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "description": "Incluye los períodos desactivados (para poder reactivarlos). Solo lo respetan ADMIN y SUPER_ADMIN; la cajera siempre recibe solo los activos.",
+            "schema": {
+              "default": false,
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Períodos de turno obtenidos correctamente",
@@ -3796,6 +3808,35 @@
                     "data",
                     "error"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -3878,7 +3919,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar períodos de turno activos",
+        "summary": "Listar períodos de turno activos. ADMIN: ?includeInactive=true también trae los desactivados.",
         "tags": [
           "shifts"
         ]
@@ -6567,7 +6608,19 @@
     "/api/v1/cash-registers": {
       "get": {
         "operationId": "CashRegistersController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Cajas registradoras obtenidas correctamente",
@@ -6615,13 +6668,30 @@
             }
           },
           "400": {
-            "description": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 },
                 "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "USER_WITHOUT_BRANCH": {
                     "summary": "USER_WITHOUT_BRANCH",
                     "value": {
@@ -6687,21 +6757,21 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 },
                 "examples": {
-                  "FORBIDDEN": {
-                    "summary": "FORBIDDEN",
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
                     "value": {
                       "isSuccess": false,
-                      "message": "Acceso denegado: privilegios insuficientes",
+                      "message": "No tiene permisos sobre esa sucursal",
                       "data": null,
                       "error": {
-                        "code": "FORBIDDEN",
+                        "code": "BRANCH_OUT_OF_SCOPE",
                         "details": []
                       }
                     }
@@ -6716,7 +6786,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN)",
+        "summary": "Listar cajas registradoras de la sucursal del usuario (CASHIER | ADMIN). SUPER_ADMIN: ?branchId= opcional.",
         "tags": [
           "cash-registers"
         ]
@@ -6778,7 +6848,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "description": "Error de validación · Ya existe una caja con ese nombre en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -6822,6 +6892,30 @@
                       "data": null,
                       "error": {
                         "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_REQUIRED": {
+                    "summary": "BRANCH_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Indique la sucursal (branchId)",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_REFERENCE_NOT_FOUND": {
+                    "summary": "BRANCH_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La sucursal indicada no existe",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_REFERENCE_NOT_FOUND",
                         "details": []
                       }
                     }
@@ -6879,7 +6973,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
@@ -6897,6 +6991,18 @@
                         "details": []
                       }
                     }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -6908,7 +7014,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear caja registradora (ADMIN)",
+        "summary": "Crear caja registradora (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
         "tags": [
           "cash-registers"
         ]
@@ -7376,6 +7482,17 @@
               "example": "papa",
               "type": "string"
             }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -7519,7 +7636,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7537,6 +7654,18 @@
                         "details": []
                       }
                     }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -7548,7 +7677,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search.",
+        "summary": "Listar ítems de inventario de la sucursal (ADMIN | COOK). Filtros: type, active, search. SUPER_ADMIN: ?branchId= opcional.",
         "tags": [
           "inventory"
         ]
@@ -7610,7 +7739,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "description": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -7669,6 +7798,30 @@
                         "details": []
                       }
                     }
+                  },
+                  "BRANCH_REQUIRED": {
+                    "summary": "BRANCH_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Indique la sucursal (branchId)",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "BRANCH_REFERENCE_NOT_FOUND": {
+                    "summary": "BRANCH_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La sucursal indicada no existe",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -7723,7 +7876,7 @@
             }
           },
           "403": {
-            "description": "Acceso denegado: privilegios insuficientes",
+            "description": "Acceso denegado: privilegios insuficientes · No tiene permisos sobre esa sucursal",
             "content": {
               "application/json": {
                 "schema": {
@@ -7741,6 +7894,18 @@
                         "details": []
                       }
                     }
+                  },
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -7752,7 +7917,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear ítem de inventario (ADMIN)",
+        "summary": "Crear ítem de inventario (ADMIN, en su sucursal; SUPER_ADMIN indica branchId)",
         "tags": [
           "inventory"
         ]
@@ -8577,6 +8742,92 @@
         "required": [
           "name",
           "address"
+        ]
+      },
+      "BranchAdminRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000101",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Jhonny"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Hurtado Zardan"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "BranchListItemEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000001",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sucursal Principal"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. Principal #123, Ciudad"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+591 2 2223344"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "cashRegistersCount": {
+            "type": "number",
+            "example": 2,
+            "description": "Cash registers (\"terminales\") the branch has, active or not"
+          },
+          "admin": {
+            "nullable": true,
+            "description": "Oldest active ADMIN of the branch; null when it has none",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BranchAdminRef"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "address",
+          "phone",
+          "active",
+          "createdAt",
+          "updatedAt",
+          "cashRegistersCount",
+          "admin"
         ]
       },
       "UpdateBranchDto": {
@@ -10179,6 +10430,12 @@
           "name": {
             "type": "string",
             "example": "Caja 3"
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01900000-0000-7000-8000-000000000001",
+            "description": "Sucursal de la caja. Obligatoria para SUPER_ADMIN; un ADMIN no la manda (se usa la suya, y si manda otra recibe 403)."
           }
         },
         "required": [
@@ -10338,6 +10595,12 @@
             "example": 40,
             "minimum": 0,
             "description": "Stock inicial. Si es mayor que 0, genera una InventoryTransaction RECEPTION en la misma transacción del alta."
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01900000-0000-7000-8000-000000000001",
+            "description": "Sucursal del ítem. Obligatoria para SUPER_ADMIN; un ADMIN no la manda (se usa la suya, y si manda otra recibe 403)."
           }
         },
         "required": [
