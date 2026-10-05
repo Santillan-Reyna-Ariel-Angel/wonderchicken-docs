@@ -1,6 +1,6 @@
 # Plan — Mejoras del backend (duplicación, contrato, tipos y entornos)
 
-> **Fecha:** 2026-10-05 · **Estado:** decidido, **sin implementar** · Rama: `feature_sprint1_integrate_front`
+> **Fecha:** 2026-10-05 · **Estado:** ✅ **ejecutado** (pasos 0 a 6; ver §8) · Rama: `feature_sprint1_integrate_front`
 > **Origen:** revisión del backend (2026-10-05) y entrevista de decisiones, una pregunta por vez.
 > **Relación con otros planes:** complementa [plan-integracion-front-datos-reales.md](plan-integracion-front-datos-reales.md) (§4: cambios #1 a #16 del backend). Si hay conflicto de orden, manda la sección 5 de este documento.
 > **Convención:** el código, los identificadores y las referencias a código en la documentación van en **inglés**; la documentación en sí, en español.
@@ -203,3 +203,48 @@ El formato de `error.details` cambia (de objeto `{ fields: string[] }` a array `
 3. **Tokens de 2 h en `development`:** con turnos de 7 horas y sin renovación, la cajera se desloguea unas 3 veces por turno. En producción serán 8 h. A futuro: token corto más token de renovación.
 4. Cuando se despliegue QA o producción: definir `CORS_ORIGINS` si el front llama directo al API (si pasa por el proxy de Next no hace falta).
 5. `PrismaService` todavía lee `DATABASE_URL` de `process.env` directamente; migrarlo a la configuración validada.
+
+---
+
+## 8. Ejecución (2026-10-05)
+
+Los pasos 0 a 6 están hechos, en la misma rama. Después de cada uno se corrió la foto (`pnpm seed` + `pnpm api:snapshot`) y las diferencias fueron exactamente las esperadas. Los pasos 1, 3, 4, 5 y 6 terminaron sin diferencias de runtime salvo las previstas.
+
+| Paso | Resultado |
+|---|---|
+| 0 | `scripts/api-snapshot/` (4 archivos) y línea base de 109 pasos. Para que fuera reproducible hubo que corregir `chance()` del seeder, que usaba `Math.random()` y rompía el `faker.seed(42)`. |
+| 1 | `@Trim()` reemplaza 32 `@Transform`; lint de `src/` de 22 errores a 0; `setupSwagger()` extraído. |
+| 2 | `ERRORS`, `BusinessException`, `ok()`, `exceptionFactory` y filtro simplificado. Los 81 `throw` y los 40 literales de éxito migrados; el formato viejo se eliminó del filtro. Guía §5.3 y §5.4 actualizadas. |
+| 3 | `AuthGuard` resuelve usuario activo, rol y sucursal una vez por request. `requireBranchId(actor)` reemplaza las 4 copias. Un usuario desactivado recibe `401 USER_INACTIVE` (verificado a mano). |
+| 4 | `orders.create()` pasó de 226 líneas a una receta de ~35; las reglas puras viven en `orders.helpers.ts`. Foto: cero diferencias. |
+| 5 | `@ApiOkEnvelope` y `@ApiErrors` en los 10 controllers; 10 entidades de respuesta; la colección de Postman pasó de 123 a 169 respuestas de ejemplo y sigue siendo determinística. |
+| 6 | `SWAGGER_ENABLED_PRODUCTION`; Swagger oculto en producción y `swagger.json` solo se reescribe en `development`; `bootstrap:admin` se niega en producción con CI faltante, por defecto o de menos de 12 caracteres. Verificado levantando la app en cada entorno. |
+
+### Desviaciones respecto del plan
+
+- **Commits por lote, no por módulo** en los pasos 2 y 5 (el catálogo `error-codes.ts` es un solo archivo compartido). Hay un commit por lote de módulos.
+- **Un código, un status.** Se encontró que `CASH_REGISTER_NOT_FOUND`, `SHIFT_PERIOD_NOT_FOUND`, `PRODUCT_NOT_FOUND` y `VARIANT_NOT_FOUND` salían con **404** cuando el id va en la URL y con **400** cuando va en el body (`POST /shifts/open`, `POST /orders`, `POST /variants`). Como el catálogo asigna un solo status por código, se adoptó la convención `X_NOT_FOUND` (URL, 404) / `X_REFERENCE_NOT_FOUND` (body, 400). **Ningún status HTTP cambió.**
+- ```@UseGuards(AuthGuard)``` se quitó de `POST /auth/logout`: el guard ya es global y se ejecutaría dos veces.
+- `GET /orders`, `POST /orders/:id/pay` y `/cancel` documentan el status que **realmente** devuelven (201, no 200).
+
+### Cambios de códigos que afectan al front
+
+| Antes | Ahora |
+|---|---|
+| `error.details` = `{ fields: [...] }` o `{ name: "..." }` | siempre un array `[{ field, message }]` (vacío si no hay campo) |
+| `POST /shifts/open`: `SHIFT_PERIOD_NOT_FOUND`, `CASH_REGISTER_NOT_FOUND` | `SHIFT_PERIOD_REFERENCE_NOT_FOUND`, `CASH_REGISTER_REFERENCE_NOT_FOUND` |
+| `POST /orders`: `PRODUCT_NOT_FOUND`, `VARIANT_NOT_FOUND`, `CUSTOMER_NOT_FOUND` | `PRODUCT_REFERENCE_NOT_FOUND`, `VARIANT_REFERENCE_NOT_FOUND`, `CUSTOMER_REFERENCE_NOT_FOUND` |
+| 401: `Unauthorized` | `INVALID_CREDENTIALS`, `TOKEN_REQUIRED`, `TOKEN_INVALID`, y nuevo `USER_INACTIVE` |
+| 404 sin código (`Not Found`) en branches, users, orders, turnos | `BRANCH_NOT_FOUND`, `USER_NOT_FOUND`, `ORDER_NOT_FOUND`, `SHIFT_NOT_FOUND` |
+| `Bad Request` en duplicados de users y productos | `USER_EMAIL_ALREADY_EXISTS`, `USER_CI_ALREADY_EXISTS`, `USER_PHONE_ALREADY_EXISTS`, `DUPLICATE_PRODUCT_NAME` |
+| `Bad Request`/`Forbidden` genéricos | `BAD_REQUEST` (ids con formato inválido) y `FORBIDDEN` |
+
+La lista completa y vigente es `src/common/errors/error-codes.ts`.
+
+### Hallazgos que NO se tocaron (fuera del alcance del plan)
+
+1. **`POST /shifts/open` no valida que la cajera ya tenga un turno abierto**: la foto lo muestra abriendo uno segundo y `GET /shifts/active` devuelve cualquiera de los dos.
+2. **Un pedido creado ya pagado queda con `paidAt: null`**; solo `/pay` lo completa.
+3. **`POST /orders/:id/pay` y `/cancel` responden 201** en vez de 200 (falta `@HttpCode(200)`; el Swagger anterior decía 200). Corregirlo cambia el status que ve el front.
+4. `AuditService.log` lanza `BadRequestException` ante una acción desconocida: es un error de programación, no del cliente; debería ser un `Error` (500).
+5. El ejemplo de `pnpm api:snapshot` necesita `pnpm seed` antes de cada corrida (los pasos crean y modifican filas).
