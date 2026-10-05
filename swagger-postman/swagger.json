@@ -2507,7 +2507,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "UUID del producto (Pollo Broaster 1/4 del seed)",
+            "description": "UUID del producto (Cuarto de Pollo del seed)",
             "schema": {
               "format": "uuid",
               "example": "01900000-0000-7000-8000-000000000401",
@@ -2672,7 +2672,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "UUID del producto (Pollo Broaster 1/4 del seed)",
+            "description": "UUID del producto (Cuarto de Pollo del seed)",
             "schema": {
               "format": "uuid",
               "example": "01900000-0000-7000-8000-000000000401",
@@ -2890,10 +2890,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "UUID del producto (Salsa Extra del seed)",
+            "description": "UUID del producto (Porción de Papas del seed)",
             "schema": {
               "format": "uuid",
-              "example": "01900000-0000-7000-8000-000000000408",
+              "example": "01900000-0000-7000-8000-000000000414",
               "type": "string"
             }
           }
@@ -3385,10 +3385,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "UUID de la variante (1/2 mixto del seed)",
+            "description": "UUID de la variante (Porción Media del seed)",
             "schema": {
               "format": "uuid",
-              "example": "01900000-0000-7000-8000-000000000503",
+              "example": "01900000-0000-7000-8000-000000000502",
               "type": "string"
             }
           }
@@ -3591,10 +3591,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "UUID de la variante (1/4 con arroz del seed)",
+            "description": "UUID de la variante (Cuarto de Pollo del seed)",
             "schema": {
               "format": "uuid",
-              "example": "01900000-0000-7000-8000-000000000502",
+              "example": "01900000-0000-7000-8000-000000000501",
               "type": "string"
             }
           }
@@ -10302,11 +10302,11 @@
           },
           "name": {
             "type": "string",
-            "example": "Pollo Broaster 1/2"
+            "example": "Porción Media"
           },
           "basePrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal serialized as a string"
           },
           "category": {
@@ -10316,7 +10316,7 @@
           "description": {
             "type": "string",
             "nullable": true,
-            "example": "2 presas + porción mixto"
+            "example": "2 presas + porción mixto de papa y arroz"
           },
           "active": {
             "type": "boolean",
@@ -10359,13 +10359,13 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Porción Media",
+            "example": "Alitas BBQ",
             "minLength": 3,
             "maxLength": 80
           },
           "basePrice": {
             "type": "number",
-            "example": 30,
+            "example": 35,
             "minimum": 0.01
           },
           "category": {
@@ -10374,7 +10374,7 @@
           },
           "description": {
             "type": "string",
-            "example": "2 presas + porción mixto"
+            "example": "Porción de alitas con salsa BBQ"
           },
           "isSellable": {
             "type": "boolean",
@@ -10426,7 +10426,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "01900000-0000-7000-8000-000000000503",
+            "example": "01900000-0000-7000-8000-000000000502",
             "format": "uuid"
           },
           "productId": {
@@ -10436,7 +10436,7 @@
           },
           "name": {
             "type": "string",
-            "example": "1/2 mixto"
+            "example": "Porción Media"
           },
           "components": {
             "type": "array",
@@ -10484,11 +10484,11 @@
           },
           "name": {
             "type": "string",
-            "example": "Pollo Broaster 1/2"
+            "example": "Porción Media"
           },
           "basePrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal serialized as a string"
           },
           "category": {
@@ -10498,7 +10498,7 @@
           "description": {
             "type": "string",
             "nullable": true,
-            "example": "2 presas + porción mixto"
+            "example": "2 presas + porción mixto de papa y arroz"
           },
           "active": {
             "type": "boolean",
@@ -10579,12 +10579,12 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "01900000-0000-7000-8000-000000000402",
+            "example": "01900000-0000-7000-8000-000000000404",
             "format": "uuid"
           },
           "name": {
             "type": "string",
-            "example": "1/2 con arroz"
+            "example": "Medio Pollo con arroz"
           },
           "components": {
             "type": "array",
@@ -10903,12 +10903,12 @@
           },
           "unitPrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "totalPrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "productId": {
@@ -10920,15 +10920,15 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "example": "01900000-0000-7000-8000-000000000503"
+            "example": "01900000-0000-7000-8000-000000000502"
           },
           "snapshot": {
             "type": "object",
             "additionalProperties": true,
             "example": {
-              "productName": "Pollo Broaster 1/2",
-              "productBasePrice": 45,
-              "variantName": "1/2 mixto",
+              "productName": "Porción Media",
+              "productBasePrice": 30,
+              "variantName": "Porción Media",
               "quantity": 1
             },
             "description": "Copy of the catalog data at sale time"
@@ -11110,12 +11110,12 @@
           },
           "originalAmount": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "total": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "isCustom": {
@@ -11291,7 +11291,7 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "01900000-0000-7000-8000-000000000405",
+            "example": "01900000-0000-7000-8000-000000000409",
             "format": "uuid"
           },
           "qty": {
@@ -11315,7 +11315,7 @@
           },
           "variantId": {
             "type": "string",
-            "example": "01900000-0000-7000-8000-000000000503",
+            "example": "01900000-0000-7000-8000-000000000502",
             "format": "uuid"
           },
           "quantity": {
@@ -11444,12 +11444,12 @@
           },
           "unitPrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "totalPrice": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           }
         },
@@ -11533,12 +11533,12 @@
           },
           "originalAmount": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "total": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "isCustom": {
@@ -11912,12 +11912,12 @@
           },
           "originalAmount": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "total": {
             "type": "string",
-            "example": "45",
+            "example": "30",
             "description": "Decimal as string"
           },
           "isCustom": {
