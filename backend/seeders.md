@@ -41,7 +41,8 @@ Si es intencional: `pnpm seed -- --force`. La lógica está en [`seeders/guard.t
 ## Ajustar el volumen de datos
 
 Editá la constante `VOLUME` en [`seeders/helpers.ts`](../seeders/helpers.ts)
-(cantidad de cajeras, clientes, órdenes por turno, etc.).
+(cantidad de cajeras, clientes, órdenes por turno, etc.). Solo las órdenes por turno también se pueden
+cambiar sin tocar código, con la variable `ORDERS_PER_SHIFT` en el `.env`.
 
 ## Datos reproducibles
 
