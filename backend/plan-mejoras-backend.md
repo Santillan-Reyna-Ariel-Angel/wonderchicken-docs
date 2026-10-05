@@ -261,3 +261,9 @@ La lista completa y vigente es `src/common/errors/error-codes.ts`.
 
 - `GET /auth/me` devuelve el perfil fresco desde la base (`branchName` incluido) para cualquier rol.
 - `PATCH /inventory/items/:id/toggle-active` (ADMIN, de su sucursal): el negocio no borra, desactiva.
+
+### Después de la ejecución: alcance de SUPER_ADMIN, períodos y sucursales (cambios #5, #4 y #3)
+
+- **#5.** Cajas e inventario: el SUPER_ADMIN usa `?branchId=` (opcional; sin él ve todas las sucursales) y manda `branchId` en el body al crear (obligatorio: `BRANCH_REQUIRED`; sucursal inexistente: `BRANCH_REFERENCE_NOT_FOUND`). Edita y activa/desactiva en cualquier sucursal. Un rol de sucursal que nombre otra recibe 403 `BRANCH_OUT_OF_SCOPE`. La lógica vive en `src/common/auth/branch-scope.ts` (`readableBranchId`, `resolveWriteBranchId`, `assertBranchExists`).
+- **#4.** `GET /shifts/shift-periods?includeInactive=true` (default sin cambios; la cajera nunca ve inactivos). Un valor que no sea `true`/`false` da 400; lo mismo vale ahora para `?active=` en inventario (antes `?active=abc` se leía como `false`).
+- **#3.** `GET /branches` agrega `cashRegistersCount` y `admin` por sucursal. Se expone como `cashRegistersCount` y no como el `_count` de Prisma, para no filtrar detalles del ORM al contrato.
