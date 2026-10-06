@@ -50,6 +50,7 @@ El orden va de lo abstracto a lo concreto: cada documento **depende del anterior
 | Archivo | Qué es | Cómo usarlo |
 | ------- | ------ | ----------- |
 | [pdr_questions_pending.txt](business/pdr_questions_pending.txt) | **Backlog de preguntas abiertas del negocio**: decisiones aún `[SIN RESPUESTA]`, `[AMBIGUA]` o `[FALTANTE EN DOC]`, priorizadas (críticas / importantes / a verificar). | A medida que el negocio responde, **trasladá la decisión al [pdr.md](business/pdr.md)** (la fuente de verdad) y remové/marcá la pregunta acá. El PDR manda; este archivo solo lista lo que falta definir. |
+| [temporaries/](temporaries/) | **Archivos que no necesitan ser permanentes**: planes específicos, prompts, respuestas para revisar durante un feature, análisis y capturas que pierden valor al terminarlo. | Poné ahí lo que sirve mientras se desarrolla un feature y no más. Cada archivo lleva su fecha y contexto al inicio. Si algo resulta útil a largo plazo, movelo a `backend/`, `frontend/`, `business/` o `notes/`; al cerrar el feature o el sprint, borrá lo que ya no sirva. |
 
 > **Estado actual:** las preguntas críticas de Fase 1 (máquina de estados, arqueo, vales) ya fueron
 > respondidas y están codificadas como reglas en [PDR §2](business/pdr.md#2-reglas-de-negocio-definitivas-y-no-negociables).

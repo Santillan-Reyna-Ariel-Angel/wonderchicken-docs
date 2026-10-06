@@ -1,5 +1,0 @@
-Estoy en esta pagina: "http://localhost:3000/cashier/pos", en el modal "Configurar variante"
-Quiero que luzca igual a la imagen que te pasare usando MUI.
-Quiero que seas riguroso(respeta) con los colores, estilos y funcioanlidad, para esto puedes revisar el proyecto de origen (D:\SISTEMAS\wonderchicken-prototype)
-Recuerda en tu memoria cual es el proyecto de origen (D:\SISTEMAS\wonderchicken-prototype)
-Para la busqueda de terminos dentro del proyecto puedes usar tgrep (es una skill o cli)
