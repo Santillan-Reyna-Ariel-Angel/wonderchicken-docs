@@ -91,12 +91,45 @@ La API de la tabla se organizará alrededor de un objeto de props tipado, pero `
 
 - `rows`: datos a renderizar.
 - `columns`: arreglo de definiciones de columnas. Cada columna declara al menos su identificador, encabezado y campo; cuando el valor necesita una presentación especial, puede recibir una función `render` que devuelve contenido o un componente React.
-- La columna de acciones es opcional. Si el arreglo `columns` incluye una definición marcada como acciones, `CommonTable` la renderiza; si no existe, no agrega ninguna columna adicional. Su `render` recibe la fila y devuelve uno o varios elementos React —por ejemplo, botones para editar, eliminar, ver o seleccionar— definidos por el feature.
+- La columna de acciones es opcional: si la pantalla pasa `actions`, la tabla agrega la columna; si no, no agrega ninguna. `actions` es una función que recibe la fila y devuelve los elementos React que el feature quiera (ver [Acciones de fila](#acciones-de-fila)). La tabla solo aporta el contenedor (alineación y separación).
 - `loading`, `emptyMessage` y `error` cuando la pantalla lo necesite.
 - `showSearch` y, si está habilitado, un callback o valor controlado de búsqueda.
 - Configuración responsive mínima, como columnas prioritarias o contenido alternativo para móvil.
 
 La tabla no debe hacer llamadas HTTP, manejar stores ni decidir permisos. Cada feature prepara las filas, las columnas y el renderizado de la columna de acciones; `CommonTable` solo renderiza. Si una tabla necesita agrupación, edición compleja o una interacción específica de negocio, se crea un componente de tabla dentro del feature y se reutilizan las piezas visuales comunes sin forzar el caso dentro de `CommonTable`.
+
+#### Acciones de fila
+
+Cada tabla **compone** las acciones que necesita; no existe un arreglo de acciones que lo defina todo. La tabla no decide qué acciones hay: una puede tener solo editar, otra editar y borrar, y otra solo un switch. Las piezas comunes aportan el aspecto y el color:
+
+- **`RowActionButton`** (`commonComponents/RowActionButton.tsx`): icono con tooltip y `aria-label`. Su `kind` define icono, texto y color del theme; sin `kind`, recibe `icon` y `label` y es neutro.
+
+  | `kind` | Icono | Color |
+  | ------ | ----- | ----- |
+  | `edit` | lápiz | `info` (el mismo azul que el modal de edición) |
+  | `delete` | papelera | `error` |
+  | `view` | ojo (o el `icon` que se pase, por ejemplo un historial) | neutro |
+  | `print` | impresora | neutro |
+
+- **`RowActionSwitch`** (`commonComponents/RowActionSwitch.tsx`): el switch de activar/desactivar, en `success`, con tooltip y `aria-label`.
+
+```tsx
+// Solo editar
+actions={(c) => <RowActionButton kind="edit" label="Editar cliente" onClick={() => edit(c)} />}
+
+// Editar + borrar
+actions={(p) => (
+  <>
+    <RowActionButton kind="edit" label={`Editar ${p.name}`} onClick={() => edit(p)} />
+    <RowActionButton kind="delete" label={`Eliminar ${p.name}`} onClick={() => remove(p)} />
+  </>
+)}
+
+// Solo un switch
+actions={(u) => <RowActionSwitch name={u.name} checked={u.active} onChange={() => toggle(u)} />}
+```
+
+Una acción solo para algunas filas se resuelve con JSX normal (`{row.canDelete && <RowActionButton … />}`) y una deshabilitada, con su prop `disabled`. El ancho de la columna se ajusta por pantalla con `actionsColumnWidth` (con un icono basta ~100 px, y con tres acciones ~180 px; el encabezado "Acciones" debe verse completo). Los colores nunca se pasan con `sx`: salen de `kind` y del theme.
 
 ### Indicadores de carga y feedback de operación
 
@@ -114,7 +147,6 @@ Durante una mutación se debe deshabilitar el control que la inició y, cuando a
 
 El estilo anterior resolvía una aplicación operativa grande con una organización muy cercana al negocio. Esa experiencia sigue siendo valiosa, pero debe trasladarse a herramientas y límites más robustos.
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
 ### 0.1 Organización por feature y caso de uso
 
 Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` contiene rutas y composición; `features/` contiene capacidades de negocio; `commonComponents/` contiene UI compartida.
@@ -122,25 +154,16 @@ Next.js no obliga a usar una arquitectura concreta. Para este proyecto, `app/` c
 ```text
 src/
 │  ├─ layout.tsx
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-│  ├─ providers.tsx
-│  └─ (authenticated)/
-│     ├─ cashier/
-│     ├─ dispatcher/
-│     ├─ cook/
-│     └─ admin/
-=======
 │  ├─ ClientProviders.tsx
 │  ├─ (public)/
-│  │  ├─ login/page.jsx
-│  │  └─ order/[token]/page.jsx
+│  │  ├─ login/page.tsx
+│  │  └─ order/[token]/page.tsx
 │  └─ (protected)/
 │     ├─ layout.tsx
 │     ├─ super-admin/
 │     ├─ branch-admin/
 │     ├─ cashier/
 │     └─ dispatcher/
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ features/
 │  ├─ sales/
 │  │  ├─ api/
@@ -155,23 +178,7 @@ src/
 └─ commonComponents/
 ```
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
-
-```text
-app/(authenticated)/cashier/
-├─ page.tsx
-├─ sales/page.tsx
-├─ orders/page.tsx
-├─ cash-register/page.tsx
-├─ expenses/page.tsx
-├─ vouchers/page.tsx
-├─ customers/page.tsx
-└─ reports/page.tsx
-```
-
-=======
-Los nombres entre paréntesis son **route groups**: organizan layouts y permisos sin agregarse a la URL. Por ejemplo, `app/(public)/login/page.jsx` expone `/login`, mientras que `app/(protected)/cashier/pos/page.jsx` expone `/cashier/pos`. Los segmentos dinámicos, como `order/[token]`, se reservan para la vista pública de una comanda.
+Los nombres entre paréntesis son **route groups**: organizan layouts y permisos sin agregarse a la URL. Por ejemplo, `app/(public)/login/page.tsx` expone `/login`, mientras que `app/(protected)/cashier/pos/page.tsx` expone `/cashier/pos`. Los segmentos dinámicos, como `order/[token]`, se reservan para la vista pública de una comanda.
 
 No se crea una ruta operativa para `cook` en V1. El rol cocinero permanece reservado hasta que se definan sus casos de uso; no debe aparecer en la navegación ni en la matriz de pantallas mientras no tenga una funcionalidad aprobada.
 
@@ -179,14 +186,14 @@ La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
 
 ```text
 app/(protected)/cashier/
-├─ page.jsx
-├─ pos/page.jsx
-├─ orders/page.jsx
-├─ cash-register/page.jsx
-├─ expenses/page.jsx
-├─ vouchers/page.jsx
-├─ customers/page.jsx
-└─ reports/page.jsx
+├─ page.tsx
+├─ pos/page.tsx
+├─ orders/page.tsx
+├─ cash-register/page.tsx
+├─ expenses/page.tsx
+├─ vouchers/page.tsx
+├─ customers/page.tsx
+└─ reports/page.tsx
 ```
 
 La cajera es un rol, no un feature. Sus rutas componen capacidades de negocio. El administrador de sucursal y el superadministrador también usan rutas por rol porque sus navegaciones, alcance de sucursal y permisos son diferentes. Los features no deben duplicarse por rol: `sales`, `orders`, `customers` y `cash-register` contienen la lógica compartida, mientras cada rol compone la vista que necesita.
@@ -215,7 +222,6 @@ La reutilización correcta ocurre en capas. `features/sales` puede compartir tip
 
 La vista pública de una comanda no requiere login: se accede mediante el `publicToken` de la orden. Un futuro portal autenticado del cliente es una capacidad distinta y no debe mezclarse con las rutas operativas por rol.
 
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 Reglas:
 
 - Un componente exclusivo de un feature vive dentro de ese feature.
@@ -236,13 +242,8 @@ features/sales/
 ├─ stores/
 │  └─ sales.store.ts
 ├─ components/
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
 │  ├─ sales-pos.tsx
 │  └─ custom-sale-form.tsx
-=======
-│  ├─ sales-pos.jsx
-│  └─ custom-sale-form.jsx
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ schemas/
 └─ types.ts
 ```
@@ -256,17 +257,10 @@ API -> Zustand Store -> UI
 La UI no llama directamente a `fetch`. El store invoca `api/`, conserva los datos compartidos y expone selectores y acciones. Los hooks personalizados no forman parte de la arquitectura base.
 
 - **`api/`**: realiza una llamada HTTP por endpoint. No renderiza ni decide reglas de negocio.
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-- **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. No calcula precios, stock, descuentos ni permisos.
-- **`components/`**: recibe datos del store, renderiza controles y emite eventos.
-- **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
-- **`types.ts`**: define tipos compartidos sin esconder reglas de negocio.
-=======
 - **`stores/`**: mantiene `data`, `isLoading`, `error` y acciones compartidas mediante Zustand. Puede exponer datos para que la UI calcule subtotales y un total preliminar de presentación, pero no decide precios válidos, stock, descuentos aplicables ni permisos.
 - **`components/`**: recibe datos del store, renderiza controles y emite eventos.
 - **`schemas/`**: valida la forma de requests y responses; no reemplaza la validación del backend.
 - **`types.ts`**: define tipos compartidos de los contratos críticos sin esconder reglas de negocio. No se crea un archivo de tipos para cada componente visual trivial.
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 El flujo completo es:
 
@@ -290,11 +284,7 @@ La estructura del frontend debe seguir los endpoints reales documentados en Swag
 | `customers`     | `GET /api/v1/customers`, `POST /api/v1/customers`, `PATCH /api/v1/customers/{id}`                                                                      | Buscar, registrar y editar clientes para facturación.                 |
 | `reports`       | `GET /api/v1/reports/sales`, `/inventory-presas`, `/cash-audit`                                                                                        | Solicitar y renderizar reportes; el backend genera los totales y CSV. |
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI pinta esos datos y solo puede calcular el **precio sugerido** de una venta custom con `piecePrices`; el backend valida y persiste el precio confirmado.
-=======
 El POS debe cargar su contexto con una llamada a `GET /api/v1/pos/context`. El backend ya devuelve productos, variantes, descuentos aplicables, precios por presa, períodos y turno activo. La UI utiliza esos datos para mostrar precios unitarios, subtotales y un total preliminar del carrito; también puede calcular el **precio sugerido** de una venta custom con `piecePrices`. El backend valida y persiste los valores confirmados.
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 La respuesta de cada API debe conservar el contrato estándar del backend (`isSuccess`, `message`, `data`, `error`). Los stores exponen esos datos a la UI sin mover reglas transaccionales al navegador.
 
@@ -302,53 +292,67 @@ La respuesta de cada API debe conservar el contrato estándar del backend (`isSu
 
 El patrón anterior de modales configurables, tablas reutilizables y callbacks es correcto. En la versión nueva se expresa con props tipadas y composición, evitando que un componente conozca Firebase, las rutas o toda la lógica del negocio.
 
+### Modales: un solo `AppModal`
+
+Todos los modales de la aplicación comparten la misma estructura de tres zonas: **header** (icono, título y subtítulo opcional), **body** (un mensaje o un componente) y **footer** (cancelar y confirmar). La implementación vive en `src/commonComponents/AppModal.tsx`; `ConfirmDialog` y `ActionModal` son envoltorios delgados sobre él. No se crean modales con `Dialog` de MUI directamente.
+
+| Zona | Prop | Regla |
+| ---- | ---- | ----- |
+| Control | `open`, `onClose` | `onClose` lo disparan la X, el click afuera, Esc y el botón Cancelar |
+| Header | `icon`, `title`, `subtitle` | `title` obligatorio; el resto opcional |
+| Body | `message`, `children` | `message` es texto simple; `children` es un componente. Se renderizan solo si existen, sin espacios vacíos |
+| Footer | `cancelLabel`, `cancelIcon` | El botón solo existe si se envía el texto |
+| Footer | `confirmLabel`, `confirmIcon`, `onConfirm` | El botón solo existe si se envía el texto. El icono es opcional; el texto, no |
+| Footer | `confirmLoading`, `confirmDisabled` | `confirmLoading` muestra "Procesando…" y bloquea ambos botones; `confirmDisabled` bloquea por regla de negocio |
+| Footer | `destructive` | El botón de confirmar usa `error` en vez de `success` |
+| Header y footer | `editing` | El modal edita datos existentes: el header y el botón de confirmar usan `info` (azul) en vez del rojo de marca y `success` |
+| Layout | `paperSx` | Escape hatch de estilos; en general solo para el ancho |
+
+Reglas:
+
+- **Sin etiquetas, sin footer.** Un modal de solo lectura no pasa `cancelLabel` ni `confirmLabel`. No existen `hideFooter` ni `hideCancel`: la presencia del texto decide si el botón se renderiza.
+- **El footer solo lleva cancelar y confirmar.** Los totales y las acciones propias de un feature (Limpiar, Imprimir, Volver, "Precio final") van **dentro del body**, en el componente que los necesita. No hay prop `footer`.
+- **Tamaño.** El modal se adapta al contenido y nunca supera el 80% del ancho ni del alto de la pantalla; solo el body hace scroll. Como el ancho sale del contenido, el modal declara su ancho natural con `paperSx={{ width: 560 }}` (se achica solo en pantallas chicas). No se usan `maxWidth` ni `fullWidth`.
+- **Padding.** `AppModal` aplica el padding del body. Si el contenido necesita ocupar todo el ancho (por ejemplo, una barra de pasos o un resumen pegado al borde), compensa con `mx: -MODAL_BODY_PADDING_X` y `my: -MODAL_BODY_PADDING_Y`, constantes exportadas por `AppModal`. No se desactiva el padding con una prop.
+- **Elementos fijos dentro del body.** Para que una barra quede pegada arriba o abajo al hacer scroll se usa `position: 'sticky'` con `top`/`bottom: (theme) => theme.spacing(-MODAL_BODY_PADDING_Y)` (el sticky respeta el padding del contenedor) y un **fondo opaco**: `action.hover` es translúcido y deja ver el contenido por debajo.
+- **Colores.** Confirmar es `success`, editar es `info` (prop `editing`: cambia el header y el botón), destructivo es `error` y cancelar es `error` en contorno. Crear y editar se distinguen de un vistazo: header rojo de marca con botón verde al crear; header y botón azules al editar. Los botones del footer no llevan `sx` de color: los toman del theme.
+- **Idioma.** Todo texto visible va en español, y el mensaje describe la consecuencia ("La sucursal quedará fuera de la red de catálogos compartidos").
+
+Ejemplo de formulario:
+
 ```tsx
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-} from '@mui/material';
-
-type ConfirmDialogProps = {
-  open: boolean;
-  title: string;
-  description: string;
-  isLoading?: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
-
-export function ConfirmDialog({
-  open,
-  title,
-  description,
-  isLoading = false,
-  onCancel,
-  onConfirm,
-}: ConfirmDialogProps) {
-  return (
-    <Dialog open={open} onClose={onCancel}>
-      <DialogTitle>{title}</DialogTitle>
-      <DialogContent>{description}</DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} disabled={isLoading}>
-          Cancelar
-        </Button>
-        <Button onClick={onConfirm} color="error" disabled={isLoading}>
-          {isLoading ? 'Procesando...' : 'Confirmar'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
+<AppModal
+  open={open}
+  onClose={onClose}
+  icon={<StorefrontRoundedIcon />}
+  title="Nueva sucursal"
+  paperSx={{ width: 560 }}
+  cancelLabel="Cancelar"
+  confirmLabel="Crear sucursal"
+  onConfirm={handleSave}
+  confirmLoading={isSaving}
+>
+  <BranchForm />
+</AppModal>
 ```
 
-La lógica de eliminar un usuario se implementa en el feature y se entrega como `onConfirm`; el diálogo solo presenta y coordina la interacción.
+Ejemplo de confirmación destructiva, con `ConfirmDialog`:
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-=======
+```tsx
+<ConfirmDialog
+  open={Boolean(confirmToggle)}
+  title={`Desactivar ${confirmToggle?.name}`}
+  message="La sucursal quedará fuera de la red de catálogos compartidos."
+  isDestructive
+  destructiveLabel="Desactivar"
+  onClose={() => setConfirmToggle(null)}
+  onConfirm={handleToggle}
+  confirmLoading={isToggling}
+/>
+```
+
+`ConfirmDialog` fija el icono de advertencia (o de pregunta con `isQuestion`), el color de `destructive` y el texto "Cancelar" por defecto. La lógica de desactivar o eliminar se implementa en el feature y se entrega como `onConfirm`; el modal solo presenta y coordina la interacción.
+
 ### Modal con contenido React inyectable (referencia)
 
 Un patrón útil cuando se necesita un modal que pueda abrirse desde un botón o icono y renderizar contenido React arbitrario. El componente gestiona su propio estado de apertura/cierre y expone callbacks para que el feature decida qué hacer al confirmar o cancelar.
@@ -427,7 +431,6 @@ export { ActionModal };
 - Si el modal necesita estado de carga, agregar `isLoading` y deshabilitar los botones mientras la operación está en curso, igual que en `ConfirmDialog`.
 - El `triggerLabel` puede ser un icono en lugar de texto; el botón puede reemplazarse por un `IconButton` si la acción lo requiere.
 
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ### 0.3 Separación entre UI, estado y datos
 
 El estilo anterior mezclaba a veces consulta, transformación, formulario y render en un mismo componente. La evolución recomendada conserva la división por módulo y agrega límites claros:
@@ -556,9 +559,6 @@ No requiere providers ni configuración extra.
 
 ---
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-## 4. Estructura recomendada
-=======
 ## 4. React-Toastify (notificaciones)
 
 ```bash
@@ -570,30 +570,20 @@ pnpm add react-toastify
 ---
 
 ## 5. Estructura recomendada
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ```text
 src/
 ├─ app/
 │  ├─ layout.tsx
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-│  ├─ providers.tsx
-│  └─ (authenticated)/
-│     ├─ cashier/
-│     ├─ dispatcher/
-│     ├─ cook/
-│     └─ admin/
-=======
 │  ├─ ClientProviders.tsx
 │  ├─ (public)/
-│  │  ├─ login/page.jsx
-│  │  └─ order/[token]/page.jsx
+│  │  ├─ login/page.tsx
+│  │  └─ order/[token]/page.tsx
 │  └─ (protected)/
 │     ├─ super-admin/
 │     ├─ branch-admin/
 │     ├─ cashier/
 │     └─ dispatcher/
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ├─ features/
 │  ├─ sales/
 │  ├─ orders/
@@ -604,26 +594,18 @@ src/
 │  ├─ reports/
 │  └─ users/
 ├─ config/
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-│  └─ api.ts
-├─ commonComponents/
-=======
 │  ├─ api.ts               # Prefijo de la API (variable de entorno)
 │  └─ colors.ts            # Colores de la marca (único punto de verdad)
 ├─ commonComponents/
-│  ├─ CommonTable.jsx
-│  ├─ EmptyState.jsx
-│  └─ ConfirmDialog.jsx
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
+│  ├─ CommonTable.tsx
+│  ├─ EmptyState.tsx
+│  └─ ConfirmDialog.tsx
 └─ styles/
   └─ globals.css
 ```
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-=======
 `CommonTable` debe mantenerse como una pieza de presentación simple y configurable. Recibe columnas, filas y opciones como búsqueda, acciones, carga, estado vacío y comportamiento responsive; no conoce endpoints ni reglas de negocio. Una tabla con edición compleja o una interacción específica permanece dentro del feature correspondiente.
 
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ### Configuración de la API
 
 El prefijo de la API no debe quedar escrito dentro de las llamadas API. Si la versión cambia de `/api/v1` a `/api/v2`, solo se actualiza la variable de entorno.
@@ -680,113 +662,71 @@ La función API es el único lugar que conoce la URL y el formato externo. El st
 
 ## 5. Theme mínimo de MUI
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-### `src/theme/theme.ts`
-
-```tsx
-import { createTheme } from '@mui/material/styles';
-=======
 ### Paleta de colores de la marca
 
-La paleta cromática del proyecto se define en un archivo de configuración centralizado (`src/config/colors.ts`) que el theme de MUI importa. De esta forma, los colores de la marca se cambian desde un solo lugar y cualquier componente que los necesite puede importar las constantes directamente.
-
-**Colores de Wonder Chicken:**
-
-| Rol en MUI | Color       | Hex       | Uso principal                            |
-|------------|-------------|-----------|------------------------------------------|
-| `primary`  | Rojo        | `#d32f2f` | Botones principales, encabezados, acentos |
-| `secondary`| Amarillo    | `#fbc02d` | Detalles, badges, highlights, ofertas     |
-| —          | Blanco      | `#ffffff` | Fondos, superficies claras                |
-| —          | Negro       | `#000000` | Textos, contrastes fuertes                |
-
-**Armonía con los colores semánticos de MUI:**
-
-Los colores de la marca NO deben reasignar ni confundirse con los colores semánticos que MUI usa para estados del sistema. MUI reserva:
-
-- `error` → rojo de advertencia/error (distinto al rojo de marca)
-- `warning` → naranja/ámbar
-- `info` → azul
-- `success` → verde
-
-El rojo de Wonder Chicken (`primary`) es un rojo intenso corporativo (#d32f2f), NO el rojo semántico de error. El amarillo (`secondary`) es un amarillo mostaza cálido (#fbc02d), NO el amarillo de advertencia. Esto permite que los botones de acción principales usen el rojo de marca sin que el usuario los interprete como "error" o "peligro".
-
-**Psicología del color aplicada:**
-
-- **Rojo corporativo:** Transmite energía, calidez, apetito (ideal para un restaurante de pollo). Al usarlo como `primary` y no como `error`, se asocia a acción positiva, no a peligro.
-- **Amarillo mostaza:** Transmite optimismo, calidez, familiaridad. Al ser un amarillo apagado (mostaza) y no brillante, no cansa la vista ni compite con el rojo.
-- **Blanco y negro:** Proporcionan el contraste necesario para la legibilidad y la jerarquía visual sin agregar ruido cromático.
-
-### Archivo de configuración centralizado
-
-Los valores de los colores deben vivir en `src/config/colors.ts`. El theme de MUI los importa y cualquier componente que necesite un color específico también puede importarlos sin depender del theme.
+La paleta de la marca vive en `src/config/colors.ts`, que importa el theme de MUI. Los colores se cambian desde un solo lugar y cualquier componente puede importar las constantes sin depender del theme.
 
 ```ts
 // src/config/colors.ts — Único punto de verdad para los colores de la marca
-
 export const BRAND_COLORS = {
-  primary: '#d32f2f',   // Rojo Wonder Chicken
-  secondary: '#fbc02d', // Amarillo Wonder Chicken
+  red: '#e31017',
+  yellow: '#e8fc21',
   white: '#ffffff',
   black: '#000000',
 } as const;
 ```
 
-El theme importa estas constantes:
+### Roles de color: identidad vs. acción
+
+El rojo de la marca se parece demasiado al rojo de error de MUI. Si ambos se usaran en botones, "Crear sucursal" y "Eliminar" se verían iguales y el usuario no distinguiría una acción segura de una destructiva. Por eso cada color tiene un rol fijo:
+
+| Rol | Color | Se usa en |
+| --- | ----- | --------- |
+| `primary` | Rojo de marca (`darken(BRAND_COLORS.red, 0.20)`) | **Identidad:** header de los modales, app bar, navegación activa, foco y etiquetas. No es un color de acción |
+| `secondary` | Amarillo de marca | Detalles, badges y resaltados |
+| `success` | Verde (`green` de MUI) | Acciones de **confirmar, crear, guardar y activar**; el estado "activo" de un switch |
+| `info` | Azul (`lightBlue` de MUI) | **Modales de edición** (header y botón de confirmar) y todo lo "informativo": toasts, alertas, badges de estado. Se cambia solo en el theme |
+| `error` | Rojo (`red` de MUI) | Acciones **destructivas** (eliminar, desactivar, cancelar un pedido) y el botón Cancelar en contorno |
+
+Regla práctica: si un botón hace algo, su color sale de `success` o `error`; el rojo de marca no se usa para botones de acción.
+
+### Colores semánticos controlados desde el theme
+
+`success`, `error` e `info` se declaran **de forma explícita en el theme**, con los tokens de la paleta de MUI (`green`, `red`) y una variante por modo. Así se ajustan en un solo lugar sin tener que tocar los componentes, y siguen el cambio entre tema claro y oscuro (en oscuro se usan tonos más claros para mantener el contraste sobre `#121212`).
 
 ```tsx
-// src/theme/theme.ts
-import { createTheme } from '@mui/material/styles';
+// src/theme/theme.ts (extracto)
+import { green, red } from '@mui/material/colors';
 import { BRAND_COLORS } from '@/config/colors';
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
-export const theme = createTheme({
-  palette: {
-    mode: 'light',
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-=======
-    primary: {
-      main: BRAND_COLORS.primary,
+export function buildTheme(mode: 'light' | 'dark') {
+  return createTheme({
+    palette: {
+      mode,
+      primary: { main: darken(BRAND_COLORS.red, 0.2), contrastText: BRAND_COLORS.white },
+      success: {
+        main: mode === 'dark' ? green[400] : green[800],
+        dark: mode === 'dark' ? green[700] : green[900],
+        contrastText: mode === 'dark' ? BRAND_COLORS.black : BRAND_COLORS.white,
+      },
+      error: {
+        main: mode === 'dark' ? red[500] : red[700],
+        dark: mode === 'dark' ? red[700] : red[900],
+        contrastText: BRAND_COLORS.white,
+      },
     },
-    secondary: {
-      main: BRAND_COLORS.secondary,
-    },
-  },
-  typography: {
-    fontFamily: 'var(--font-geist-sans), sans-serif',
-  },
-});
+  });
+}
 ```
-
-Si en el futuro el restaurante cambia su identidad visual, solo se actualiza `src/config/colors.ts` y el cambio se propaga a todo el theme y a cualquier componente que importe las constantes directamente.
 
 **Reglas:**
 
-- No hardcodear tonos de rojo, amarillo, blanco o negro fuera del theme o de `colors.ts`.
-- Cualquier variación cromática (hover, active, disabled) debe generarse desde el theme de MUI (`darken`, `lighten`, `alpha`), no definirse como constantes separadas.
-- Los colores semánticos de MUI (`error`, `warning`, `info`, `success`) se dejan con sus valores por defecto. No se deben reasignar con colores de la marca para no confundir estados del sistema con la identidad visual.
-
-### `src/theme/theme.ts`
-
-```tsx
-import { createTheme } from '@mui/material/styles';
-import { BRAND_COLORS } from '@/config/colors';
-
-export const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: BRAND_COLORS.primary,
-    },
-    secondary: {
-      main: BRAND_COLORS.secondary,
-    },
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
-  },
-  typography: {
-    fontFamily: 'var(--font-geist-sans), sans-serif',
-  },
-});
-```
+- No hardcodear tonos de rojo, verde, amarillo, blanco o negro fuera del theme o de `colors.ts`.
+- Los componentes usan `color="success"` / `color="error"` (o `theme.palette.*`); nunca un hexadecimal ni un `sx` de color en botones de acción.
+- Cualquier variación cromática (hover, active, disabled) se genera desde el theme (`darken`, `lighten`, `alpha`), no se define como constante aparte.
+- Un fondo que debe tapar el contenido (barra pegada con `position: 'sticky'`) no puede usar un color translúcido como `action.hover`; se usa `background.paper` y, si hace falta el tono, un `backgroundImage` con `linear-gradient`.
+- **Acentos puntuales de dominio** (por ejemplo el azul de las bebidas en el POS o el estado de la cocina) no usan `info`: cada componente define su propio color (`const ACCENT_BLUE = …` con tokens `lightBlue`). Así, cambiar `info` en el theme solo afecta a los modales de edición y a lo informativo, no a esos acentos.
+- Los estados no dependen solo del color: llevan texto o icono.
 
 ---
 
@@ -814,11 +754,7 @@ Hace automáticamente:
 
 El proveedor de MUI debe ser un Client Component independiente. Así el layout puede conservar `metadata` y el render del documento HTML en el servidor.
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-### `src/app/providers.tsx`
-=======
 ### `src/app/ClientProviders.tsx`
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ```tsx
 'use client';
@@ -832,11 +768,7 @@ type ProvidersProps = {
   children: ReactNode;
 };
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-export function Providers({ children }: ProvidersProps) {
-=======
 export function ClientProviders({ children }: ProvidersProps) {
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -852,11 +784,7 @@ export function ClientProviders({ children }: ProvidersProps) {
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-import { Providers } from './providers';
-=======
 import { ClientProviders } from './ClientProviders';
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 import './globals.css';
 
 const geistSans = Geist({
@@ -878,11 +806,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-        <Providers>{children}</Providers>
-=======
         <ClientProviders>{children}</ClientProviders>
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
       </body>
     </html>
   );
@@ -897,11 +821,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 - ✔ `globals.css` sigue siendo mínimo
 - ✔ `metadata` permanece en un layout de servidor
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-=======
 El mismo `ClientProviders` debe concentrar el theme activo, el control para alternar entre modo claro y oscuro y el `ToastContainer` de React-Toastify. Las pantallas no deben crear proveedores paralelos ni resolver el tema de forma aislada.
 
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 ---
 
 # PARTE 2 — GUÍA DE USO
@@ -910,38 +831,16 @@ El mismo `ClientProviders` debe concentrar el theme activo, el control para alte
 
 ---
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-## 🔹 Next.js con TSX — Uso recomendado
-
-### Ejemplo de componente
-
-```tsx
-type Props = {
-  title: string;
-};
-
-export default function Card({ title }: Props) {
-=======
 ## 🔹 Next.js con JSX y TSX — Uso recomendado
 
 ### Componente visual en JSX
 
 ```jsx
 export default function Card({ title }) {
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
   return <h2>{title}</h2>;
 }
 ```
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-### Recomendaciones
-
-- Empieza simple.
-- Agrega tipos solo en:
-  - Props
-  - Respuestas de API
-  - Funciones importantes
-=======
 La UI puede escribirse en JSX cuando recibe datos ya validados y solo compone la vista. No se debe usar JSX como excusa para omitir validación de respuestas, permisos o payloads.
 
 ### Frontera crítica en TypeScript
@@ -965,7 +864,6 @@ export function parseOrderResponse(payload: unknown) {
 - Usa JSX para presentación y estado visual local.
 - Usa TypeScript para contratos, API, stores, autenticación, permisos y mutaciones de negocio.
 - Usa Zod para validar datos externos incluso si el componente consumidor está escrito en JSX.
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ### Ventajas
 
@@ -976,11 +874,7 @@ export function parseOrderResponse(payload: unknown) {
 
 ### Regla práctica
 
-<<<<<<< HEAD:docs/frontend/old-docs/frontend_code_style.md
-> Usa `.tsx` como base y tipa solo donde aporta valor.
-=======
 > Usa `.jsx` para la UI no crítica y `.ts`/`.tsx` para las fronteras críticas del sistema.
->>>>>>> df636109084d3ea42b6bc2da7d006be0ba84e188:docs/frontend/frontend_code_style.md
 
 ---
 
