@@ -1035,6 +1035,10 @@ Objeto `period`: `{ "id": "uuid-period-manana", "name": "Mañana", "displayOrder
 
 **Errores propios:** `VALIDATION_ERROR` (400) · `SHIFT_PERIOD_ALREADY_EXISTS` (400) · `SHIFT_PERIOD_NOT_FOUND` (404).
 
+**Alcance del período (para no confundirlo).** Un período es solo una **etiqueta del turno de caja** (`Shift.periodId`): lo elige quien abre el turno y lo ven la cajera y el POS (`GET /pos/context`). **No** es atributo del usuario, **no** se deduce del reloj y cocina y despacho **no** lo usan.
+
+> **🔲 Pendiente:** los períodos por sucursal (#33) y la validación del formato `HH:mm` (#34) están en [implementation_guide.md §10.2](implementation_guide.md#102-deuda-técnica-conocida), con su versión y sprint recomendados.
+
 Objeto `shift` (apertura y turno activo):
 
 ```json
