@@ -330,7 +330,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "name": "Credenciales inválidas",
+              "name": "Credenciales inválidas · El usuario está inactivo o ya no existe",
               "originalRequest": {
                 "url": {
                   "path": [

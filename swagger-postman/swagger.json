@@ -118,7 +118,7 @@
             }
           },
           "401": {
-            "description": "Credenciales inválidas",
+            "description": "Credenciales inválidas · El usuario está inactivo o ya no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -133,6 +133,18 @@
                       "data": null,
                       "error": {
                         "code": "INVALID_CREDENTIALS",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
                         "details": []
                       }
                     }

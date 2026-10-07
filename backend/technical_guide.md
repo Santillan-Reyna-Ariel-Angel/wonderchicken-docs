@@ -636,7 +636,7 @@ Reglas transversales que **todos** los endpoints respetan. El frontend envía el
 
 - **Login por email + CI**: la contraseña es el **CI** del usuario (se compara contra `passwordHash`, el hash bcrypt del CI). Los usuarios del seed entran con `password123`.
 - `LoginDto` exige una contraseña de **mínimo 6 caracteres**: un usuario creado con un CI más corto **no puede loguearse**.
-- Un email inexistente, un usuario desactivado y una contraseña incorrecta dan el **mismo** `401 INVALID_CREDENTIALS` (no se revela cuál falló).
+- Un email inexistente y una contraseña incorrecta dan el **mismo** `401 INVALID_CREDENTIALS` (no se revela cuál falló). Un usuario **desactivado** con el email y la contraseña **correctos** recibe `401 USER_INACTIVE`: solo se distingue cuando quien intenta entrar conoce la contraseña, así que no permite averiguar qué correos existen.
 
 ### Piezas
 
@@ -862,7 +862,7 @@ Fuente única: `src/common/errors/error-codes.ts`. Esta tabla se mantiene igual 
 | `INVALID_CREDENTIALS` | 401 | Credenciales inválidas | `POST /auth/login` |
 | `TOKEN_REQUIRED` | 401 | Token de autenticación requerido | cualquier endpoint autenticado |
 | `TOKEN_INVALID` | 401 | Token inválido o expirado | cualquier endpoint autenticado |
-| `USER_INACTIVE` | 401 | El usuario está inactivo o ya no existe | cualquier endpoint autenticado |
+| `USER_INACTIVE` | 401 | El usuario está inactivo o ya no existe | `POST /auth/login` (credenciales correctas) y cualquier endpoint autenticado |
 
 
 ## 5.6 Alcance por rol y sucursal
@@ -903,7 +903,7 @@ Lo impone el backend. Si algo cae fuera del alcance del usuario responde **404**
 { "isSuccess": true, "message": "Login exitoso", "data": { "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }, "error": null }
 ```
 
-**Errores propios:** `VALIDATION_ERROR` (400) · `INVALID_CREDENTIALS` (401).
+**Errores propios:** `VALIDATION_ERROR` (400) · `INVALID_CREDENTIALS` (401) · `USER_INACTIVE` (401, solo con el email y la contraseña correctos).
 
 **`GET /auth/me`** — cualquier rol ✅. El perfil del usuario autenticado, leído de la base en cada llamada; es lo que usa el header del front.
 
