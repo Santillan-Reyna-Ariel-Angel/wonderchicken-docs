@@ -32,7 +32,7 @@ Si es intencional: `pnpm seed -- --force`. La lógica está en [`seeders/guard.t
 
 `users` · `cash-registers` · `shift-periods` · `products` · `inventory` · `customers` ·
 `discounts` · `shifts` · `discount-authorizations` · `orders` · `vouchers` ·
-`inventory-transactions` · `daily-manual-consumptions` · `shift-chicken-logs` ·
+`inventory-transactions` · `daily-inventory-entries` · `shift-chicken-logs` ·
 `expenses` · `audit-logs`
 
 > En modo puntual (`pnpm seed -- <nombre>`) el seeder **lee sus dependencias de la DB**.

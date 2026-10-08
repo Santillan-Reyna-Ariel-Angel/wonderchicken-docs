@@ -141,10 +141,10 @@ Nota técnica: El consumo operativo se registra en `OrderItemComponent` (una fil
 - **Criterio de aceptación:** Sin autorización, la cajera no ve/no puede aplicar el descuento "Compensación al cliente"; tras autorizarla el admin, puede aplicarlo a uno o varios platos de uno o varios pedidos del turno; la autorización no se renueva por pedido ni por plato; al cerrar el turno la autorización deja de estar vigente y no pasa al turno siguiente; queda registrado quién autorizó, a qué cajera y cuándo.
 
 ### FR-017 — Registro de consumos manuales y ciclo crudo de presas por turno (Media)
-- **Funcionalidad:** Al cierre del turno, el cocinero registra:
-  - **Consumos manuales de insumos:** bolsas de papa, bolsas de smile, envases de arroz, vasos, bombillas, etc. (referencia: tabla "INVENTARIO DIARIO" en [`business_context.md`](business_context.md#ejemplo-de-inventario-diario)).
-  - **Ciclo crudo de presas por tipo (pecho, ala, pierna, entrepierna):** reproceso crudo, procesado crudo, sobrante procesado crudo y sobrante cocido en expositor ([PDR §2.3](pdr.md)).
-- Al abrir un turno, el sistema **autopobla** el reproceso crudo a partir del sobrante crudo del turno anterior; el cocinero puede ajustar antes de confirmar y el cambio queda registrado.
+- **Funcionalidad:** En cada turno el personal llena la **planilla de inventario diario** ([PDR §2.3 y §2.7](pdr.md)): cada rol anota lo suyo, los valores se sobrescriben y solo se registra quién modificó por última vez. El administrador solo la lee.
+  - **Tabla de ítems — ingreso, gasto y sobrante de insumos y bebidas:** bolsas, envases de arroz, vasos, bombillas, etc. Los anotan cajeras y despachadoras; el cocinero solo el ingreso y el uso de las bolsas de papa (referencia: tabla "INVENTARIO DIARIO" en [`business_context.md`](business_context.md#ejemplo-de-inventario-diario)).
+  - **Ciclo de presas por tipo (pecho, ala, pierna, entrepierna):** el cocinero anota reproceso crudo, procesado crudo y sobrante procesado crudo; la despachadora o la cajera, el sobrante cocido en expositor ([PDR §2.3](pdr.md)).
+- Al abrir un turno, el sistema **autopobla** el reproceso crudo a partir del sobrante crudo del turno anterior; el cocinero puede ajustarlo y queda registrado quién lo modificó por última vez.
 - **Criterio de aceptación:** El registro queda vinculado al turno y aparece en el reporte de inventario diario; el reproceso crudo del nuevo turno coincide por default con el sobrante crudo del turno anterior; el sistema reconcilia `(reproceso + procesado − sobrante crudo) − vendido cocido` contra el sobrante cocido en expositor anotado y reporta discrepancias.
 
 ### FR-018 — Autenticación JWT y autorización por rol (Alta)

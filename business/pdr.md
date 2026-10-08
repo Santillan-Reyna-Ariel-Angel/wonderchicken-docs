@@ -111,12 +111,13 @@
 El pollo vive en **dos planos distintos** que el sistema debe modelar por separado:
 
 ### Plano CRUDO (anotado por los cocineros — no transaccional)
-- **Anotación por turno:** al cierre de cada turno, el cocinero registra por tipo de presa (pecho, ala, pierna, entrepierna):
+- **Anotación por turno** (quién anota cada dato: ver la planilla más abajo), por tipo de presa (pecho, ala, pierna, entrepierna):
   - **Reproceso crudo:** pollo crudo sobrante que viene del turno anterior (turno mañana lo recibe del turno noche del día anterior; turno noche lo recibe del turno mañana del mismo día).
   - **Procesado crudo:** pollo fresco marinado en este turno.
   - **Sobrante procesado crudo:** pollo crudo que queda sin cocinar al final del turno.
-  - **Sobrante cocido en expositor:** pollo cocido que queda sin vender en el expositor al cierre del turno.
-- **Regla de continuidad entre turnos:** el **Sobrante procesado crudo** del turno T pasa a ser el **Reproceso crudo** del turno T+1. El sistema debe **autopoblar** este valor al abrir el turno siguiente(pero el cocinero siguiente tiene opcion a editar/confirnar dicha cantidad, el calculo automatico es una ayuda); el cocinero puede ajustar si hubo merma o ingreso adicional, dejando el cambio registrado para auditoría.
+  - **Sobrante cocido en expositor:** pollo cocido que queda sin vender en el expositor al cierre del turno (lo anota la despachadora o la cajera, no el cocinero).
+- **Regla de continuidad entre turnos:** el **Sobrante procesado crudo** del turno T pasa a ser el **Reproceso crudo** del turno T+1. El sistema debe **autopoblar** este valor al abrir el turno siguiente(pero el cocinero siguiente tiene opcion a editar/confirnar dicha cantidad, el calculo automatico es una ayuda); el cocinero puede ajustar si hubo merma o ingreso adicional (los valores se sobrescriben y queda registrado quién los modificó por última vez).
+- **Planilla de inventario diario y quién la llena (aclarado por el dueño, 2026-10-07):** hay **una planilla por turno** (Mañana o Noche; ver el ejemplo en business_context). Tiene dos partes. En la **tabla del pollo**, los **cocineros** (cualquiera de los dos) anotan lo crudo (reproceso, procesado y sobrante crudo, contado físicamente); el **sobrante cocido en expositor** lo anotan la **despachadora o la cajera**; el *vendido cocido* lo calcula el sistema. En la **tabla de ítems** (bebidas, bolsas, papeles, servilletas, vasos…; saldo anterior, ingreso, gasto y sobrante) anotan cajeras y despachadoras lo que les corresponde —el ingreso de insumos, el gasto y el sobrante contado de todos los ítems— y el **cocinero solo el ingreso y el uso de las bolsas de papa**. Los valores **se sobrescriben** (si un cocinero cuenta mal y se va, la cajera —que se queda más tiempo— lo corrige); solo se registra quién modificó por última vez. No hay cierre. El **administrador solo la lee**.
 - **Cantidad cocinada en el turno (derivada):** `Reproceso crudo + Procesado crudo − Sobrante procesado crudo`. Esta cantidad representa el pollo crudo que pasó al expositor (se cocinó) durante el turno.
 - **Reporte de inventario diario:** consolida ambos turnos del día (referencia: tabla "INVENTARIO DIARIO" en [`business_context.md`](business_context.md#ejemplo-de-inventario-diario)).
 
@@ -125,7 +126,7 @@ El pollo vive en **dos planos distintos** que el sistema debe modelar por separa
 - **Descuento por venta:** el inventario cocido se descuenta por tipo **al confirmar el pago**, NO al pasar el pedido a preparación. Esto evita inconsistencias cuando un pedido con pago pendiente termina cancelado.
 - **Regla de pares:** los platos de "2 presas" consumen exactamente 2 unidades del par seleccionado por el cliente (ej. pecho-ala descuenta 1 pecho cocido + 1 ala cocida; pierna-entrepierna descuenta 1 pierna cocida + 1 entrepierna cocida).
 - **Bebidas:** se descuentan por unidad automáticamente al confirmar el pago.
-- **Sobrante cocido en expositor:** se anota al cierre de turno (plano crudo) y habilita la venta interna con descuento al personal (§2.11).
+- **Sobrante cocido en expositor:** se anota al cierre de turno (lo anota la despachadora o la cajera) y habilita la venta interna con descuento al personal (§2.11).
 - **Reconciliación al cierre:** el sistema compara el `Sobrante cocido en expositor` contra `(cantidad cocinada en el turno − vendido cocido por el sistema)` y reporta discrepancias para auditoría.
 
 Nota técnica importante: en la implementación técnica el consumo operativo de piezas y bebidas se registra en filas normalizadas de `OrderItemComponent` vinculadas a cada `OrderItem`. Además, cada `OrderItem` persiste un `snapshot` JSON con la información que debe imprimirse y auditarse (nombre, precio confirmado, descuentos aplicados, composición). El decremento de stock cocido se ejecuta al confirmar el pago y usa las filas `OrderItemComponent` como fuente de verdad para crear `InventoryTransaction`.
@@ -169,8 +170,8 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
   - **SUPER_ADMIN:** Gestión de sucursales, reportes consolidados globales, configuración global.
   - **ADMINISTRADOR:** Registrar productos, registrar platos / variantes, crear usuarios (en su sucursal), modificar inventario (con motivo), ver reportes de su sucursal, crear descuentos y autorizar descuentos por turno. **Gestionar clientes** (crear, consultar —incluye vista **cross-sucursal**—, editar, ver historial de pedidos del cliente y activar/desactivar) según las reglas de §2.12.
   - **CAJERA:** Registrar ventas (mesa / llevar / custom), emitir vales, abrir / cerrar caja, registrar gastos, anular pedidos, aplicar descuentos, gestionar clientes (registrar / buscar por CI o NIT para factura nominada).
-  - **DESPACHADORA:** Ver la cola de comandas, marcar pedidos como "listo" y "entregado".
-  - **COCINERO:** Registrar ingreso de presas procesadas, anotar consumos manuales por turno (bolsas de papa, smile, etc.).
+  - **DESPACHADORA:** Ver la cola de comandas, marcar pedidos como "listo" y "entregado". Anotar en la planilla de inventario diario el sobrante cocido en expositor, el ingreso de insumos y el gasto/sobrante de todos los ítems; puede corregir lo que anotó el cocinero.
+  - **COCINERO:** Anotar en la planilla de inventario diario el ciclo crudo del pollo (reproceso, procesado y sobrante crudo) y el ingreso y el uso de las bolsas de papa. No anota el sobrante cocido en expositor ni nada más de la tabla de ítems.
 - **Sesiones por turno:** un mismo trabajador puede trabajar como cajera un día y como despachadora otro. Pero **dentro del mismo turno**, un usuario solo puede tener **1 sesión activa con 1 rol**. No puede estar simultáneamente activo como cajera y despachadora en el mismo turno.
 - **Cajas por turno:** el sistema permite 1 o más cajas, pero **cada caja es atendida por 1 sola cajera por turno**.
 

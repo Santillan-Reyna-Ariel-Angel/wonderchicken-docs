@@ -52,7 +52,7 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | 7   | `POST` | `/users`   | `superAdminToken` | `{ "firstName": "Elena", "lastName": "Cocina", "email": "elena@wonderchicken.com", "ci": "4444444", "role": "COOK", "branchId": "{{branchId}}" }` | `201` → guardar **`cookId`**         |
 | 8   | `GET`  | `/users`   | `adminToken`     | —                                                                                                                              | `200` → 5 usuarios                  |
 
-> El `COOK` se crea acá (paso 7) para poder probar el consumo manual y el ciclo crudo en la Fase C sin seeders.
+> El `COOK` se crea acá (paso 7) para poder probar la planilla de inventario diario en la Fase C sin seeders.
 
 ---
 
@@ -118,7 +118,7 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 > **Dar de baja no borra historia:** las órdenes ya creadas con ese producto conservan su `snapshot` y su precio congelado.
 
-### B6. Ítems de inventario con stock inicial ✅ Sprint 2 (solo alta/listado/edición; el decremento al pagar llega en el resto de S2)
+### B6. Ítems de inventario con stock inicial ✅ Sprint 2
 
 *Lo que hace el usuario:* el admin da de alta las presas cocidas, las bebidas y los insumos, y carga cuánto hay.
 
@@ -128,8 +128,9 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | 32  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-ALA", "name": "Alas cocidas", "unit": "UNIDAD", "type": "ALA", "unitMeasure": "1 presa", "salePrice": 10.00, "initialStock": 40 }` | `201` → **`invAlaId`**                  |
 | 33  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-PIERNA", "name": "Piernas cocidas", "unit": "UNIDAD", "type": "PIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invPiernaId`**               |
 | 34  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-ENTREPIERNA", "name": "Entrepiernas cocidas", "unit": "UNIDAD", "type": "ENTREPIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invEntrepiernaId`**         |
-| 35  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "BEBIDA-COCA500", "name": "Coca Cola 500 ml", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "500 ml", "initialStock": 60 }` | `201` → **`invCoca500Id`**              |
-| 36  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-PAPA", "name": "Bolsas de papa", "unit": "BOLSA", "type": "INSUMO", "unitMeasure": "1 bolsa", "initialStock": 25 }` | `201` → **`invPapasBolsaId`**           |
+| 35  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "BEBIDA-COCA500", "name": "Coca Cola 500 ml", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "500 ml", "initialStock": 60, "productId": "{{productCocaId}}" }` | `201` → **`invCoca500Id`** (vinculada a su producto) |
+| 35b | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "BEBIDA-COCA2L", "name": "Coca Cola 2 lt", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "2 lt", "initialStock": 24, "productId": "{{productCoca2LId}}" }` | `201` → **`invCoca2LId`**               |
+| 36  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-PAPA", "name": "Bolsas de papa", "unit": "BOLSA", "type": "INSUMO", "unitMeasure": "1 bolsa", "initialStock": 25, "kitchenManaged": true }` | `201` → **`invPapasBolsaId`** (ítem de cocina) |
 | 37  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-SMILE", "name": "Bolsas de smile", "unit": "BOLSA", "type": "INSUMO", "initialStock": 20 }` | `201` → **`invSmileId`**                |
 | 38  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-PECHO", "name": "Duplicado", "unit": "UNIDAD", "type": "PECHO" }` | `4xx` → `INVENTORY_ITEM_CODE_ALREADY_EXISTS` |
 | 39  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-VASOS", "name": "Vasos", "unit": "VASO", "type": "INSUMO", "salePrice": 5.00 }` | `4xx` → `salePrice` rechazado en `INSUMO`     |
@@ -143,14 +144,16 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 > - **`PATCH` no toca el stock.** Para moverlo: `POST /inventory/adjust` con motivo (Fase C14).
 > - El **`branchId` no va en el body** — se deriva del admin.
 > - `salePrice` solo aplica a presas (alimenta el precio sugerido custom, Fase C9).
+> - **Cada bebida es un `Product` con nombre único que incluye marca y tamaño** ("Coca Cola 2 lt") y se vincula 1:1 a su ítem con `productId` (solo `BEBIDA`, único por sucursal). Sin ese vínculo, vender la bebida da `INVENTORY_MAPPING_MISSING`.
+> - Para vender platos con presas hay que tener **un ítem activo por tipo de presa** (pecho, ala, pierna, entrepierna) en la sucursal.
 
-### B7. Ajustes manuales de stock 🔲 Sprint 2
+### B7. Ajustes manuales de stock ✅ Sprint 2
 
 | #   | Método | Endpoint             | Auth        | Body                                                                       | Esperado                             |
 | --- | ------ | -------------------- | ----------- | ---------------------------------------------------------------------------- | ------------------------------------ |
 | 44  | `POST` | `/inventory/adjust`  | `adminToken`| `{ "inventoryItemId": "{{invPechoId}}", "delta": 10, "reason": "RECEPTION", "note": "Ingreso de mañana" }` | `200` → `InventoryTransaction` creada  |
 | 45  | `POST` | `/inventory/adjust`  | `adminToken`| `{ "inventoryItemId": "{{invPechoId}}", "delta": -2, "reason": "ADJUSTMENT", "note": "Merma por almacenamiento" }` | `200` → ajuste con motivo        |
-| 46  | `PATCH`| `/inventory/:invPechoId/sale-price` | `adminToken`| `{ "salePrice": 13.00 }`                                            | `200` → precio de venta actualizado   |
+| 46  | `PATCH`| `/inventory/items/:invPechoId` | `adminToken`| `{ "salePrice": 13.00 }`                                            | `200` → precio de venta actualizado (no existe una ruta `sale-price` aparte)  |
 
 ### B8. Catálogo de descuentos 🔲 Sprint 3
 
@@ -200,17 +203,19 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 | #   | Método | Endpoint    | Auth          | Body                                                                                                                                                                                                                                                                            | Esperado                                            |
 | --- | ------ | ----------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| 63  | `POST` | `/orders`   | `cashierToken`| `{ "type": "MESA", "tableNumber": "70", "customerId": "{{customerId}}", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "productId": "{{productPorcionMediaId}}", "variantId": "{{variantPorcionMediaId}}", "quantity": 2, "selectedPieces": [{ "type": "PECHO", "qty": 2 }, { "type": "ALA", "qty": 2 }], "substitutions": [{ "from": "mixto", "to": "arroz" }] }, { "productId": "{{productCoca2LId}}", "quantity": 1 }] }` | `201` → **`orderId`**, **`publicToken`**, `total: 80.00` |
+| 63  | `POST` | `/orders`   | `cashierToken`| `{ "type": "MESA", "tableNumber": "70", "customerId": "{{customerId}}", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "productId": "{{productPorcionMediaId}}", "variantId": "{{variantPorcionMediaId}}", "quantity": 2, "selectedPieces": [{ "type": "pecho", "qty": 1 }, { "type": "ala", "qty": 1 }], "substitutions": [{ "from": "mixto", "to": "arroz" }] }, { "productId": "{{productCoca2LId}}", "quantity": 1 }] }` | `201` → **`orderId`**, **`publicToken`**, `total: 80.00` |
 | 64  | `GET`  | `/orders/:orderId` | `cashierToken`| —                                                                                                                                                                                                        | `200` → detalle de la orden                        |
 | 65  | `GET`  | `/orders`   | `cashierToken`| `?status=PREPARING`                                                                                                                                                                                          | `200` → aparece en el panel de despacho            |
 
+> **`selectedPieces` es por unidad:** "Porción Media" lleva 2 presas, así que la suma de `qty` debe ser 2 aunque `quantity` sea 2 (el backend multiplica por `quantity` al descontar). Dos platos con pares distintos van en **dos líneas**. Si la suma no coincide: `INVALID_PIECE_SELECTION`.
+>
 > **La sustitución no cambia el precio** (PDR §2.1): 2×30 (Porción Media) + 16 (Coca 2L) = **80**, sin ajuste por el cambio de mixto a arroz. El backend calcula el total desde el catálogo — el front no manda precios (§5.0).
 
 ### C5. Venta LLEVAR con pago pendiente ✅
 
 | #   | Método | Endpoint      | Auth          | Body                                                                                                                                                                | Esperado                                          |
 | --- | ------ | ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 66  | `POST` | `/orders`     | `cashierToken`| `{ "type": "LLEVAR", "paymentStatus": "PENDING", "items": [{ "productId": "{{productPorcionMediaId}}", "quantity": 1, "selectedPieces": [{ "type": "PIERNA", "qty": 1 }, { "type": "ENTREPIERNA", "qty": 1 }] }] }` | `201` → **`orderIdPendiente`**, `paymentStatus: PENDING` |
+| 66  | `POST` | `/orders`     | `cashierToken`| `{ "type": "LLEVAR", "paymentStatus": "PENDING", "items": [{ "productId": "{{productPorcionMediaId}}", "quantity": 1, "selectedPieces": [{ "type": "pierna", "qty": 1 }, { "type": "entrepierna", "qty": 1 }] }] }` | `201` → **`orderIdPendiente`**, `paymentStatus: PENDING` |
 | 67  | `GET`  | `/orders/:orderIdPendiente` | `cashierToken`| —                                                                                                    | `200` → se prepara igual, **sin** descontar stock  |
 
 > Con pago pendiente **no se descuenta inventario ni se contabiliza ingreso** hasta confirmar el pago (PDR §2.5).
@@ -219,7 +224,7 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 | #   | Método | Endpoint           | Auth          | Body                    | Esperado                                                          |
 | --- | ------ | ------------------ | ------------- | ----------------------- | ----------------------------------------------------------------- |
-| 68  | `POST` | `/orders/:orderIdPendiente/pay` | `cashierToken`| `{ "paymentMethod": "CARD" }` | `200` → `paymentStatus: PAID`, **stock descontado**           |
+| 68  | `POST` | `/orders/:orderIdPendiente/pay` | `cashierToken`| `{ "paymentMethod": "CARD" }` | `200` → `paymentStatus: PAID`, **stock descontado**; sin stock suficiente → `409 INSUFFICIENT_STOCK` listando todo lo que falta y el pedido sigue pendiente |
 | 69  | `GET`  | `/inventory/dashboard` | `adminToken` | —                       | `200` → el stock cocido bajó respecto a la Fase B6                |
 
 ### C7. Cancelar pago pendiente ✅
@@ -239,23 +244,23 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | 73  | `GET`  | `/orders`     | `cashierToken`| `?customerId={{customerId}}`                | `200` → historial del cliente               |
 | 74  | `GET`  | `/orders`     | `cashierToken`| `?status=PREPARING&date=2026-07-10`         | `200` → comandas del día                    |
 
-### C9. Venta custom de presas surtidas 🔲 Sprint 2
+### C9. Venta custom de presas surtidas ✅ Sprint 2
 
 *Lo que hace el usuario:* la cajera arma un plato fuera del menú, ve el precio **sugerido** (calculado por el POS con los `piecePrices` de `pos/context`) y lo **pisa** si quiere.
 
 | #   | Método | Endpoint          | Auth          | Body                                                                                                                                                              | Esperado                                                          |
 | --- | ------ | ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 75  | `GET`  | `/pos/context`    | `cashierToken`| —                                                                                                                                                                 | `200` → `piecePrices` con los 4 `salePrice`                        |
-| 76  | `POST` | `/orders/custom`  | `cashierToken`| `{ "type": "LLEVAR", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "customPieces": [{ "type": "PECHO", "qty": 2 }, { "type": "ALA", "qty": 1 }], "extras": [{ "name": "papa", "qty": 1 }], "drinks": [{ "productId": "{{productCoca500Id}}", "qty": 1 }], "quantity": 1, "unitPrice": 35.00 }] }` | `201` → `isCustom: true`, `type: LLEVAR`, guarda el precio **confirmado** (35) |
+| 75  | `GET`  | `/pos/context`    | `cashierToken`| —                                                                                                                                                                 | `200` → `piecePrices` con los `salePrice` de las presas activas (un tipo sin precio no aparece) |
+| 76  | `POST` | `/orders/custom`  | `cashierToken`| `{ "type": "LLEVAR", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "customPieces": [{ "type": "pecho", "qty": 2 }, { "type": "ala", "qty": 1 }], "extras": [{ "type": "papa", "qty": 1 }], "drinks": [{ "productId": "{{productCocaId}}", "qty": 1 }], "quantity": 1, "unitPrice": 35.00 }] }` | `201` → `isCustom: true`, guarda el precio **confirmado** (35) |
 | 77  | `GET`  | `/inventory/dashboard` | `adminToken`| —                                                                                                                                                                 | `200` → descontó 2 pechos + 1 ala + 1 coca 500 exactos            |
 
-> Sugerido = 2×12 (pecho) + 1×10 (ala) + extras + bebida ≈ 42; la cajera lo pisa a 35 y **eso** se persiste (FR-002b). El inventario descuenta lo real, no el precio.
+> El tipo puede ser `MESA` o `LLEVAR` (custom es una marca, no un tipo). Sugerido = 2×12 (pecho) + 1×10 (ala) + extras + bebida ≈ 42; la cajera lo pisa a 35 y **eso** se persiste (FR-002b). El inventario descuenta lo real, no el precio.
 
 ### C10. Venta con descuento por plato 🔲 Sprint 3
 
 | #   | Método | Endpoint             | Auth          | Body                                                                                                                                                                                             | Esperado                                                  |
 | --- | ------ | -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 78  | `POST` | `/orders`            | `cashierToken`| `{ "type": "MESA", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "productId": "{{productPorcionMediaId}}", "quantity": 2, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "PIERNA", "qty": 2 }, { "type": "ENTREPIERNA", "qty": 2 }] }, { "productId": "{{productPorcionMediaId}}", "quantity": 1, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "PECHO", "qty": 1 }, { "type": "ALA", "qty": 1 }] }] }` | `201` → `originalAmount: 90.00`, `total: 69.00` (3 platos − 7 c/u) |
+| 78  | `POST` | `/orders`            | `cashierToken`| `{ "type": "MESA", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "productId": "{{productPorcionMediaId}}", "quantity": 2, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "pierna", "qty": 1 }, { "type": "entrepierna", "qty": 1 }] }, { "productId": "{{productPorcionMediaId}}", "quantity": 1, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "pecho", "qty": 1 }, { "type": "ala", "qty": 1 }] }] }` | `201` → `originalAmount: 90.00`, `total: 69.00` (3 platos − 7 c/u) |
 | 79  | `POST` | `/orders`            | `cashierToken`| como el 78 pero con `discountId` de un descuento `ALWAYS` **sin autorizar** para esta cajera                                     | `4xx` → `DISCOUNT_NOT_AUTHORIZED` (rechaza la orden completa) |
 | 80  | `POST` | `/discounts/:discountCompensacionId/authorize` | `adminToken`| `{ "cashierId": "{{cashierId}}" }`                                              | `200` → autorización creada para el turno                     |
 | 81  | `POST` | `/orders`            | `cashierToken`| ítems con `discountId` de "Compensación al cliente" (ahora autorizada)                                                               | `201` → total con descuento aplicado                         |
@@ -284,20 +289,42 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 > El `shiftId` y el `createdBy` se **derivan** del turno activo y del token — no van en el body (§5.0).
 
-### C13. Cocina: consumos manuales y ciclo crudo 🔲 Sprint 2
+### C13. Planilla de inventario diario ✅ Sprint 2
 
-| #   | Método | Endpoint                                  | Auth      | Body                                                                                    | Esperado                                              |
-| --- | ------ | ----------------------------------------- | --------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| 90  | `POST` | `/auth/login`                             | —         | `{ "email": "elena@wonderchicken.com", "password": "4444444" }`                          | `200` → guardar **`cookToken`**                       |
-| 91  | `GET`  | `/inventory/items?type=INSUMO`            | `cookToken`| —                                                                                       | `200` → insumos para el formulario                    |
-| 92  | `POST` | `/inventory/manual-consumption`            | `cookToken`| `{ "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "quantity": 3 }, { "inventoryItemId": "{{invSmileId}}", "quantity": 1 }] }` | `200` → consumos ligados al turno |
-| 93  | `GET`  | `/inventory/shift-chicken-log/{{shiftId}}`| `cookToken`| —                                                                                       | `200` → `reprocessRaw` autopoblado del turno anterior   |
-| 94  | `POST` | `/inventory/shift-chicken-log`            | `cookToken`| `{ "pieceType": "PECHO", "reprocessRaw": 10, "processedRaw": 30, "rawLeftover": 5, "cookedLeftover": 8 }` | `200` → ciclo crudo registrado  |
-| 95  | `POST` | `/inventory/shift-chicken-log/{{shiftId}}/close` | `cookToken`| —                                                                               | `200` → reconciliación + discrepancias               |
+*Lo que hace el usuario:* cocina, cajera y despachadora llenan la **planilla de inventario diario** del turno (Mañana o Noche); el ADMIN la lee. Cada celda se **sobrescribe** (el cocinero cuenta mal, se va y la cajera corrige) y solo queda registrado quién la tocó por última vez. Se identifica por **sucursal + período + fecha** (no por turno de caja): el cocinero no depende de que la caja esté abierta.
 
-> El `reprocessRaw` del turno nuevo **se autopobla** con el `rawLeftover` del turno anterior (PDR §2.3). El cocinero puede ajustarlo antes de confirmar.
+| #    | Método | Endpoint                                   | Auth             | Body                                                                                                                                  | Esperado                                                                 |
+| ---- | ------ | ------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 90   | `POST` | `/auth/login`                              | —                | `{ "email": "elena@wonderchicken.com", "password": "4444444" }`                                                                       | `200` → guardar **`cookToken`**                                          |
+| 91   | `GET`  | `/shifts/shift-periods`                    | `cookToken`      | —                                                                                                                                     | `200` → los períodos de su sucursal; guardar **`periodId`**              |
+| 92   | `GET`  | `/inventory/daily-sheet?periodId={{periodId}}` | `cookToken`  | —                                                                                                                                     | `200` → encabezado, tabla del pollo (ALA, PECHO, PIERNA, ENTREPIERNA + TOTAL) y tabla de ítems agrupada; `suggestedReprocessRaw` con el sobrante crudo del turno anterior |
+| 93   | `PUT`  | `/inventory/daily-sheet/chicken`           | `cookToken`      | `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "reprocessRaw": 38, "processedRaw": 70, "rawLeftover": 64 }, …] }`   | `200` → la planilla completa recalculada (`cooked`, `soldCooked`, totales) |
+| 94   | `PUT`  | `/inventory/daily-sheet/chicken`           | `cookToken`      | `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "cookedLeftover": 8 }] }`                                           | `403` → `SHEET_FIELD_FORBIDDEN` (el cocido en expositor lo anota despacho o caja) |
+| 95   | `PUT`  | `/inventory/daily-sheet/chicken`           | `dispatcherToken`| `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "cookedLeftover": 8 }, …] }`                                        | `200` → `discrepancy = cookedLeftover − (cooked − soldCooked)`           |
+| 96   | `PUT`  | `/inventory/daily-sheet/chicken`           | `cashierToken`   | `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "processedRaw": 65 }] }`                                            | `200` → la cajera **corrige** la celda del cocinero; `lastModifiedBy` = la cajera |
+| 97a  | `PUT`  | `/inventory/daily-sheet/items`             | `dispatcherToken`| `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "received": 10 }] }`                            | `200` → **INGRESO** +10; el stock sube 10                                |
+| 97b  | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invSmileId}}", "received": 5 }] }`                                | `403` → `SHEET_FIELD_FORBIDDEN` (el cocinero solo anota el ingreso de los ítems de cocina) |
+| 97c  | `PUT`  | `/inventory/daily-sheet/items`             | `cashierToken`   | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "received": 4 }] }`                            | `200` → corrige 10 → 4: el stock baja **6** (la diferencia), no se duplica |
+| 97b2 | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "received": 6 }] }`                                | `200` → el cocinero registra el **INGRESO** de las bolsas de papa (ítem de cocina) |
+| 97d0 | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "leftoverCount": 5 }] }`                        | `403` → `SHEET_FIELD_FORBIDDEN` (el cocinero no cuenta el sobrante) |
+| 97d1 | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invSmileId}}", "consumed": 1 }] }`                                        | `403` → `SHEET_FIELD_FORBIDDEN` (no es un ítem de cocina) |
+| 97d  | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "consumed": 3 }] }`                            | `200` → **GASTO** manual 3; el stock baja 3                              |
+| 97e  | `PUT`  | `/inventory/daily-sheet/items`             | `cookToken`      | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "consumed": 999 }] }`                          | `409` → `INSUFFICIENT_STOCK`; nada cambia                                |
+| 97f  | `PUT`  | `/inventory/daily-sheet/items`             | `cashierToken`   | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPapasBolsaId}}", "leftoverCount": 5 }] }`                       | `200` → **SOBRANTE** contado; **no** mueve el stock; `difference` = contado − esperado |
+| 97g  | `PUT`  | `/inventory/daily-sheet/items`             | `cashierToken`   | `{ "periodId": "{{periodId}}", "entries": [{ "inventoryItemId": "{{invPechoId}}", "consumed": 1 }] }`                                 | `400` → `SHEET_ITEM_INVALID` (las presas van en la tabla del pollo)      |
+| 98   | `PUT`  | `/inventory/daily-sheet/chicken`           | `adminToken`     | `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "processedRaw": 1 }] }`                                             | `403` → el ADMIN solo **lee** la planilla                                |
+| 98b  | `GET`  | `/inventory/daily-sheet?periodId={{periodId}}` | `adminToken` | —                                                                                                                                     | `200` → ve todo lo anotado, con quién lo modificó por última vez        |
 
----
+> **Qué escribe cada rol:** el **cocinero** las tres filas crudas del pollo (reproceso, procesado, sobrante crudo) y **solo el ingreso y el uso de las bolsas de papa** (ítems de cocina); **despacho y caja** el sobrante cocido en expositor y el ingreso, y la **cajera** puede corregir lo del cocinero.
+>
+> **El GASTO de lo que se vende (bebidas, presas) es automático** y sale de las ventas del turno; el gasto manual es solo para lo que no se vende (bolsas, servilletas, vasos). No lo anotes dos veces.
+>
+> El `SALDO ANTERIOR` de un ítem es el **sobrante contado** en el turno anterior; el `reprocessRaw` se sugiere con el `rawLeftover` del turno anterior (la Noche de ayer alimenta la Mañana de hoy).
+
+### C14. Anular un pedido pagado ✅ Sprint 2
+
+| #   | Método | Endpoint                         | Auth          | Body                                                                                     | Esperado                                                          |
+| ---
 
 ## Fase D — Despacho, cierre y consulta ✅/🔲
 
