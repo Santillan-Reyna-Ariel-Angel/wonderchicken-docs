@@ -2226,7 +2226,7 @@
                       "type": "object",
                       "properties": {
                         "product": {
-                          "$ref": "#/components/schemas/ProductEntity"
+                          "$ref": "#/components/schemas/ProductWithVariantsEntity"
                         }
                       },
                       "required": [
@@ -2250,7 +2250,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · Ya existe un producto con ese nombre",
+            "description": "Error de validación · Ya existe un producto con ese nombre · Las reglas de armado no son coherentes con la composición del plato",
             "content": {
               "application/json": {
                 "schema": {
@@ -2282,6 +2282,18 @@
                       "data": null,
                       "error": {
                         "code": "DUPLICATE_PRODUCT_NAME",
+                        "details": []
+                      }
+                    }
+                  },
+                  "INVALID_VARIANT_RULES": {
+                    "summary": "INVALID_VARIANT_RULES",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Las reglas de armado no son coherentes con la composición del plato",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_VARIANT_RULES",
                         "details": []
                       }
                     }
@@ -2368,7 +2380,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear producto (admin)",
+        "summary": "Crear producto (admin). Con `variant` crea también su variante principal (composición + reglas de armado) en la misma transacción.",
         "tags": [
           "products"
         ]
@@ -2505,7 +2517,7 @@
             "bearer": []
           }
         ],
-        "summary": "Listar productos. ADMIN ve todos; CASHIER solo activos e isSellable.",
+        "summary": "Listar productos. ADMIN ve todos; CASHIER solo activos.",
         "tags": [
           "products"
         ]
@@ -2746,7 +2758,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · Ya existe un producto con ese nombre",
+            "description": "Error de validación · Ya existe un producto con ese nombre · Las reglas de armado no son coherentes con la composición del plato",
             "content": {
               "application/json": {
                 "schema": {
@@ -2778,6 +2790,18 @@
                       "data": null,
                       "error": {
                         "code": "DUPLICATE_PRODUCT_NAME",
+                        "details": []
+                      }
+                    }
+                  },
+                  "INVALID_VARIANT_RULES": {
+                    "summary": "INVALID_VARIANT_RULES",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Las reglas de armado no son coherentes con la composición del plato",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_VARIANT_RULES",
                         "details": []
                       }
                     }
@@ -2888,7 +2912,7 @@
             "bearer": []
           }
         ],
-        "summary": "Editar producto (ADMIN)",
+        "summary": "Editar producto (ADMIN). Con `variant` actualiza (o crea) su variante principal en la misma transacción.",
         "tags": [
           "products"
         ]
@@ -4660,6 +4684,212 @@
         ]
       }
     },
+    "/api/v1/shifts/close": {
+      "post": {
+        "operationId": "ShiftsController_close",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseShiftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Caja cerrada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Caja cerrada correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "shift": {
+                          "$ref": "#/components/schemas/ShiftArqueoEntity"
+                        }
+                      },
+                      "required": [
+                        "shift"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Hay pedidos con pago pendiente. Cóbrelos o cancélelos antes de cerrar la caja.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "NO_ACTIVE_SHIFT": {
+                    "summary": "NO_ACTIVE_SHIFT",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No hay un turno abierto. Abra caja antes de registrar pedidos.",
+                      "data": null,
+                      "error": {
+                        "code": "NO_ACTIVE_SHIFT",
+                        "details": []
+                      }
+                    }
+                  },
+                  "SHIFT_HAS_PENDING_PAYMENTS": {
+                    "summary": "SHIFT_HAS_PENDING_PAYMENTS",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Hay pedidos con pago pendiente. Cóbrelos o cancélelos antes de cerrar la caja.",
+                      "data": null,
+                      "error": {
+                        "code": "SHIFT_HAS_PENDING_PAYMENTS",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cerrar el turno con arqueo: calcula esperado y diferencia, cierra las órdenes entregadas y libera la caja",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
     "/api/v1/shifts/active": {
       "get": {
         "operationId": "ShiftsController_getActive",
@@ -4854,7 +5084,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador. · El método de pago es obligatorio cuando el pedido se crea pagado · No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING) · Solo se permite una sustitución por ítem (PDR §2.1) · La sustitución solo aplica al acompañamiento por defecto (mixto) · El producto indicado no existe · El producto no está disponible para la venta · La variante no existe o no pertenece al producto · El cliente indicado no existe · El cliente está inactivo. Reactívelo o use la venta S/N. · Las presas elegidas no coinciden con las que lleva el plato (selectedPieces)",
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador. · El método de pago es obligatorio cuando el pedido se crea pagado · No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING) · Solo se permite una sustitución por ítem (PDR §2.1) · La sustitución solo aplica al acompañamiento por defecto (mixto) · La sustitución no está habilitada para este plato · Alguna presa elegida no está habilitada para este plato · Este plato se vende por pares completos de presas · Alguna bebida elegida no está habilitada para este plato · El producto indicado no existe · El producto no está disponible para la venta · La variante no existe o no pertenece al producto · El cliente indicado no existe · El cliente está inactivo. Reactívelo o use la venta S/N. · Las presas elegidas no coinciden con las que lleva el plato (selectedPieces) · El descuento indicado no existe · El descuento no puede superar el precio del plato",
             "content": {
               "application/json": {
                 "schema": {
@@ -4938,6 +5168,54 @@
                       }
                     }
                   },
+                  "SUBSTITUTION_NOT_ALLOWED": {
+                    "summary": "SUBSTITUTION_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La sustitución no está habilitada para este plato",
+                      "data": null,
+                      "error": {
+                        "code": "SUBSTITUTION_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PIECE_NOT_ALLOWED": {
+                    "summary": "PIECE_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Alguna presa elegida no está habilitada para este plato",
+                      "data": null,
+                      "error": {
+                        "code": "PIECE_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PIECES_NOT_PAIRED": {
+                    "summary": "PIECES_NOT_PAIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Este plato se vende por pares completos de presas",
+                      "data": null,
+                      "error": {
+                        "code": "PIECES_NOT_PAIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DRINK_NOT_ALLOWED": {
+                    "summary": "DRINK_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Alguna bebida elegida no está habilitada para este plato",
+                      "data": null,
+                      "error": {
+                        "code": "DRINK_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
                   "PRODUCT_REFERENCE_NOT_FOUND": {
                     "summary": "PRODUCT_REFERENCE_NOT_FOUND",
                     "value": {
@@ -5006,6 +5284,30 @@
                       "data": null,
                       "error": {
                         "code": "INVALID_PIECE_SELECTION",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_REFERENCE_NOT_FOUND": {
+                    "summary": "DISCOUNT_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento indicado no existe",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_EXCEEDS_PRICE": {
+                    "summary": "DISCOUNT_EXCEEDS_PRICE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no puede superar el precio del plato",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_EXCEEDS_PRICE",
                         "details": []
                       }
                     }
@@ -5087,7 +5389,7 @@
             }
           },
           "409": {
-            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Falta configurar el inventario del producto o de la presa en esta sucursal · Stock insuficiente",
+            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Falta configurar el inventario del producto o de la presa en esta sucursal · Stock insuficiente · El descuento no está disponible en este momento · El descuento requiere la autorización del administrador para este turno",
             "content": {
               "application/json": {
                 "schema": {
@@ -5129,6 +5431,30 @@
                         "details": []
                       }
                     }
+                  },
+                  "DISCOUNT_NOT_AVAILABLE": {
+                    "summary": "DISCOUNT_NOT_AVAILABLE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no está disponible en este momento",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AVAILABLE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_NOT_AUTHORIZED": {
+                    "summary": "DISCOUNT_NOT_AUTHORIZED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento requiere la autorización del administrador para este turno",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AUTHORIZED",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -5140,7 +5466,7 @@
             "bearer": []
           }
         ],
-        "summary": "Crear pedido estándar MESA/LLEVAR con N ítems. Total calculado en backend.",
+        "summary": "Crear pedido MESA/LLEVAR con platos (items) y/o líneas custom (customItems), cada una con un descuento opcional. Total calculado en backend.",
         "tags": [
           "orders"
         ]
@@ -5443,7 +5769,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador. · El método de pago es obligatorio cuando el pedido se crea pagado · No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING) · El producto indicado no existe · El producto no está disponible para la venta · El cliente indicado no existe · El cliente está inactivo. Reactívelo o use la venta S/N. · Las presas elegidas no coinciden con las que lleva el plato (selectedPieces)",
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador. · El método de pago es obligatorio cuando el pedido se crea pagado · No se debe especificar método de pago cuando el pedido tiene pago pendiente (paymentStatus=PENDING) · El producto indicado no existe · El producto no está disponible para la venta · El cliente indicado no existe · El cliente está inactivo. Reactívelo o use la venta S/N. · Las presas elegidas no coinciden con las que lleva el plato (selectedPieces) · El descuento indicado no existe · El descuento no puede superar el precio del plato",
             "content": {
               "application/json": {
                 "schema": {
@@ -5562,6 +5888,30 @@
                         "details": []
                       }
                     }
+                  },
+                  "DISCOUNT_REFERENCE_NOT_FOUND": {
+                    "summary": "DISCOUNT_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento indicado no existe",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_EXCEEDS_PRICE": {
+                    "summary": "DISCOUNT_EXCEEDS_PRICE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no puede superar el precio del plato",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_EXCEEDS_PRICE",
+                        "details": []
+                      }
+                    }
                   }
                 }
               }
@@ -5640,7 +5990,7 @@
             }
           },
           "409": {
-            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Falta configurar el inventario del producto o de la presa en esta sucursal · Stock insuficiente",
+            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Falta configurar el inventario del producto o de la presa en esta sucursal · Stock insuficiente · El descuento no está disponible en este momento · El descuento requiere la autorización del administrador para este turno",
             "content": {
               "application/json": {
                 "schema": {
@@ -5679,6 +6029,30 @@
                       "data": null,
                       "error": {
                         "code": "INSUFFICIENT_STOCK",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_NOT_AVAILABLE": {
+                    "summary": "DISCOUNT_NOT_AVAILABLE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no está disponible en este momento",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AVAILABLE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_NOT_AUTHORIZED": {
+                    "summary": "DISCOUNT_NOT_AUTHORIZED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento requiere la autorización del administrador para este turno",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AUTHORIZED",
                         "details": []
                       }
                     }
@@ -5915,7 +6289,7 @@
             }
           },
           "409": {
-            "description": "La orden ya está pagada · La orden fue cancelada · Stock insuficiente",
+            "description": "La orden ya está pagada · La orden fue cancelada · No se puede cobrar un pedido de un turno ya cerrado · Stock insuficiente",
             "content": {
               "application/json": {
                 "schema": {
@@ -5942,6 +6316,18 @@
                       "data": null,
                       "error": {
                         "code": "ORDER_CANCELLED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "ORDER_PAYMENT_SHIFT_CLOSED": {
+                    "summary": "ORDER_PAYMENT_SHIFT_CLOSED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No se puede cobrar un pedido de un turno ya cerrado",
+                      "data": null,
+                      "error": {
+                        "code": "ORDER_PAYMENT_SHIFT_CLOSED",
                         "details": []
                       }
                     }
@@ -6723,7 +7109,7 @@
             }
           },
           "400": {
-            "description": "Error de validación · Ya existe un ítem con ese código en la sucursal · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · Solo los ítems de tipo BEBIDA se vinculan a un producto · Ese producto ya está vinculado a otro ítem de la sucursal · El producto indicado no existe · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
+            "description": "Error de validación · El precio de venta solo aplica a los tipos de presa (PECHO, ALA, PIERNA, ENTREPIERNA) · Solo los ítems de tipo BEBIDA se vinculan a un producto · Ese producto ya está vinculado a otro ítem de la sucursal · Ya hay un ítem de inventario activo para ese tipo de presa en la sucursal · El producto indicado no existe · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique la sucursal (branchId) · La sucursal indicada no existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -6744,18 +7130,6 @@
                             "message": "El campo name debe ser un texto"
                           }
                         ]
-                      }
-                    }
-                  },
-                  "INVENTORY_ITEM_CODE_ALREADY_EXISTS": {
-                    "summary": "INVENTORY_ITEM_CODE_ALREADY_EXISTS",
-                    "value": {
-                      "isSuccess": false,
-                      "message": "Ya existe un ítem con ese código en la sucursal",
-                      "data": null,
-                      "error": {
-                        "code": "INVENTORY_ITEM_CODE_ALREADY_EXISTS",
-                        "details": []
                       }
                     }
                   },
@@ -6791,6 +7165,18 @@
                       "data": null,
                       "error": {
                         "code": "INVENTORY_PRODUCT_ALREADY_LINKED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PIECE_ITEM_ALREADY_EXISTS": {
+                    "summary": "PIECE_ITEM_ALREADY_EXISTS",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ya hay un ítem de inventario activo para ese tipo de presa en la sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "PIECE_ITEM_ALREADY_EXISTS",
                         "details": []
                       }
                     }
@@ -7269,13 +7655,25 @@
             }
           },
           "400": {
-            "description": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "description": "Ya hay un ítem de inventario activo para ese tipo de presa en la sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponseDto"
                 },
                 "examples": {
+                  "PIECE_ITEM_ALREADY_EXISTS": {
+                    "summary": "PIECE_ITEM_ALREADY_EXISTS",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ya hay un ítem de inventario activo para ese tipo de presa en la sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "PIECE_ITEM_ALREADY_EXISTS",
+                        "details": []
+                      }
+                    }
+                  },
                   "USER_WITHOUT_BRANCH": {
                     "summary": "USER_WITHOUT_BRANCH",
                     "value": {
@@ -8583,6 +8981,1053 @@
         ]
       }
     },
+    "/api/v1/discounts": {
+      "post": {
+        "operationId": "DiscountsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDiscountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Descuento creado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Descuento creado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "discount": {
+                          "$ref": "#/components/schemas/DiscountEntity"
+                        }
+                      },
+                      "required": [
+                        "discount"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear descuento del catálogo (monto fijo en Bs por plato) (ADMIN)",
+        "tags": [
+          "discounts"
+        ]
+      },
+      "get": {
+        "operationId": "DiscountsController_list",
+        "parameters": [
+          {
+            "name": "availability",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "END_OF_SHIFT",
+              "type": "string",
+              "enum": [
+                "ALWAYS",
+                "END_OF_SHIFT"
+              ]
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Descuentos obtenidos correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Descuentos obtenidos correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "discounts": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DiscountEntity"
+                          }
+                        },
+                        "total": {
+                          "type": "number",
+                          "example": 1
+                        }
+                      },
+                      "required": [
+                        "discounts",
+                        "total"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar descuentos del catálogo (filtros availability, active)",
+        "tags": [
+          "discounts"
+        ]
+      }
+    },
+    "/api/v1/discounts/authorizations": {
+      "get": {
+        "operationId": "DiscountsController_listAuthorizations",
+        "parameters": [
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. El ADMIN ve siempre la suya (si pide otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Autorizaciones obtenidas correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Autorizaciones obtenidas correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "authorizations": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DiscountAuthorizationListItemEntity"
+                          }
+                        },
+                        "total": {
+                          "type": "number",
+                          "example": 1
+                        }
+                      },
+                      "required": [
+                        "authorizations",
+                        "total"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las autorizaciones vigentes (turnos abiertos) de la sucursal. SUPER_ADMIN: ?branchId= opcional.",
+        "tags": [
+          "discounts"
+        ]
+      }
+    },
+    "/api/v1/discounts/{id}": {
+      "patch": {
+        "operationId": "DiscountsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del descuento (Descuento personal del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000001001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDiscountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Descuento actualizado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Descuento actualizado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "discount": {
+                          "$ref": "#/components/schemas/DiscountEntity"
+                        }
+                      },
+                      "required": [
+                        "discount"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Descuento no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "DISCOUNT_NOT_FOUND": {
+                    "summary": "DISCOUNT_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Descuento no encontrado",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar o desactivar un descuento. No altera las ventas pasadas (cada línea conserva su monto).",
+        "tags": [
+          "discounts"
+        ]
+      }
+    },
+    "/api/v1/discounts/{id}/authorize": {
+      "post": {
+        "operationId": "DiscountsController_authorize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del descuento que exige autorización (Compensación al cliente del seed)",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000001002",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeDiscountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Descuento autorizado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Descuento autorizado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "authorization": {
+                          "$ref": "#/components/schemas/DiscountAuthorizationEntity"
+                        }
+                      },
+                      "required": [
+                        "authorization"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · Ese descuento no requiere autorización · La cajera indicada no existe o no pertenece a su sucursal · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "DISCOUNT_AUTHORIZATION_NOT_REQUIRED": {
+                    "summary": "DISCOUNT_AUTHORIZATION_NOT_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Ese descuento no requiere autorización",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_AUTHORIZATION_NOT_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "CASHIER_REFERENCE_NOT_FOUND": {
+                    "summary": "CASHIER_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La cajera indicada no existe o no pertenece a su sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "CASHIER_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Descuento no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "DISCOUNT_NOT_FOUND": {
+                    "summary": "DISCOUNT_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Descuento no encontrado",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El descuento no está disponible en este momento · La cajera ya tiene autorizado ese descuento en su turno · La cajera no tiene un turno abierto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "DISCOUNT_NOT_AVAILABLE": {
+                    "summary": "DISCOUNT_NOT_AVAILABLE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no está disponible en este momento",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AVAILABLE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_ALREADY_AUTHORIZED": {
+                    "summary": "DISCOUNT_ALREADY_AUTHORIZED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La cajera ya tiene autorizado ese descuento en su turno",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_ALREADY_AUTHORIZED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "CASHIER_WITHOUT_OPEN_SHIFT": {
+                    "summary": "CASHIER_WITHOUT_OPEN_SHIFT",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La cajera no tiene un turno abierto",
+                      "data": null,
+                      "error": {
+                        "code": "CASHIER_WITHOUT_OPEN_SHIFT",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Autorizar a una cajera un descuento que lo exige, durante su turno abierto (queda auditado)",
+        "tags": [
+          "discounts"
+        ]
+      }
+    },
     "/api/v1/pos/context": {
       "get": {
         "operationId": "PosController_getContext",
@@ -8624,6 +10069,12 @@
                             "$ref": "#/components/schemas/PiecePriceEntity"
                           }
                         },
+                        "discounts": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PosDiscountEntity"
+                          }
+                        },
                         "shift": {
                           "nullable": true,
                           "allOf": [
@@ -8637,6 +10088,7 @@
                         "products",
                         "shiftPeriods",
                         "piecePrices",
+                        "discounts",
                         "shift"
                       ]
                     },
@@ -8758,7 +10210,7 @@
             "bearer": []
           }
         ],
-        "summary": "Carga única del POS: productos + variantes + períodos + precios de presas + turno activo.",
+        "summary": "Carga única del POS: productos + variantes + períodos + precios de presas + descuentos aplicables + turno activo.",
         "tags": [
           "pos"
         ]
@@ -11159,6 +12611,1510 @@
           "cash-registers"
         ]
       }
+    },
+    "/api/v1/expenses": {
+      "post": {
+        "operationId": "ExpensesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gasto registrado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Gasto registrado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "expense": {
+                          "$ref": "#/components/schemas/ExpenseEntity"
+                        }
+                      },
+                      "required": [
+                        "expense"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "NO_ACTIVE_SHIFT": {
+                    "summary": "NO_ACTIVE_SHIFT",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No hay un turno abierto. Abra caja antes de registrar pedidos.",
+                      "data": null,
+                      "error": {
+                        "code": "NO_ACTIVE_SHIFT",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un gasto pagado desde la caja. Se liga al turno abierto de la cajera.",
+        "tags": [
+          "expenses"
+        ]
+      }
+    },
+    "/api/v1/vouchers": {
+      "post": {
+        "operationId": "VouchersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVoucherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vale registrado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Vale registrado correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "voucher": {
+                          "$ref": "#/components/schemas/VoucherEntity"
+                        }
+                      },
+                      "required": [
+                        "voucher"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador. · Indique el trabajador (workerId o workerName) · El trabajador indicado no existe o no pertenece a su sucursal · El producto indicado no existe · El producto no está disponible para la venta · La variante no existe o no pertenece al producto · Las presas elegidas no coinciden con las que lleva el plato (selectedPieces) · Alguna presa elegida no está habilitada para este plato · Este plato se vende por pares completos de presas · Alguna bebida elegida no está habilitada para este plato · El descuento indicado no existe · El descuento no puede superar el precio del plato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  },
+                  "WORKER_REQUIRED": {
+                    "summary": "WORKER_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Indique el trabajador (workerId o workerName)",
+                      "data": null,
+                      "error": {
+                        "code": "WORKER_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "WORKER_REFERENCE_NOT_FOUND": {
+                    "summary": "WORKER_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El trabajador indicado no existe o no pertenece a su sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "WORKER_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PRODUCT_REFERENCE_NOT_FOUND": {
+                    "summary": "PRODUCT_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El producto indicado no existe",
+                      "data": null,
+                      "error": {
+                        "code": "PRODUCT_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PRODUCT_INACTIVE": {
+                    "summary": "PRODUCT_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El producto no está disponible para la venta",
+                      "data": null,
+                      "error": {
+                        "code": "PRODUCT_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "VARIANT_REFERENCE_NOT_FOUND": {
+                    "summary": "VARIANT_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "La variante no existe o no pertenece al producto",
+                      "data": null,
+                      "error": {
+                        "code": "VARIANT_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "INVALID_PIECE_SELECTION": {
+                    "summary": "INVALID_PIECE_SELECTION",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Las presas elegidas no coinciden con las que lleva el plato (selectedPieces)",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_PIECE_SELECTION",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PIECE_NOT_ALLOWED": {
+                    "summary": "PIECE_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Alguna presa elegida no está habilitada para este plato",
+                      "data": null,
+                      "error": {
+                        "code": "PIECE_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "PIECES_NOT_PAIRED": {
+                    "summary": "PIECES_NOT_PAIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Este plato se vende por pares completos de presas",
+                      "data": null,
+                      "error": {
+                        "code": "PIECES_NOT_PAIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DRINK_NOT_ALLOWED": {
+                    "summary": "DRINK_NOT_ALLOWED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Alguna bebida elegida no está habilitada para este plato",
+                      "data": null,
+                      "error": {
+                        "code": "DRINK_NOT_ALLOWED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_REFERENCE_NOT_FOUND": {
+                    "summary": "DISCOUNT_REFERENCE_NOT_FOUND",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento indicado no existe",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_REFERENCE_NOT_FOUND",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_EXCEEDS_PRICE": {
+                    "summary": "DISCOUNT_EXCEEDS_PRICE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no puede superar el precio del plato",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_EXCEEDS_PRICE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso denegado: privilegios insuficientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "FORBIDDEN": {
+                    "summary": "FORBIDDEN",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Acceso denegado: privilegios insuficientes",
+                      "data": null,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No hay un turno abierto. Abra caja antes de registrar pedidos. · Falta configurar el inventario del producto o de la presa en esta sucursal · Stock insuficiente · El descuento no está disponible en este momento · El descuento requiere la autorización del administrador para este turno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "NO_ACTIVE_SHIFT": {
+                    "summary": "NO_ACTIVE_SHIFT",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No hay un turno abierto. Abra caja antes de registrar pedidos.",
+                      "data": null,
+                      "error": {
+                        "code": "NO_ACTIVE_SHIFT",
+                        "details": []
+                      }
+                    }
+                  },
+                  "INVENTORY_MAPPING_MISSING": {
+                    "summary": "INVENTORY_MAPPING_MISSING",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Falta configurar el inventario del producto o de la presa en esta sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "INVENTORY_MAPPING_MISSING",
+                        "details": []
+                      }
+                    }
+                  },
+                  "INSUFFICIENT_STOCK": {
+                    "summary": "INSUFFICIENT_STOCK",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Stock insuficiente",
+                      "data": null,
+                      "error": {
+                        "code": "INSUFFICIENT_STOCK",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_NOT_AVAILABLE": {
+                    "summary": "DISCOUNT_NOT_AVAILABLE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento no está disponible en este momento",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AVAILABLE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "DISCOUNT_NOT_AUTHORIZED": {
+                    "summary": "DISCOUNT_NOT_AUTHORIZED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El descuento requiere la autorización del administrador para este turno",
+                      "data": null,
+                      "error": {
+                        "code": "DISCOUNT_NOT_AUTHORIZED",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emitir un vale del personal. El monto lo deriva el backend; no suma a caja pero descuenta inventario (VALE).",
+        "tags": [
+          "vouchers"
+        ]
+      },
+      "get": {
+        "operationId": "VouchersController_list",
+        "parameters": [
+          {
+            "name": "shiftId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000801",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "ISSUED",
+              "type": "string",
+              "enum": [
+                "ISSUED",
+                "REDEEMED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "workerId",
+            "required": false,
+            "in": "query",
+            "description": "Trabajador que es usuario del sistema",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000103",
+              "type": "string"
+            }
+          },
+          {
+            "name": "worker",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda parcial por nombre del trabajador (sin distinguir mayúsculas)",
+            "schema": {
+              "example": "maria",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Desde el día (inclusive). Sin `to`, hasta hoy. Con solo `to`, ese único día.",
+            "schema": {
+              "example": "2026-05-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Hasta el día (inclusive).",
+            "schema": {
+              "example": "2026-05-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro ve las de todas. Los demás roles ven siempre la suya (si piden otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vales obtenidos correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Vales obtenidos correctamente"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "vouchers": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/VoucherEntity"
+                          }
+                        },
+                        "total": {
+                          "type": "number",
+                          "example": 1
+                        }
+                      },
+                      "required": [
+                        "vouchers",
+                        "total"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar vales, del más reciente al más antiguo. La cajera ve los que emitió; el ADMIN, los de su sucursal. SUPER_ADMIN: ?branchId= opcional.",
+        "tags": [
+          "vouchers"
+        ]
+      }
+    },
+    "/api/v1/reports/sales": {
+      "get": {
+        "operationId": "ReportsController_sales",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Primer día del rango (inclusive, día operativo del turno). Por defecto, el día `to`.",
+            "schema": {
+              "example": "2026-05-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Último día del rango (inclusive). Por defecto, hoy.",
+            "schema": {
+              "example": "2026-05-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "`csv` descarga el reporte como archivo (fuera del envelope de la API).",
+            "schema": {
+              "default": "json",
+              "example": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma todas. El ADMIN ve siempre la suya (si pide otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte de ventas obtenido correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Reporte de ventas obtenido correctamente"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SalesReportEntity"
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "INVALID_DATE_RANGE": {
+                    "summary": "INVALID_DATE_RANGE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_DATE_RANGE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ventas por turno y total del rango (?from=&to=, por defecto hoy). ?format=csv descarga el archivo.",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/inventory-presas": {
+      "get": {
+        "operationId": "ReportsController_inventoryPresas",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Primer día del rango (inclusive, día operativo del turno). Por defecto, el día `to`.",
+            "schema": {
+              "example": "2026-05-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Último día del rango (inclusive). Por defecto, hoy.",
+            "schema": {
+              "example": "2026-05-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "`csv` descarga el reporte como archivo (fuera del envelope de la API).",
+            "schema": {
+              "default": "json",
+              "example": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma todas. El ADMIN ve siempre la suya (si pide otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte de presas obtenido correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Reporte de presas obtenido correctamente"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/InventoryPresasReportEntity"
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "INVALID_DATE_RANGE": {
+                    "summary": "INVALID_DATE_RANGE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_DATE_RANGE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Presas vendidas, consumidas por vales y restantes por tipo. ?format=csv descarga el archivo.",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/cash-audit": {
+      "get": {
+        "operationId": "ReportsController_cashAudit",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Primer día del rango (inclusive, día operativo del turno). Por defecto, el día `to`.",
+            "schema": {
+              "example": "2026-05-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Último día del rango (inclusive). Por defecto, hoy.",
+            "schema": {
+              "example": "2026-05-07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "`csv` descarga el reporte como archivo (fuera del envelope de la API).",
+            "schema": {
+              "default": "json",
+              "example": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Solo SUPER_ADMIN: elige la sucursal; sin este filtro suma todas. El ADMIN ve siempre la suya (si pide otra, 403).",
+            "schema": {
+              "format": "uuid",
+              "example": "01900000-0000-7000-8000-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte de arqueo obtenido correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isSuccess": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Reporte de arqueo obtenido correctamente"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CashAuditReportEntity"
+                    },
+                    "error": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    }
+                  },
+                  "required": [
+                    "isSuccess",
+                    "message",
+                    "data",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error de validación · El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días · El usuario no tiene una sucursal asignada. Contacte al administrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "summary": "VALIDATION_ERROR",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Error de validación",
+                      "data": null,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "details": [
+                          {
+                            "field": "name",
+                            "message": "El campo name debe ser un texto"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "INVALID_DATE_RANGE": {
+                    "summary": "INVALID_DATE_RANGE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El rango de fechas no es válido: \"from\" no puede ser posterior a \"to\" y el máximo es de 366 días",
+                      "data": null,
+                      "error": {
+                        "code": "INVALID_DATE_RANGE",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_WITHOUT_BRANCH": {
+                    "summary": "USER_WITHOUT_BRANCH",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario no tiene una sucursal asignada. Contacte al administrador.",
+                      "data": null,
+                      "error": {
+                        "code": "USER_WITHOUT_BRANCH",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de autenticación requerido · Token inválido o expirado · El usuario está inactivo o ya no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "TOKEN_REQUIRED": {
+                    "summary": "TOKEN_REQUIRED",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token de autenticación requerido",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_REQUIRED",
+                        "details": []
+                      }
+                    }
+                  },
+                  "TOKEN_INVALID": {
+                    "summary": "TOKEN_INVALID",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "Token inválido o expirado",
+                      "data": null,
+                      "error": {
+                        "code": "TOKEN_INVALID",
+                        "details": []
+                      }
+                    }
+                  },
+                  "USER_INACTIVE": {
+                    "summary": "USER_INACTIVE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "El usuario está inactivo o ya no existe",
+                      "data": null,
+                      "error": {
+                        "code": "USER_INACTIVE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No tiene permisos sobre esa sucursal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                },
+                "examples": {
+                  "BRANCH_OUT_OF_SCOPE": {
+                    "summary": "BRANCH_OUT_OF_SCOPE",
+                    "value": {
+                      "isSuccess": false,
+                      "message": "No tiene permisos sobre esa sucursal",
+                      "data": null,
+                      "error": {
+                        "code": "BRANCH_OUT_OF_SCOPE",
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Arqueo de cada turno del rango (apertura, ventas por método, gastos, vales, anulaciones, diferencia). ?format=csv descarga el archivo.",
+        "tags": [
+          "reports"
+        ]
+      }
     }
   },
   "info": {
@@ -11686,107 +14642,6 @@
           }
         }
       },
-      "ProductEntity": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "01900000-0000-7000-8000-000000000402",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "Porción Media"
-          },
-          "basePrice": {
-            "type": "string",
-            "example": "30",
-            "description": "Decimal serialized as a string"
-          },
-          "category": {
-            "type": "string",
-            "example": "Plato principal"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true,
-            "example": "2 presas + porción mixto de papa y arroz"
-          },
-          "active": {
-            "type": "boolean",
-            "example": true
-          },
-          "isSellable": {
-            "type": "boolean",
-            "example": true
-          },
-          "isInventoryItem": {
-            "type": "boolean",
-            "example": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-05-01T12:00:00.000Z"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-05-01T12:00:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "basePrice",
-          "category",
-          "description",
-          "active",
-          "isSellable",
-          "isInventoryItem",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateProductDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "example": "Alitas BBQ",
-            "minLength": 3,
-            "maxLength": 80
-          },
-          "basePrice": {
-            "type": "number",
-            "example": 35,
-            "minimum": 0.01
-          },
-          "category": {
-            "type": "string",
-            "example": "Plato principal"
-          },
-          "description": {
-            "type": "string",
-            "example": "Porción de alitas con salsa BBQ"
-          },
-          "isSellable": {
-            "type": "boolean",
-            "example": true,
-            "default": true
-          },
-          "isInventoryItem": {
-            "type": "boolean",
-            "example": true,
-            "default": true
-          }
-        },
-        "required": [
-          "name",
-          "basePrice",
-          "category"
-        ]
-      },
       "VariantComponentDto": {
         "type": "object",
         "properties": {
@@ -11815,6 +14670,145 @@
           "count"
         ]
       },
+      "PieceRulesDto": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "array",
+            "example": [
+              "pecho",
+              "ala",
+              "pierna",
+              "entrepierna"
+            ],
+            "description": "Presas que la cajera puede elegir para este plato.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pecho",
+                "ala",
+                "pierna",
+                "entrepierna"
+              ]
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "free",
+              "pairs"
+            ],
+            "example": "free",
+            "description": "`free` (por defecto): cualquier combinación de las presas habilitadas. `pairs`: solo pares completos (`pairs`)."
+          },
+          "pairs": {
+            "type": "array",
+            "example": [
+              "pecho-ala",
+              "pierna-entrepierna"
+            ],
+            "description": "Pares que se venden. Obligatorio con `mode: \"pairs\"`; `allowed` debe ser exactamente las presas de estos pares.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pecho-ala",
+                "pierna-entrepierna"
+              ]
+            }
+          }
+        },
+        "required": [
+          "allowed"
+        ]
+      },
+      "SideRulesDto": {
+        "type": "object",
+        "properties": {
+          "included": {
+            "type": "boolean",
+            "example": true,
+            "description": "El plato incluye acompañamiento."
+          },
+          "default": {
+            "type": "string",
+            "enum": [
+              "mixto",
+              "papa",
+              "arroz",
+              "smiles"
+            ],
+            "example": "mixto",
+            "description": "Acompañamiento por defecto. Obligatorio si `included`."
+          },
+          "allowed": {
+            "type": "array",
+            "example": [
+              "mixto",
+              "papa",
+              "arroz",
+              "smiles"
+            ],
+            "description": "Acompañamientos por los que se puede sustituir (sin costo, máximo uno por plato). Debe incluir el default.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "mixto",
+                "papa",
+                "arroz",
+                "smiles"
+              ]
+            }
+          }
+        },
+        "required": [
+          "included"
+        ]
+      },
+      "DrinkRulesDto": {
+        "type": "object",
+        "properties": {
+          "included": {
+            "type": "boolean",
+            "example": true,
+            "description": "El plato incluye bebida."
+          },
+          "defaultProductId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01900000-0000-7000-8000-000000000409",
+            "description": "Producto (categoría Bebida) que se entrega por defecto. Obligatorio si `included`."
+          },
+          "allowedProductIds": {
+            "example": [
+              "01900000-0000-7000-8000-000000000409",
+              "01900000-0000-7000-8000-000000000408"
+            ],
+            "description": "Bebidas por las que se puede cambiar. Debe incluir la bebida por defecto.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "included"
+        ]
+      },
+      "VariantRulesDto": {
+        "type": "object",
+        "properties": {
+          "pieces": {
+            "$ref": "#/components/schemas/PieceRulesDto"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideRulesDto"
+          },
+          "drink": {
+            "$ref": "#/components/schemas/DrinkRulesDto"
+          }
+        }
+      },
       "VariantEntity": {
         "type": "object",
         "properties": {
@@ -11837,6 +14831,16 @@
             "items": {
               "$ref": "#/components/schemas/VariantComponentDto"
             }
+          },
+          "rules": {
+            "nullable": true,
+            "description": "Lo que el admin permite al armar el plato; null en las variantes sin reglas.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VariantRulesDto"
+              }
+            ]
           },
           "isDefault": {
             "type": "boolean",
@@ -11862,6 +14866,7 @@
           "productId",
           "name",
           "components",
+          "rules",
           "isDefault",
           "active",
           "createdAt",
@@ -11898,14 +14903,6 @@
             "type": "boolean",
             "example": true
           },
-          "isSellable": {
-            "type": "boolean",
-            "example": true
-          },
-          "isInventoryItem": {
-            "type": "boolean",
-            "example": true
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -11930,11 +14927,78 @@
           "category",
           "description",
           "active",
-          "isSellable",
-          "isInventoryItem",
           "createdAt",
           "updatedAt",
           "variants"
+        ]
+      },
+      "ProductVariantInputDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Combo Wonder estándar",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "components": {
+            "description": "Composición por defecto (lo que consumen pedidos e inventario). Las presas son las cocidas que la cajera elige; lo que no descuenta presas (un filete) va como \"extra\".",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantComponentDto"
+            }
+          },
+          "rules": {
+            "nullable": true,
+            "description": "Lo que el admin permite al armar el plato. Sin esto la variante no tiene restricciones. `null` en un PATCH las borra.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VariantRulesDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "components"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Alitas BBQ",
+            "minLength": 3,
+            "maxLength": 80
+          },
+          "basePrice": {
+            "type": "number",
+            "example": 35,
+            "minimum": 0.01
+          },
+          "category": {
+            "type": "string",
+            "example": "Plato principal"
+          },
+          "description": {
+            "type": "string",
+            "example": "Porción de alitas con salsa BBQ"
+          },
+          "variant": {
+            "description": "Variante principal (composición por defecto + reglas de armado). Se crea en la misma transacción que el producto. Sin ella el producto nace sin variantes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVariantInputDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "basePrice",
+          "category"
         ]
       },
       "UpdateProductDto": {
@@ -11958,13 +15022,13 @@
             "type": "string",
             "example": "2 presas + porción mixto"
           },
-          "isSellable": {
-            "type": "boolean",
-            "example": true
-          },
-          "isInventoryItem": {
-            "type": "boolean",
-            "example": true
+          "variant": {
+            "description": "Variante principal (la default activa, o la primera activa): se actualiza o, si no hay, se crea, en la misma transacción. Las demás variantes no se tocan.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVariantInputDto"
+              }
+            ]
           }
         }
       },
@@ -11990,6 +15054,14 @@
             "type": "boolean",
             "example": true,
             "default": false
+          },
+          "rules": {
+            "description": "Lo que se permite al armar el plato; debe ser coherente con `components`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VariantRulesDto"
+              }
+            ]
           }
         },
         "required": [
@@ -12014,6 +15086,16 @@
           "isDefault": {
             "type": "boolean",
             "example": true
+          },
+          "rules": {
+            "nullable": true,
+            "description": "Reglas de armado (`null` las borra). Se validan contra los `components` resultantes.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VariantRulesDto"
+              }
+            ]
           }
         }
       },
@@ -12272,6 +15354,264 @@
           "periodId"
         ]
       },
+      "ShiftByMethodEntity": {
+        "type": "object",
+        "properties": {
+          "cash": {
+            "type": "string",
+            "example": "1100",
+            "description": "Collected in cash: the only method that enters the drawer"
+          },
+          "card": {
+            "type": "string",
+            "example": "155",
+            "description": "Decimal serialized as a string"
+          },
+          "vale": {
+            "type": "string",
+            "example": "0",
+            "description": "Orders paid with the VALE method"
+          }
+        },
+        "required": [
+          "cash",
+          "card",
+          "vale"
+        ]
+      },
+      "ShiftDiscountsEntity": {
+        "type": "object",
+        "properties": {
+          "units": {
+            "type": "number",
+            "example": 3,
+            "description": "Plates sold with a discount"
+          },
+          "amount": {
+            "type": "string",
+            "example": "21",
+            "description": "Total taken off the sales by per-plate discounts"
+          }
+        },
+        "required": [
+          "units",
+          "amount"
+        ]
+      },
+      "ShiftCancellationLineEntity": {
+        "type": "object",
+        "properties": {
+          "orderNumber": {
+            "type": "number",
+            "example": 4
+          },
+          "amount": {
+            "type": "string",
+            "example": "36",
+            "description": "Decimal serialized as a string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "example": "Error de la cajera"
+          },
+          "details": {
+            "type": "string",
+            "nullable": true,
+            "example": "Cobró de más"
+          }
+        },
+        "required": [
+          "orderNumber",
+          "amount",
+          "reason",
+          "details"
+        ]
+      },
+      "ShiftCancellationsEntity": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 1
+          },
+          "amount": {
+            "type": "string",
+            "example": "36",
+            "description": "Decimal serialized as a string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftCancellationLineEntity"
+            }
+          }
+        },
+        "required": [
+          "count",
+          "amount",
+          "orders"
+        ]
+      },
+      "ShiftTotalsEntity": {
+        "type": "object",
+        "properties": {
+          "sales": {
+            "type": "string",
+            "example": "1255",
+            "description": "Paid and not annulled, every method"
+          },
+          "orders": {
+            "type": "number",
+            "example": 31
+          },
+          "byMethod": {
+            "$ref": "#/components/schemas/ShiftByMethodEntity"
+          },
+          "expenses": {
+            "type": "string",
+            "example": "30",
+            "description": "Paid out of the till"
+          },
+          "vouchers": {
+            "type": "string",
+            "example": "60",
+            "description": "Staff vouchers issued: payroll, not part of the till"
+          },
+          "discounts": {
+            "$ref": "#/components/schemas/ShiftDiscountsEntity"
+          },
+          "cancellations": {
+            "$ref": "#/components/schemas/ShiftCancellationsEntity"
+          }
+        },
+        "required": [
+          "sales",
+          "orders",
+          "byMethod",
+          "expenses",
+          "vouchers",
+          "discounts",
+          "cancellations"
+        ]
+      },
+      "ShiftArqueoEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ],
+            "example": "CLOSED"
+          },
+          "businessDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T00:00:00.000Z"
+          },
+          "startAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "branchId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000001",
+            "format": "uuid"
+          },
+          "openingAmount": {
+            "type": "string",
+            "example": "200",
+            "description": "Decimal serialized as a string"
+          },
+          "closingAmount": {
+            "type": "string",
+            "example": "1265",
+            "description": "Cash counted by the cashier",
+            "nullable": true
+          },
+          "expectedAmount": {
+            "type": "string",
+            "example": "1270",
+            "description": "opening + cash sales − expenses",
+            "nullable": true
+          },
+          "discrepancy": {
+            "type": "string",
+            "example": "-5",
+            "description": "counted − expected",
+            "nullable": true
+          },
+          "discrepancyAlert": {
+            "type": "boolean",
+            "example": false,
+            "description": "The difference exceeds the 5 Bs tolerance: review it"
+          },
+          "cashier": {
+            "$ref": "#/components/schemas/ShiftCashierRef"
+          },
+          "cashRegister": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShiftCashRegisterRef"
+              }
+            ]
+          },
+          "period": {
+            "$ref": "#/components/schemas/ShiftPeriodRef"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ShiftTotalsEntity"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "businessDate",
+          "startAt",
+          "endAt",
+          "branchId",
+          "openingAmount",
+          "closingAmount",
+          "expectedAmount",
+          "discrepancy",
+          "discrepancyAlert",
+          "cashier",
+          "cashRegister",
+          "period",
+          "totals"
+        ]
+      },
+      "CloseShiftDto": {
+        "type": "object",
+        "properties": {
+          "countedAmount": {
+            "type": "number",
+            "example": 1265,
+            "minimum": 0,
+            "maximum": 999999.99,
+            "description": "Efectivo contado en el cajón al cerrar. El backend calcula lo esperado y la diferencia."
+          }
+        },
+        "required": [
+          "countedAmount"
+        ]
+      },
       "OrderUserRef": {
         "type": "object",
         "properties": {
@@ -12339,6 +15679,19 @@
             },
             "description": "Copy of the catalog data at sale time"
           },
+          "discountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null,
+            "description": "Catalog discount applied to every unit of the line"
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true,
+            "example": null,
+            "description": "Amount frozen PER UNIT when the discount was applied (snapshot, not a subtraction). Decimal as string"
+          },
           "substitutions": {
             "nullable": true,
             "example": null,
@@ -12398,6 +15751,8 @@
           "productId",
           "variantId",
           "snapshot",
+          "discountId",
+          "discountAmount",
           "substitutions",
           "selectedPieces",
           "customPieces",
@@ -12655,8 +16010,12 @@
             "type": "string",
             "example": "mixto",
             "enum": [
+              "arroz",
+              "papa",
+              "smiles",
               "mixto"
-            ]
+            ],
+            "description": "Acompañamiento por defecto del plato (`rules.side.default` de su variante). Sin reglas solo se admite `mixto`."
           },
           "to": {
             "type": "string",
@@ -12729,6 +16088,13 @@
             "example": 2,
             "minimum": 1
           },
+          "discountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null,
+            "description": "Descuento del catálogo (id de GET /pos/context) para TODAS las unidades del ítem (PDR §2.11; para uno parcial, partí el ítem en dos líneas). Sin descuento: omitilo o null. El backend valida y congela el monto: el front nunca manda montos."
+          },
           "selectedPieces": {
             "type": "array",
             "items": {
@@ -12763,6 +16129,60 @@
         "required": [
           "productId",
           "quantity"
+        ]
+      },
+      "CreateCustomOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "customPieces": {
+            "minItems": 1,
+            "description": "Presas sueltas por unidad (ej. 2 pechos + 1 ala).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemSelectedPieceDto"
+            }
+          },
+          "extras": {
+            "description": "Acompañamientos. No afectan el inventario (PDR §2.3).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemExtraDto"
+            }
+          },
+          "drinks": {
+            "description": "Bebidas: descuentan por unidad.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDrinkDto"
+            }
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1
+          },
+          "unitPrice": {
+            "type": "number",
+            "example": 35,
+            "minimum": 0.01,
+            "description": "Precio unitario CONFIRMADO por la cajera (puede pisar el sugerido)."
+          },
+          "discountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null,
+            "description": "Descuento del catálogo (id de GET /pos/context) para TODAS las unidades de la línea (PDR §2.11). Sin descuento: omitilo o null. El backend valida y congela el monto."
+          },
+          "notes": {
+            "type": "string",
+            "example": "Sin sal"
+          }
+        },
+        "required": [
+          "customPieces",
+          "quantity",
+          "unitPrice"
         ]
       },
       "CreateOrderDto": {
@@ -12806,64 +16226,23 @@
             "description": "Requerido si paymentStatus=PAID"
           },
           "items": {
-            "minItems": 1,
+            "description": "Platos del menú. Junto con `customItems` debe haber al menos una línea.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CreateOrderItemDto"
+            }
+          },
+          "customItems": {
+            "description": "Líneas custom (presas sueltas con el precio que confirmó la cajera). Pueden ir en el mismo pedido que los platos: es una sola orden y un solo ticket (PDR §2.10).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCustomOrderItemDto"
             }
           }
         },
         "required": [
           "type",
-          "paymentStatus",
-          "items"
-        ]
-      },
-      "CreateCustomOrderItemDto": {
-        "type": "object",
-        "properties": {
-          "customPieces": {
-            "minItems": 1,
-            "description": "Presas sueltas por unidad (ej. 2 pechos + 1 ala).",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderItemSelectedPieceDto"
-            }
-          },
-          "extras": {
-            "description": "Acompañamientos. No afectan el inventario (PDR §2.3).",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderItemExtraDto"
-            }
-          },
-          "drinks": {
-            "description": "Bebidas: descuentan por unidad.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderItemDrinkDto"
-            }
-          },
-          "quantity": {
-            "type": "number",
-            "example": 1,
-            "minimum": 1
-          },
-          "unitPrice": {
-            "type": "number",
-            "example": 35,
-            "minimum": 0.01,
-            "description": "Precio unitario CONFIRMADO por la cajera (puede pisar el sugerido)."
-          },
-          "notes": {
-            "type": "string",
-            "example": "Sin sal"
-          }
-        },
-        "required": [
-          "customPieces",
-          "quantity",
-          "unitPrice"
+          "paymentStatus"
         ]
       },
       "CreateCustomOrderDto": {
@@ -13266,11 +16645,6 @@
       "CreateInventoryItemDto": {
         "type": "object",
         "properties": {
-          "productCode": {
-            "type": "string",
-            "example": "PRESA-PECHO-2",
-            "description": "Código único del ítem dentro de la sucursal"
-          },
           "name": {
             "type": "string",
             "example": "Pechos cocidos"
@@ -13298,6 +16672,16 @@
               "INSUMO"
             ],
             "example": "PECHO"
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "P",
+              "S",
+              "C"
+            ],
+            "example": "P",
+            "description": "Solo INSUMO (obligatorio): grupo de la planilla de inventario diario y letra de su código. P descartables y empaques, S salsas y fiambres, C insumos de cocina. Se ignora en bebidas y presas."
           },
           "unitMeasure": {
             "type": "string",
@@ -13335,7 +16719,6 @@
           }
         },
         "required": [
-          "productCode",
           "name",
           "unit",
           "type"
@@ -14234,6 +17617,292 @@
           "entries"
         ]
       },
+      "DiscountEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001001",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Descuento personal"
+          },
+          "fixedAmount": {
+            "type": "string",
+            "example": "7",
+            "description": "Fixed amount in Bs PER PLATE. Decimal serialized as a string"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "ALWAYS",
+              "END_OF_SHIFT"
+            ],
+            "example": "END_OF_SHIFT"
+          },
+          "requiresAuthorization": {
+            "type": "boolean",
+            "example": false
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "fixedAmount",
+          "availability",
+          "requiresAuthorization",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateDiscountDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Promo estudiantes",
+            "maxLength": 100
+          },
+          "fixedAmount": {
+            "type": "number",
+            "example": 5,
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "description": "Monto fijo en Bs que se descuenta POR PLATO (no es un porcentaje en V1)."
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "ALWAYS",
+              "END_OF_SHIFT"
+            ],
+            "example": "ALWAYS",
+            "description": "ALWAYS: todo el turno. END_OF_SHIFT: solo cuando la planilla registra sobrante cocido en el expositor."
+          },
+          "requiresAuthorization": {
+            "type": "boolean",
+            "example": false,
+            "default": false,
+            "description": "Si es true, la cajera necesita que un administrador la autorice para el turno."
+          },
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "fixedAmount",
+          "availability"
+        ]
+      },
+      "AuthorizationUserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000102",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Mariela"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Sanchez Sanchez"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "AuthorizationDiscountRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001002",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Compensación al cliente"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "DiscountAuthorizationListItemEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001101",
+            "format": "uuid"
+          },
+          "discountId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001002",
+            "format": "uuid"
+          },
+          "shiftId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "cashier": {
+            "$ref": "#/components/schemas/AuthorizationUserRef"
+          },
+          "authorizedBy": {
+            "example": {
+              "id": "01900000-0000-7000-8000-000000000101",
+              "firstName": "Jhonny",
+              "lastName": "Hurtado Zardan"
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthorizationUserRef"
+              }
+            ]
+          },
+          "authorizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "discount": {
+            "$ref": "#/components/schemas/AuthorizationDiscountRef"
+          }
+        },
+        "required": [
+          "id",
+          "discountId",
+          "shiftId",
+          "cashier",
+          "authorizedBy",
+          "authorizedAt",
+          "discount"
+        ]
+      },
+      "UpdateDiscountDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Descuento personal",
+            "maxLength": 100
+          },
+          "fixedAmount": {
+            "type": "number",
+            "example": 7,
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "description": "Solo rige para las ventas nuevas."
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "ALWAYS",
+              "END_OF_SHIFT"
+            ],
+            "example": "END_OF_SHIFT"
+          },
+          "requiresAuthorization": {
+            "type": "boolean",
+            "example": false
+          },
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "description": "Desactivar retira el descuento del POS sin tocar las ventas."
+          }
+        }
+      },
+      "DiscountAuthorizationEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001101",
+            "format": "uuid"
+          },
+          "discountId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001002",
+            "format": "uuid"
+          },
+          "shiftId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "cashier": {
+            "$ref": "#/components/schemas/AuthorizationUserRef"
+          },
+          "authorizedBy": {
+            "example": {
+              "id": "01900000-0000-7000-8000-000000000101",
+              "firstName": "Jhonny",
+              "lastName": "Hurtado Zardan"
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthorizationUserRef"
+              }
+            ]
+          },
+          "authorizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "discountId",
+          "shiftId",
+          "cashier",
+          "authorizedBy",
+          "authorizedAt"
+        ]
+      },
+      "AuthorizeDiscountDto": {
+        "type": "object",
+        "properties": {
+          "cashierId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000102",
+            "format": "uuid",
+            "description": "Cajera a habilitar. La autorización vale para su turno abierto actual (el shiftId se deriva)."
+          }
+        },
+        "required": [
+          "cashierId"
+        ]
+      },
       "PiecePriceEntity": {
         "type": "object",
         "properties": {
@@ -14258,6 +17927,39 @@
         "required": [
           "type",
           "salePrice"
+        ]
+      },
+      "PosDiscountEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001001",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Descuento personal"
+          },
+          "fixedAmount": {
+            "type": "string",
+            "example": "7",
+            "description": "Fixed amount in Bs PER PLATE. Decimal serialized as a string"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "ALWAYS",
+              "END_OF_SHIFT"
+            ],
+            "example": "END_OF_SHIFT"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "fixedAmount",
+          "availability"
         ]
       },
       "CustomerEntity": {
@@ -14747,6 +18449,554 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "ExpenseUserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000102",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Mariela"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Sanchez Sanchez"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "ExpenseEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001201",
+            "format": "uuid"
+          },
+          "description": {
+            "type": "string",
+            "example": "Compra de arroz"
+          },
+          "amount": {
+            "type": "string",
+            "example": "35.5",
+            "description": "Decimal serialized as a string"
+          },
+          "paidBy": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "REGISTER"
+            ],
+            "example": "CASH"
+          },
+          "shiftId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/ExpenseUserRef"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "amount",
+          "paidBy",
+          "shiftId",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "CreateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Compra de arroz",
+            "maxLength": 200
+          },
+          "amount": {
+            "type": "number",
+            "example": 35.5,
+            "minimum": 0.01,
+            "maximum": 99999999.99
+          },
+          "paidBy": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "REGISTER"
+            ],
+            "example": "CASH",
+            "description": "Ambos valores salen del cajón y restan del efectivo esperado del arqueo."
+          }
+        },
+        "required": [
+          "description",
+          "amount",
+          "paidBy"
+        ]
+      },
+      "VoucherUserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000102",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Mariela"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Sanchez Sanchez"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "VoucherEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000001301",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "V-20260501-001"
+          },
+          "workerId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null,
+            "description": "Set when the worker is a system user"
+          },
+          "workerName": {
+            "type": "string",
+            "example": "MARIA LOPEZ",
+            "description": "Display name: the user full name or the free text typed"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": "01900000-0000-7000-8000-000000000402"
+          },
+          "productName": {
+            "type": "string",
+            "example": "Porción Media"
+          },
+          "originalAmount": {
+            "type": "string",
+            "example": "30",
+            "description": "Product price. Decimal serialized as a string"
+          },
+          "discountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": "01900000-0000-7000-8000-000000001001"
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true,
+            "example": "7",
+            "description": "Frozen discount amount, null without discount"
+          },
+          "amount": {
+            "type": "string",
+            "example": "23",
+            "description": "originalAmount − discountAmount: deducted from payroll"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ISSUED",
+              "REDEEMED",
+              "CANCELLED"
+            ],
+            "example": "ISSUED"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Almuerzo"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-01T12:00:00.000Z"
+          },
+          "shiftId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "issuedBy": {
+            "$ref": "#/components/schemas/VoucherUserRef"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "workerId",
+          "workerName",
+          "productId",
+          "productName",
+          "originalAmount",
+          "discountId",
+          "discountAmount",
+          "amount",
+          "status",
+          "note",
+          "issuedAt",
+          "shiftId",
+          "issuedBy"
+        ]
+      },
+      "CreateVoucherDto": {
+        "type": "object",
+        "properties": {
+          "workerId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01900000-0000-7000-8000-000000000103",
+            "description": "Trabajador que es usuario del sistema."
+          },
+          "workerName": {
+            "type": "string",
+            "example": "MARIA LOPEZ",
+            "maxLength": 120,
+            "description": "Trabajador que no es usuario del sistema (texto libre). Debe venir workerId o workerName."
+          },
+          "productId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000402",
+            "format": "uuid"
+          },
+          "discountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null,
+            "description": "Descuento del catálogo, normalmente el \"Descuento personal\" (misma ventana y autorización que en un pedido). Sin descuento: omitilo o null."
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01900000-0000-7000-8000-000000000502",
+            "description": "Variante del plato: define cuántas presas lleva."
+          },
+          "selectedPieces": {
+            "description": "Presas elegidas (deben sumar las que lleva la variante): son las que descuenta el vale.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemSelectedPieceDto"
+            }
+          },
+          "drinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDrinkDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "example": "Almuerzo",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "productId"
+        ]
+      },
+      "SalesDiscountsEntity": {
+        "type": "object",
+        "properties": {
+          "units": {
+            "type": "number",
+            "example": 3
+          },
+          "amount": {
+            "type": "string",
+            "example": "21"
+          }
+        },
+        "required": [
+          "units",
+          "amount"
+        ]
+      },
+      "SalesCancellationsEntity": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 1
+          },
+          "amount": {
+            "type": "string",
+            "example": "36"
+          }
+        },
+        "required": [
+          "count",
+          "amount"
+        ]
+      },
+      "SalesTotalsEntity": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "type": "number",
+            "example": 212,
+            "description": "Paid and not annulled orders"
+          },
+          "sales": {
+            "type": "string",
+            "example": "9840",
+            "description": "Every method together"
+          },
+          "byMethod": {
+            "$ref": "#/components/schemas/ShiftByMethodEntity"
+          },
+          "discounts": {
+            "$ref": "#/components/schemas/SalesDiscountsEntity"
+          },
+          "cancellations": {
+            "$ref": "#/components/schemas/SalesCancellationsEntity"
+          }
+        },
+        "required": [
+          "orders",
+          "sales",
+          "byMethod",
+          "discounts",
+          "cancellations"
+        ]
+      },
+      "ReportPeriodRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000302",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Noche"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "SalesShiftRowEntity": {
+        "type": "object",
+        "properties": {
+          "shiftId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000801",
+            "format": "uuid"
+          },
+          "branchId": {
+            "type": "string",
+            "example": "01900000-0000-7000-8000-000000000001",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-05-07",
+            "description": "Operating day (YYYY-MM-DD)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ],
+            "example": "CLOSED"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ReportPeriodRef"
+          },
+          "cashRegister": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShiftCashRegisterRef"
+              }
+            ]
+          },
+          "cashier": {
+            "$ref": "#/components/schemas/ShiftCashierRef"
+          },
+          "orders": {
+            "type": "number",
+            "example": 31
+          },
+          "sales": {
+            "type": "string",
+            "example": "1255"
+          },
+          "discounts": {
+            "type": "string",
+            "example": "21",
+            "description": "Taken off by per-plate discounts"
+          }
+        },
+        "required": [
+          "shiftId",
+          "branchId",
+          "date",
+          "status",
+          "period",
+          "cashRegister",
+          "cashier",
+          "orders",
+          "sales",
+          "discounts"
+        ]
+      },
+      "SalesReportEntity": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-05-01"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-05-07"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/SalesTotalsEntity"
+          },
+          "shifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesShiftRowEntity"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "totals",
+          "shifts"
+        ]
+      },
+      "PieceStockRowEntity": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "PECHO",
+              "ALA",
+              "PIERNA",
+              "ENTREPIERNA",
+              "BEBIDA",
+              "INSUMO"
+            ],
+            "example": "PECHO"
+          },
+          "sold": {
+            "type": "number",
+            "example": 410,
+            "description": "Sold to customers in the range, net of annulments"
+          },
+          "vouchers": {
+            "type": "number",
+            "example": 12,
+            "description": "Taken by staff vouchers in the range"
+          },
+          "currentStock": {
+            "type": "number",
+            "example": 40,
+            "description": "Cooked stock right now (active items of the type)"
+          }
+        },
+        "required": [
+          "type",
+          "sold",
+          "vouchers",
+          "currentStock"
+        ]
+      },
+      "InventoryPresasReportEntity": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-05-01"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-05-07"
+          },
+          "pieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PieceStockRowEntity"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "pieces"
+        ]
+      },
+      "CashAuditReportEntity": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-05-01"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-05-07"
+          },
+          "shifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftArqueoEntity"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "shifts"
         ]
       }
     }

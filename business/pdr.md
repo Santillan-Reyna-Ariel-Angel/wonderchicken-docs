@@ -156,6 +156,7 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
 - **Turno:** cada turno tiene un monto de apertura y un monto de cierre.
 - **Arqueo (campos mínimos):** apertura, cierre, ventas totales, ventas por método (efectivo, tarjeta, vale), gastos, vales emitidos (monto), anulaciones (cantidad y monto), diferencia entre esperado y contado.
 - **Anulaciones:** al anular un pedido ya pagado, se requiere **motivo y detalle**. Aparecen en el arqueo con su monto y motivo para cuadrar los ingresos del turno.
+- **Efectivo esperado:** apertura + ventas cobradas en **efectivo** − gastos de caja. La tarjeta y el pago con método vale no entran al cajón, y los vales del personal son nómina (aparecen aparte, no restan). La diferencia es *contado − esperado*; las ventas anuladas no cuentan como ventas.
 - **Discrepancias:** se registran para auditoría. El umbral de tolerancia y la política de cierre con discrepancia son **POSPONIBLE** (definir con administrador antes de Sprint 3 — ver §13.3).
 
 ## 2.7 Roles e interfaces (V1 con autenticación JWT y control de permisos por rol en backend)
@@ -191,7 +192,8 @@ Nota técnica importante: en la implementación técnica el consumo operativo de
 ## 2.10 Ventas custom (presas surtidas)
 - **Caso de uso:** a veces los clientes piden combinaciones que no encajan con los platos del menú (ej. "vendéme 2 pechos sueltos", "1 ala + 1 pierna + arroz"). Hoy la cajera fuerza la venta seleccionando un plato de precio similar y descuenta inventario manualmente. El nuevo sistema debe soportar esto de forma nativa.
 - **CUSTOM no es un tipo de pedido:** una venta custom puede ser **MESA o LLEVAR** indistintamente. El tipo del pedido sigue describiendo el destino (MESA o LLEVAR); el carácter custom es una **marca** sobre el pedido, no un valor de tipo.
-- **Flujo dedicado en el POS:** la cajera elige explícitamente el flujo "Venta Custom" (botón dedicado, ver §7.1). El sistema reserva un camino separado para este flujo, con sus propias validaciones, sin necesidad de inferir nada desde el contenido del pedido.
+- **Flujo dedicado en el POS:** la cajera elige explícitamente el flujo "Venta Custom" (botón dedicado, ver §7.1), con sus propias validaciones, sin inferir nada desde el contenido del pedido.
+- **Se puede combinar con platos del menú:** las líneas custom y los platos se apilan en el mismo carrito y salen en **una sola orden y un solo ticket** (el pedido queda marcado como custom).
 - **Estructura del ítem custom:** la cajera arma cada ítem indicando explícitamente:
   - cantidad y tipo de cada presa (ej. 2 pechos, 1 ala, 1 pierna),
   - acompañamientos opcionales (papa / arroz / mixto / smiles / plátano) — sin afectar el inventario granular,
@@ -407,6 +409,7 @@ Estados adicionales: **pago pendiente**, **anulado**, **en espera**.
 
 ## 13.3 Decisiones residuales pendientes de cierre antes de V1
 > Estos puntos quedaron sin resolver tras Fase 1 y deben cerrarse con el administrador **antes de Sprint 3** (caja/arqueo). Si no se resuelven, se aplica el default sugerido.
+> **Estado (2026-10-10):** el Sprint 3 se implementó con el **default sugerido** de cada fila (umbral de 5 Bs; registrar + alertar + permitir; reporte de discrepancias y política contable de vales para V2). Si el administrador decide otra cosa, solo cambia una constante: `DISCREPANCY_TOLERANCE` en `src/shifts/shift-totals.ts`.
 
 | Decisión | Opciones | Default sugerido si no se decide |
 |----------|----------|----------------------------------|

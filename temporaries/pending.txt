@@ -1,0 +1,33 @@
+1: En al venta custom es crrecto que hay un input de precio final?(revisar docs)
+2: Las tarjetas de pago pendiente  o muestra toda la informacion en su detalle, ejemplo compro un wonder pop y un custom y no se mostro el custom.(hacelo escroleable o desplegable?)
+3: En POS, el modal de configurar variante, la seccion "Acompañamiento Incluido " no da opciones de seleccionar una sustitucion(quiero que este permita elegit como antes).
+4: El modal Ticket Comanda: en su detalle no muestra los items de la orden(caso custom)
+5: En la pantalla (http://localhost:3000/dispatcher) del dispacher, y la pantalla modal del ticket(http://localhost:3000/cashier/orders) de la cajera: las comandas creadas con configuracion de variante muestra 2 veces repetidas las presas(el backend descuenta bien, solose muestran 2 veces la fila de las "presas"). Creoq eu esto se da por que en el modal de configuracion se tiene la opcion granukar y puede que lo este tomand como otras presas extras aun que el backend descuente bien.
+
+
+Planilla solo lectura ❌ — el ADMIN está perfecto (403 al escribir), pero el SUPER_ADMIN SÍ puede escribir: PUT /daily-sheet/chicken le responde 200. El RolesGuard (roles.guard.ts:41) le da acceso global a todo. Contra tu prueba: ninguna celda debe ser editable.
+ Sucursal y turnos ⚠️ — la ciudad sí aparece en el encabezado, pero solo la edita el SUPER_ADMIN: el ADMIN recibe 403 (PATCH /branches/:id es rol SUPER_ADMIN según la doc). Turnos aislados por sucursal: ✅.
+
+Mensajes en inglés ⚠️ — los @Min/@Max/ArrayMinSize ya salen en español. Pendiente: un 404 de ruta muestra "Cannot POST ..." en inglés (códigos genéricos BAD_REQUEST y NOT_FOUND).
+Pendiente (prioridad): (1) el bypass de SUPER_ADMIN en el RolesGuard para los PUT de la planilla, (2) definir si el ADMIN debe poder editar su sucursal, (3) traducir los 404 de ruta.
+
+
+Por confirmar:
+Cocinero (cocinero1@gmail.com)
+7. Planilla de otro turno o día: cambiá el turno y el día. Tiene que cargar otra planilla.
+8. Valores inválidos: probá borrar una celda, escribir un negativo y escribir un decimal. Una celda borrada debe quedar vacía.
+9. Permisos: confirmá que no puede editar el sobrante cocido ni los ítems que no son de cocina.
+
+Despachadora y cajera, en la planilla
+10. Sobrante cocido: cargalo y revisá que "Diferencia" cuadre con lo vendido.
+11. Corregir una celda del cocinero: debe poder.
+12. Ingreso o gasto de una bebida: revisá que cambie el stock en Inventario.
+
+Administrador y superadministrador
+13. Planilla en solo lectura: el superadmin elige sucursal y turno, y ninguna celda debe ser editable.
+14. Inventario: creá una bebida vinculada a un producto y un ítem de cocina. Probá vincular el mismo producto a dos ítems; debe dar error.
+15. Sucursal y turnos: editá la ciudad de una sucursal y mirá si aparece en el encabezado de la planilla. En Turnos, creá un turno en una sucursal y comprobá que otra no lo ve.
+
+Un par de detalles
+16. Carrito persistido: recargá la página con cosas en el carrito. Se guarda en el navegador, así que deberían seguir ahí.
+17. Mensajes de error: buscá alguno en inglés o muy técnico. Los que encuentres, avisame.

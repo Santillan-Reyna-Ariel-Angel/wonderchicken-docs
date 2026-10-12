@@ -92,10 +92,10 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 | #   | Método | Endpoint    | Auth        | Body                                                                                                       | Esperado                                  |
 | --- | ------ | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| 18  | `POST` | `/products` | `adminToken`| `{ "name": "Porción Media", "basePrice": 30.00, "category": "Plato principal", "description": "2 presas + mixto", "isSellable": true, "isInventoryItem": true }` | `201` → **`productPorcionMediaId`**       |
-| 19  | `POST` | `/products` | `adminToken`| `{ "name": "Coca Cola 500 ml", "basePrice": 8.00, "category": "Bebida", "isSellable": true, "isInventoryItem": true }` | `201` → **`productCocaId`**               |
-| 20  | `POST` | `/products` | `adminToken`| `{ "name": "Porción de Papas", "basePrice": 12.00, "category": "Extra", "isSellable": true, "isInventoryItem": false }` | `201` → **`productPapasId`**              |
-| 21  | `POST` | `/products` | `adminToken`| `{ "name": "Coca Cola 2 L", "basePrice": 16.00, "category": "Bebida", "isSellable": true, "isInventoryItem": true }` | `201` → **`productCoca2LId`**             |
+| 18  | `POST` | `/products` | `adminToken`| `{ "name": "Porción Media", "basePrice": 30.00, "category": "Plato principal", "description": "2 presas + mixto" }` | `201` → **`productPorcionMediaId`**       |
+| 19  | `POST` | `/products` | `adminToken`| `{ "name": "Coca Cola 500 ml", "basePrice": 8.00, "category": "Bebida" }` | `201` → **`productCocaId`**               |
+| 20  | `POST` | `/products` | `adminToken`| `{ "name": "Porción de Papas", "basePrice": 12.00, "category": "Extra" }` | `201` → **`productPapasId`**              |
+| 21  | `POST` | `/products` | `adminToken`| `{ "name": "Coca Cola 2 L", "basePrice": 16.00, "category": "Bebida" }` | `201` → **`productCoca2LId`**             |
 | 22  | `GET`  | `/products` | `adminToken`| —                                                                                                           | `200` → los 4 con sus variantes           |
 
 ### B4. Variantes de cada plato ✅
@@ -124,16 +124,16 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 | #   | Método | Endpoint            | Auth        | Body                                                                                                                                                             | Esperado                                |
 | --- | ------ | ------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| 31  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-PECHO", "name": "Pechos cocidos", "unit": "UNIDAD", "type": "PECHO", "unitMeasure": "1 presa", "salePrice": 12.00, "initialStock": 40 }` | `201` → **`invPechoId`**                |
-| 32  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-ALA", "name": "Alas cocidas", "unit": "UNIDAD", "type": "ALA", "unitMeasure": "1 presa", "salePrice": 10.00, "initialStock": 40 }` | `201` → **`invAlaId`**                  |
-| 33  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-PIERNA", "name": "Piernas cocidas", "unit": "UNIDAD", "type": "PIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invPiernaId`**               |
-| 34  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-ENTREPIERNA", "name": "Entrepiernas cocidas", "unit": "UNIDAD", "type": "ENTREPIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invEntrepiernaId`**         |
-| 35  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "BEBIDA-COCA500", "name": "Coca Cola 500 ml", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "500 ml", "initialStock": 60, "productId": "{{productCocaId}}" }` | `201` → **`invCoca500Id`** (vinculada a su producto) |
-| 35b | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "BEBIDA-COCA2L", "name": "Coca Cola 2 lt", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "2 lt", "initialStock": 24, "productId": "{{productCoca2LId}}" }` | `201` → **`invCoca2LId`**               |
-| 36  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-PAPA", "name": "Bolsas de papa", "unit": "BOLSA", "type": "INSUMO", "unitMeasure": "1 bolsa", "initialStock": 25, "kitchenManaged": true }` | `201` → **`invPapasBolsaId`** (ítem de cocina) |
-| 37  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-SMILE", "name": "Bolsas de smile", "unit": "BOLSA", "type": "INSUMO", "initialStock": 20 }` | `201` → **`invSmileId`**                |
-| 38  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "PRESA-PECHO", "name": "Duplicado", "unit": "UNIDAD", "type": "PECHO" }` | `4xx` → `INVENTORY_ITEM_CODE_ALREADY_EXISTS` |
-| 39  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "INSUMO-VASOS", "name": "Vasos", "unit": "VASO", "type": "INSUMO", "salePrice": 5.00 }` | `4xx` → `salePrice` rechazado en `INSUMO`     |
+| 31  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Pechos cocidos", "unit": "UNIDAD", "type": "PECHO", "unitMeasure": "1 presa", "salePrice": 12.00, "initialStock": 40 }` | `201` → **`invPechoId`**                |
+| 32  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Alas cocidas", "unit": "UNIDAD", "type": "ALA", "unitMeasure": "1 presa", "salePrice": 10.00, "initialStock": 40 }` | `201` → **`invAlaId`**                  |
+| 33  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Piernas cocidas", "unit": "UNIDAD", "type": "PIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invPiernaId`**               |
+| 34  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Entrepiernas cocidas", "unit": "UNIDAD", "type": "ENTREPIERNA", "unitMeasure": "1 presa", "salePrice": 11.00, "initialStock": 40 }` | `201` → **`invEntrepiernaId`**         |
+| 35  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Coca Cola 500 ml", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "500 ml", "initialStock": 60, "productId": "{{productCocaId}}" }` | `201` → **`invCoca500Id`** (vinculada a su producto) |
+| 35b | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Coca Cola 2 lt", "unit": "UNIDAD", "type": "BEBIDA", "unitMeasure": "2 lt", "initialStock": 24, "productId": "{{productCoca2LId}}" }` | `201` → **`invCoca2LId`**               |
+| 36  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Bolsas de papa", "unit": "BOLSA", "type": "INSUMO", "group": "C", "unitMeasure": "1 bolsa", "initialStock": 25, "kitchenManaged": true }` | `201` → **`invPapasBolsaId`** (ítem de cocina) |
+| 37  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Bolsas de smile", "unit": "BOLSA", "type": "INSUMO", "group": "C", "initialStock": 20 }` | `201` → **`invSmileId`**                |
+| 38  | `POST` | `/inventory/items`  | `adminToken`| `{ "productCode": "X-1", "name": "Con código", "unit": "UNIDAD", "type": "PECHO" }` | `400` → `VALIDATION_ERROR`: el código lo genera el backend (`B<n>`, `<grupo><n>` o `PRESA-<TIPO>`) |
+| 39  | `POST` | `/inventory/items`  | `adminToken`| `{ "name": "Vasos", "unit": "VASO", "type": "INSUMO", "group": "P", "salePrice": 5.00 }` | `4xx` → `salePrice` rechazado en `INSUMO`     |
 | 40  | `GET`  | `/inventory/items` | `adminToken`| `?type=PECHO`                                                                                      | `200` → la presa con su stock           |
 | 41  | `GET`  | `/inventory/items` | `cookToken`  | `?type=INSUMO`                                                                                      | `200` → el cocinero lista insumos       |
 | 42  | `PATCH`| `/inventory/items/:invPechoId` | `adminToken`| `{ "name": "Pechos cocidos (turno día)" }`                                                          | `200` → nombre actualizado              |
@@ -155,11 +155,11 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | 45  | `POST` | `/inventory/adjust`  | `adminToken`| `{ "inventoryItemId": "{{invPechoId}}", "delta": -2, "reason": "ADJUSTMENT", "note": "Merma por almacenamiento" }` | `200` → ajuste con motivo        |
 | 46  | `PATCH`| `/inventory/items/:invPechoId` | `adminToken`| `{ "salePrice": 13.00 }`                                            | `200` → precio de venta actualizado (no existe una ruta `sale-price` aparte)  |
 
-### B8. Catálogo de descuentos 🔲 Sprint 3
+### B8. Catálogo de descuentos ✅ Sprint 3
 
 | #   | Método | Endpoint                  | Auth        | Body                                                                                                     | Esperado                                 |
 | --- | ------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| 47  | `POST` | `/discounts`              | `adminToken`| `{ "name": "Descuento personal", "fixedAmount": 7.00, "availability": "END_OF_SHIFT", "requiresAuthorization": false, "active": true }` | `201` → **`discountPersonalId`**         |
+| 47  | `POST` | `/discounts`              | `adminToken`| `{ "name": "Descuento personal", "fixedAmount": 7.00, "availability": "END_OF_SHIFT", "requiresAuthorization": false, "active": true }` | `201` → **`discountPersonalId`** (el seed ya trae uno con otro id) |
 | 48  | `POST` | `/discounts`              | `adminToken`| `{ "name": "Compensación al cliente", "fixedAmount": 7.00, "availability": "ALWAYS", "requiresAuthorization": true, "active": true }` | `201` → **`discountCompensacionId`**   |
 | 49  | `GET`  | `/discounts`              | `adminToken`| —                                                                                                          | `200` → el catálogo                     |
 
@@ -256,36 +256,37 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 
 > El tipo puede ser `MESA` o `LLEVAR` (custom es una marca, no un tipo). Sugerido = 2×12 (pecho) + 1×10 (ala) + extras + bebida ≈ 42; la cajera lo pisa a 35 y **eso** se persiste (FR-002b). El inventario descuenta lo real, no el precio.
 
-### C10. Venta con descuento por plato 🔲 Sprint 3
+### C10. Venta con descuento por plato ✅ Sprint 3
 
 | #   | Método | Endpoint             | Auth          | Body                                                                                                                                                                                             | Esperado                                                  |
 | --- | ------ | -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | 78  | `POST` | `/orders`            | `cashierToken`| `{ "type": "MESA", "paymentStatus": "PAID", "paymentMethod": "CASH", "items": [{ "productId": "{{productPorcionMediaId}}", "quantity": 2, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "pierna", "qty": 1 }, { "type": "entrepierna", "qty": 1 }] }, { "productId": "{{productPorcionMediaId}}", "quantity": 1, "discountId": "{{discountPersonalId}}", "selectedPieces": [{ "type": "pecho", "qty": 1 }, { "type": "ala", "qty": 1 }] }] }` | `201` → `originalAmount: 90.00`, `total: 69.00` (3 platos − 7 c/u) |
-| 79  | `POST` | `/orders`            | `cashierToken`| como el 78 pero con `discountId` de un descuento `ALWAYS` **sin autorizar** para esta cajera                                     | `4xx` → `DISCOUNT_NOT_AUTHORIZED` (rechaza la orden completa) |
-| 80  | `POST` | `/discounts/:discountCompensacionId/authorize` | `adminToken`| `{ "cashierId": "{{cashierId}}" }`                                              | `200` → autorización creada para el turno                     |
+| 79  | `POST` | `/orders`            | `cashierToken`| como el 78 pero con `discountId` de un descuento `ALWAYS` **sin autorizar** para esta cajera                                     | `409` → `DISCOUNT_NOT_AUTHORIZED` (rechaza la orden completa) |
+| 80  | `POST` | `/discounts/:discountCompensacionId/authorize` | `adminToken`| `{ "cashierId": "{{cashierId}}" }`                                              | `201` → autorización creada para su turno abierto (queda `AUTHORIZE_DISCOUNT`) |
 | 81  | `POST` | `/orders`            | `cashierToken`| ítems con `discountId` de "Compensación al cliente" (ahora autorizada)                                                               | `201` → total con descuento aplicado                         |
-| 82  | `GET`  | `/discounts/authorizations` | `adminToken`| `?shiftId={{shiftId}}`                                                                                        | `200` → autorización vigente del turno                       |
-| 83  | `POST` | `/orders`            | `cashierToken`| ítems con `discountId` de "Descuento personal" (`END_OF_SHIFT`) **fuera** de la ventana de fin de turno                          | `4xx` → `DISCOUNT_NOT_AVAILABLE`                              |
+| 82  | `GET`  | `/discounts/authorizations` | `adminToken`| —                                                                                                             | `200` → las autorizaciones vigentes (turnos abiertos) de la sucursal |
+| 83  | `POST` | `/orders`            | `cashierToken`| ítems con `discountId` de "Descuento personal" (`END_OF_SHIFT`) con la planilla **sin** pollo cocido sobrante (ventana cerrada)   | `409` → `DISCOUNT_NOT_AVAILABLE`                              |
+| 83b | `PUT`  | `/inventory/daily-sheet/chicken` | `dispatcherToken`| `{ "periodId": "{{periodId}}", "pieces": [{ "pieceType": "PECHO", "cookedLeftover": 4 }] }` | `200` → la ventana `END_OF_SHIFT` se abre y `GET /pos/context` ya ofrece el descuento personal |
 
-> El descuento viaja **en el ítem de la orden** — una sola llamada, una sola transacción. El inventario sigue descontando el producto real (nunca el equivalente al precio). El `discountAmount` queda **congelado** por ítem: si el admin luego sube el descuento a 10, las ventas viejas conservan 7.
+> La ventana `END_OF_SHIFT` se abre cuando la planilla del día registra sobrante cocido (no depende del reloj). El descuento viaja **en el ítem de la orden** — una sola llamada, una sola transacción. El inventario sigue descontando el producto real (nunca el equivalente al precio). El `discountAmount` queda **congelado** por ítem: si el admin luego sube el descuento a 10, las ventas viejas conservan 7.
 
-### C11. Vale de trabajador 🔲 Sprint 3
+### C11. Vale de trabajador ✅ Sprint 3
 
 | #   | Método | Endpoint     | Auth          | Body                                                                                                | Esperado                                                       |
 | --- | ------ | ------------ | ------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| 84  | `POST` | `/vouchers`  | `cashierToken`| `{ "workerName": "MARIA LOPEZ", "productId": "{{productPorcionMediaId}}", "discountId": "{{discountPersonalId}}" }` | `201` → `originalAmount: 30.00`, `discountAmount: 7.00`, `amount: 23.00` |
-| 85  | `POST` | `/vouchers`  | `cashierToken`| `{ "workerName": "PEDRO", "productId": "{{productPorcionMediaId}}" }`                               | `201` → `amount: 30.00` (sin descuento)                        |
+| 84  | `POST` | `/vouchers`  | `cashierToken`| `{ "workerName": "MARIA LOPEZ", "productId": "{{productPorcionMediaId}}", "variantId": "{{variantPorcionMediaId}}", "selectedPieces": [{ "type": "pecho", "qty": 1 }, { "type": "ala", "qty": 1 }], "discountId": "{{discountPersonalId}}" }` | `201` → `originalAmount: "30"`, `discountAmount: "7"`, `amount: "23"`, `code: "V-YYYYMMDD-001"`; descuenta 1 pecho y 1 ala (`VALE`) |
+| 85  | `POST` | `/vouchers`  | `cashierToken`| `{ "workerName": "PEDRO", "productId": "{{productPorcionMediaId}}" }`                               | `201` → `amount: "30"` (sin descuento; sin `variantId` no descuenta presas) |
 | 86  | `GET`  | `/vouchers`  | `cashierToken`| —                                                                                                   | `200` → **solo los que emitió esta cajera**                    |
-| 87  | `GET`  | `/vouchers`  | `adminToken` | —                                                                                                   | `200` → **todos**, incluye quién emitió cada uno               |
+| 87  | `GET`  | `/vouchers`  | `adminToken` | —                                                                                                   | `200` → **todos los de la sucursal**, incluye quién emitió cada uno (`?worker=maria`, `?from=&to=`, `?status=` filtran) |
 
 > El vale **descuenta inventario** pero **NO suma** al ingreso de caja (PDR §2.4). El monto se **deriva** del producto — el front no lo manda.
 
-### C12. Gasto desde caja 🔲 Sprint 3
+### C12. Gasto desde caja ✅ Sprint 3
 
 | #   | Método | Endpoint   | Auth          | Body                                          | Esperado                                        |
 | --- | ------ | ---------- | ------------- | ---------------------------------------------- | ----------------------------------------------- |
-| 88  | `POST` | `/expenses` | `cashierToken`| `{ "description": "Compra de arroz", "amount": 35.50, "paidBy": "CASH" }` | `200` → gasto ligado al turno activo |
-| 89  | `POST` | `/expenses` | `cashierToken`| `{ ... }` **sin turno abierto**               | `4xx` → error claro                             |
+| 88  | `POST` | `/expenses` | `cashierToken`| `{ "description": "Compra de arroz", "amount": 35.50, "paidBy": "CASH" }` | `201` → gasto ligado al turno activo (`shiftId` derivado) |
+| 89  | `POST` | `/expenses` | `cashierToken`| `{ ... }` **sin turno abierto**               | `409` → `NO_ACTIVE_SHIFT`                       |
 
 > El `shiftId` y el `createdBy` se **derivan** del turno activo y del token — no van en el body (§5.0).
 
@@ -342,23 +343,24 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | 98  | `PATCH`| `/orders/:orderId/status` | `dispatcherToken`| `{ "status": "READY" }`   | `200` → `readyAt` registrado, aparece en pantalla pública     |
 | 99  | `PATCH`| `/orders/:orderId/status` | `dispatcherToken`| `{ "status": "DELIVERED" }` | `200` → `deliveredAt` + `deliveredBy`, desaparece de la pantalla |
 
-### D3. Cerrar caja (arqueo) 🔲 Sprint 3
+### D3. Cerrar caja (arqueo) ✅ Sprint 3
 
 | #   | Método | Endpoint        | Auth          | Body                    | Esperado                                                        |
 | --- | ------ | --------------- | ------------- | ----------------------- | --------------------------------------------------------------- |
-| 100 | `POST` | `/shifts/close` | `cashierToken`| `{ "countedAmount": 1450.00 }` | `200` → arqueo con ventas, gastos, vales, anulaciones, diferencia |
-| 101 | `POST` | `/orders`       | `cashierToken`| venta con turno cerrado                                        | `4xx` → no se pueden registrar ventas en caja cerrada           |
+| 99b | `POST` | `/shifts/close` | `cashierToken`| `{ "countedAmount": 1450.00 }` con un pedido **pendiente** sin cobrar | `409` → `SHIFT_HAS_PENDING_PAYMENTS` (cobrá o cancelá el pendiente y repetí) |
+| 100 | `POST` | `/shifts/close` | `cashierToken`| `{ "countedAmount": 1450.00 }` | `201` → arqueo: `totals` (ventas por método, gastos, vales, descuentos, anulaciones), `expectedAmount`, `discrepancy` y `discrepancyAlert` |
+| 101 | `POST` | `/orders`       | `cashierToken`| venta con turno cerrado                                        | `409` → `NO_ACTIVE_SHIFT`: no se registran ventas en caja cerrada |
 
-> El cierre **extingue** las autorizaciones de descuentos del turno y la sesión de la cajera (no pasa al turno siguiente).
+> El esperado es `apertura + ventas en efectivo − gastos`. El cierre pasa las órdenes entregadas a `CLOSED`, libera la caja y hace que las autorizaciones de descuento del turno **dejen de valer** (no pasan al turno siguiente). Una diferencia de más de 5 Bs no bloquea: se registra y se marca.
 
-### D4. Reportes 🔲 Sprint 3
+### D4. Reportes ✅ Sprint 3
 
 | #   | Método | Endpoint                   | Auth        | Body                              | Esperado                        |
 | --- | ------ | -------------------------- | ----------- | ---------------------------------- | ------------------------------- |
 | 102 | `GET`  | `/reports/sales`           | `adminToken`| `?from=2026-07-01&to=2026-07-10`   | `200` → ventas por turno/día    |
-| 103 | `GET`  | `/reports/inventory-presas`| `adminToken`| `?date=2026-07-10`                 | `200` → vendidas y restantes    |
-| 104 | `GET`  | `/reports/cash-audit`      | `adminToken`| `?date=2026-07-10`                 | `200` → arqueo con anulaciones y vales |
-| 105 | `GET`  | `/reports/sales`           | `adminToken`| `?from=2026-07-01&to=2026-07-10&format=csv` | `200` → descarga CSV    |
+| 103 | `GET`  | `/reports/inventory-presas`| `adminToken`| `?from=2026-07-10&to=2026-07-10`   | `200` → vendidas, de vales y restantes por presa |
+| 104 | `GET`  | `/reports/cash-audit`      | `adminToken`| `?from=2026-07-10&to=2026-07-10`   | `200` → el arqueo de cada turno del día, con anulaciones y vales |
+| 105 | `GET`  | `/reports/sales`           | `adminToken`| `?from=2026-07-01&to=2026-07-10&format=csv` | `200` → descarga `ventas_<rango>.csv` (fuera del envelope) |
 
 ### D5. Auditoría 🔲 Sprint 5
 
@@ -436,8 +438,8 @@ Fase F — Vistas públicas e impresión   público       🔲 S4
 | `{{invCoca500Id}}`         | Paso 35 — `data.id`                       | ✅ (S2)   |
 | `{{invPapasBolsaId}}`      | Paso 36 — `data.id`                       | ✅ (S2)   |
 | `{{invSmileId}}`           | Paso 37 — `data.id`                       | ✅ (S2)   |
-| `{{discountPersonalId}}`   | Paso 47 — `data.id`                       | 3 🔲   |
-| `{{discountCompensacionId}}`| Paso 48 — `data.id`                      | 3 🔲   |
+| `{{discountPersonalId}}`   | Paso 47 — `data.discount.id`              | 3 ✅   |
+| `{{discountCompensacionId}}`| Paso 48 — `data.discount.id`             | 3 ✅   |
 | `{{customerId}}`           | Paso 58 — `data.id`                       | ✅   |
 | `{{shiftId}}`              | Paso 54 — `data.id`                       | 1 ✅   |
 | `{{orderId}}`              | Paso 63 — `data.id` + `publicToken`       | 1 ✅   |
