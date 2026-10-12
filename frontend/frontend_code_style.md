@@ -180,7 +180,7 @@ src/
 
 Los nombres entre paréntesis son **route groups**: organizan layouts y permisos sin agregarse a la URL. Por ejemplo, `app/(public)/login/page.tsx` expone `/login`, mientras que `app/(protected)/cashier/pos/page.tsx` expone `/cashier/pos`. Los segmentos dinámicos, como `order/[token]`, se reservan para la vista pública de una comanda.
 
-No se crea una ruta operativa para `cook` en V1. El rol cocinero permanece reservado hasta que se definan sus casos de uso; no debe aparecer en la navegación ni en la matriz de pantallas mientras no tenga una funcionalidad aprobada.
+El rol cocinero (`COOK`) tiene la ruta `/cook` con una única pantalla: la planilla de inventario diario (pollo crudo e ingreso/gasto de los ítems de cocina). Cajera, despachadora, administrador y superadministrador acceden a la misma planilla desde `/<rol>/inventory-sheet`; cada rol solo edita sus celdas.
 
 La cajera es un rol, no un feature. Sus pantallas componen varias capacidades:
 
